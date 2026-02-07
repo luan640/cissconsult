@@ -170,3 +170,4 @@ Regras aplicadas:
   - `POST /totems/<totem_id>/delete/`
 - Cada registro de humor/denuncia pode ser vinculado a um totem.
 - Dashboard mostra contagem separada por totem no periodo selecionado.
+"# cissconsult" 
