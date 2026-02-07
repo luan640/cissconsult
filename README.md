@@ -171,3 +171,4 @@ Regras aplicadas:
 - Cada registro de humor/denuncia pode ser vinculado a um totem.
 - Dashboard mostra contagem separada por totem no periodo selecionado.
 "# cissconsult" 
+"# cissconsult" 
