@@ -1,0 +1,57 @@
+<div id="departments-table-container" data-table-container>
+  {% if messages %}
+    <section class="stack-gap">
+      {% for message in messages %}
+        <div class="notice{% if message.tags %} notice--{{ message.tags }}{% endif %}">{{ message }}</div>
+      {% endfor %}
+    </section>
+  {% endif %}
+
+  <section class="card card--table">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Status</th>
+          <th>Acoes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for department in departments %}
+          <tr>
+            <td>{{ department.name }}</td>
+            <td>{% if department.is_active %}Ativo{% else %}Inativo{% endif %}</td>
+            <td class="table__actions">
+              <button
+                class="btn btn--light btn--sm"
+                type="button"
+                data-open-edit-department
+                data-update-url="{% url 'departments-update' department.id %}"
+                data-name="{{ department.name }}"
+                data-is-active="{% if department.is_active %}1{% else %}0{% endif %}"
+              >
+                Editar
+              </button>
+              <form
+                method="post"
+                action="{% url 'departments-delete' department.id %}"
+                data-department-toggle-form
+                onsubmit="return confirm('{% if department.is_active %}Desativar{% else %}Ativar{% endif %} este setor?');"
+              >
+                {% csrf_token %}
+                <button class="btn {% if department.is_active %}btn--danger{% else %}btn--primary{% endif %} btn--sm" type="submit">
+                  {% if department.is_active %}Desativar{% else %}Ativar{% endif %}
+                </button>
+              </form>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="3">Nenhum setor cadastrado nesta empresa.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% include "partials/_table_pagination.html" %}
+</div>

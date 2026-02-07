@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Tipos de humor | PLATAFORMA NR-1{% endblock %}
+
+{% block extra_head %}
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}" />
+{% endblock %}
+
+{% block content %}
+<div class="app-layout">
+  {% include "partials/sidebar.html" with active_menu="mood_types" can_manage_access=True %}
+  <main class="content">
+    <header class="content__header">
+      <div>
+        <h1 class="content__title">Tipos de humor</h1>
+        <p class="content__subtitle">Cadastre ou desative opcoes exibidas no totem.</p>
+      </div>
+      <button class="btn btn--primary" type="button" data-open-modal="create-mood-type-modal">Novo tipo</button>
+    </header>
+    {% include "mood_types/_table_container.html" %}
+  </main>
+</div>
+
+<div class="modal-backdrop" data-modal="create-mood-type-modal" aria-hidden="true">
+  <div class="modal-card">
+    <div class="modal-card__header"><h2>Novo tipo de humor</h2><button type="button" class="modal-close" data-close-modal>&times;</button></div>
+    <form method="post" action="{% url 'mood-types-create' %}" class="form-grid modal-form" data-mood-type-create-form>
+      {% csrf_token %}
+      <div class="form-field"><label for="create_mood_label">Label</label><input id="create_mood_label" name="label" required maxlength="80" /></div>
+      <div class="form-field">
+        <label for="create_mood_emoji">Emoji</label>
+        <div class="emoji-field">
+          <input id="create_mood_emoji" name="emoji" required maxlength="32" value="&#128578;" list="emoji-suggestions" />
+          <button class="btn btn--light btn--sm emoji-field__trigger" type="button" data-emoji-picker-trigger data-target-input="create_mood_emoji" aria-label="Abrir seletor de emoji">&#128512;</button>
+        </div>
+      </div>
+      <div class="form-field"><label for="create_mood_sentiment">Sentimento</label><select id="create_mood_sentiment" name="sentiment" required>{% for value, label in sentiment_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></div>
+      <div class="form-field">
+        <label for="create_mood_score" class="field-label-with-tooltip">
+          <span>Score</span>
+          <span class="tooltip" tabindex="0" aria-label="Ajuda sobre score do humor">
+            ?
+            <span class="tooltip__text">
+              Peso numerico do humor (1 a 5): 1 muito negativo, 3 neutro e 5 muito positivo.
+            </span>
+          </span>
+        </label>
+        <input id="create_mood_score" type="number" min="1" max="5" name="mood_score" required value="3" />
+      </div>
+      <div class="form-actions"><button class="btn btn--primary" type="submit">Salvar</button><button class="btn btn--light" type="button" data-close-modal>Cancelar</button></div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-backdrop" data-modal="edit-mood-type-modal" aria-hidden="true">
+  <div class="modal-card">
+    <div class="modal-card__header"><h2>Editar tipo de humor</h2><button type="button" class="modal-close" data-close-modal>&times;</button></div>
+    <form method="post" action="" class="form-grid modal-form" data-edit-mood-type-form>
+      {% csrf_token %}
+      <div class="form-field"><label for="edit_mood_label">Label</label><input id="edit_mood_label" name="label" required maxlength="80" /></div>
+      <div class="form-field">
+        <label for="edit_mood_emoji">Emoji</label>
+        <div class="emoji-field">
+          <input id="edit_mood_emoji" name="emoji" required maxlength="32" list="emoji-suggestions" />
+          <button class="btn btn--light btn--sm emoji-field__trigger" type="button" data-emoji-picker-trigger data-target-input="edit_mood_emoji" aria-label="Abrir seletor de emoji">&#128512;</button>
+        </div>
+      </div>
+      <div class="form-field"><label for="edit_mood_sentiment">Sentimento</label><select id="edit_mood_sentiment" name="sentiment" required>{% for value, label in sentiment_choices %}<option value="{{ value }}">{{ label }}</option>{% endfor %}</select></div>
+      <div class="form-field">
+        <label for="edit_mood_score" class="field-label-with-tooltip">
+          <span>Score</span>
+          <span class="tooltip" tabindex="0" aria-label="Ajuda sobre score do humor">
+            ?
+            <span class="tooltip__text">
+              Peso numerico do humor (1 a 5): 1 muito negativo, 3 neutro e 5 muito positivo.
+            </span>
+          </span>
+        </label>
+        <input id="edit_mood_score" type="number" min="1" max="5" name="mood_score" required />
+      </div>
+      <div class="form-actions"><button class="btn btn--primary" type="submit">Salvar</button><button class="btn btn--light" type="button" data-close-modal>Cancelar</button></div>
+    </form>
+  </div>
+</div>
+
+<datalist id="emoji-suggestions">
+  {% for emoji in emoji_suggestions %}
+    <option value="{{ emoji }}"></option>
+  {% endfor %}
+</datalist>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="{% static 'js/dashboard_sidebar.js' %}"></script>
+  <script src="{% static 'js/table_async.js' %}"></script>
+  <script src="{% static 'js/mood_types_modals.js' %}"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@joeattardi/emoji-button@4.6.4/dist/index.min.js"></script>
+  <script src="{% static 'js/emoji_picker.js' %}"></script>
+{% endblock %}

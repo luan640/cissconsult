@@ -1,0 +1,21 @@
+Acesso MASTER
+- Cadastrar empresas
+- Inativar empresas
+- Alterar limite de utilização (usuario e totens)
+- Navegar entre as empresas (para análise de indicadores ou acesso geral)
+- Criar campanhas de questionário AET por empresas
+- Gerar relatório por campanhas (em andamento)
+- Comparar relatórios de campanhas (em andamento)
+
+Acesso EMPRESA
+- Cadastrar
+    - usuario
+    - totens
+    - tipo de humor
+    - motivos de denuncia
+    - setores
+    - GHE
+- Tela para registro de humor
+- Tela para canal de denúncia
+- Configuração de alertas de e-mail (em andamento)
+- Tela inicial com indicadores

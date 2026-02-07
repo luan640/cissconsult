@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Selecionar empresa | PLATAFORMA NR-1{% endblock %}
+
+{% block content %}
+<main style="max-width: 520px; margin: 48px auto; font-family: sans-serif;">
+  <h1>Selecionar empresa</h1>
+  <p>Escolha a empresa para iniciar a sessao.</p>
+
+  {% if error %}
+    <p style="color: #b91c1c;">{{ error }}</p>
+  {% endif %}
+
+  {% if is_master %}
+    {% if companies %}
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="next_url" value="{{ next_url }}" />
+        <label for="company_id">Empresa</label><br />
+        <select id="company_id" name="company_id" required>
+          {% for company in companies %}
+            <option value="{{ company.id }}">
+              {{ company.name }}
+            </option>
+          {% endfor %}
+        </select>
+        <div style="margin-top: 16px;">
+          <button type="submit">Confirmar empresa</button>
+        </div>
+      </form>
+    {% else %}
+      <p>Nenhuma empresa cadastrada.</p>
+    {% endif %}
+  {% elif memberships %}
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="next_url" value="{{ next_url }}" />
+      <label for="company_id">Empresa</label><br />
+      <select id="company_id" name="company_id" required>
+        {% for membership in memberships %}
+          <option value="{{ membership.company_id }}">
+            {{ membership.company.name }}{% if membership.is_default %} (padrao){% endif %}
+          </option>
+        {% endfor %}
+      </select>
+      <div style="margin-top: 16px;">
+        <button type="submit">Confirmar empresa</button>
+      </div>
+    </form>
+  {% else %}
+    <p>Seu usuario nao possui empresa vinculada. Fale com o administrador do sistema.</p>
+  {% endif %}
+</main>
+{% endblock %}

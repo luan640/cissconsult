@@ -1,0 +1,92 @@
+{% load static %}
+<aside class="sidebar">
+  <div class="brand">
+    <div class="brand__logo">
+      <img src="{% static 'img/logo_vetorizada.png' %}" alt="Logo da empresa" />
+    </div>
+    <p class="brand__name">{{ current_company_name|default:"PLATAFORMA NR-1" }}</p>
+    <button
+      class="sidebar__toggle"
+      type="button"
+      data-sidebar-toggle
+      aria-label="Recolher menu lateral"
+      aria-expanded="true"
+    >
+      <span class="sidebar__hamburger" aria-hidden="true">
+        <span></span>
+        <span></span>
+        <span></span>
+      </span>
+    </button>
+  </div>
+
+  <nav class="menu">
+    {% if is_master %}
+      <a class="menu__item{% if active_menu == 'master-dashboard' %} is-active{% endif %}" href="{% url 'master-dashboard' %}">
+        <svg class="menu__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 13h8V3H3v10Zm10 8h8V11h-8v10ZM3 21h8v-6H3v6Zm10-10h8V3h-8v8Z" fill="currentColor"/></svg>
+        <span class="menu__text">Master</span>
+      </a>
+      <a class="menu__item{% if active_menu == 'companies' %} is-active{% endif %}" href="{% url 'companies-list' %}" data-match-path="/master/companies/">
+        <svg class="menu__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 21h16V9L12 3 4 9v12Zm4-8h8v2H8v-2Zm0 4h8v2H8v-2Z" fill="currentColor"/></svg>
+        <span class="menu__text">Empresas</span>
+      </a>
+      <a class="menu__item{% if active_menu == 'campaigns' %} is-active{% endif %}" href="{% url 'campaigns-list' %}" data-match-path="/campaigns/">
+        <svg class="menu__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 11h8V3H3v8Zm10 10h8V5h-8v16ZM3 21h8v-8H3v8Zm2-6h4v4H5v-4Zm10-8h4v10h-4V7Z" fill="currentColor"/></svg>
+        <span class="menu__text">Campanhas</span>
+      </a>
+    {% endif %}
+    {% if not is_master %}
+        <a class="menu__item{% if active_menu == 'dashboard' %} is-active{% endif %}" href="{% url 'dashboard' %}" data-match-path="/dashboard/">
+          <svg class="menu__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 13h8V3H3v10Zm10 8h8V11h-8v10ZM3 21h8v-6H3v6Zm10-10h8V3h-8v8Z" fill="currentColor"/></svg>
+          <span class="menu__text">Início</span>
+        </a>
+    {% endif %}
+    <!-- <a class="menu__item{% if active_menu == 'companies' %} is-active{% endif %}" href="{% url 'company-select' %}" data-match-path="/auth/select-company/">
+      <svg class="menu__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 21h16V9L12 3 4 9v12Zm4-8h8v2H8v-2Zm0 4h8v2H8v-2Z" fill="currentColor"/></svg>
+      <span class="menu__text">Empresas</span>
+    </a> -->
+    {% if can_manage_access %}
+      <div class="menu__group{% if active_menu == 'totems' or active_menu == 'mood_types' or active_menu == 'complaint_types' %} is-open{% endif %}" data-menu-group>
+        <button class="menu__item menu__item--toggle{% if active_menu == 'totems' or active_menu == 'mood_types' or active_menu == 'complaint_types' %} is-active{% endif %}" type="button" data-menu-group-toggle>
+          <svg class="menu__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 2h8a1 1 0 0 1 1 1v17h2v2H5v-2h2V3a1 1 0 0 1 1-1Zm1 2v4h6V4H9Zm0 6v10h6V10H9Zm2 2h2v2h-2v-2Zm0 4h2v2h-2v-2Z" fill="currentColor"/></svg>
+          <span class="menu__text">Totens</span>
+          <span class="menu__caret" aria-hidden="true">&#9662;</span>
+        </button>
+        <div class="menu__children">
+          <a class="menu__subitem{% if active_menu == 'totems' %} is-active{% endif %}" href="{% url 'totems-list' %}">Gerenciar totens</a>
+          <a class="menu__subitem{% if active_menu == 'mood_types' %} is-active{% endif %}" href="{% url 'mood-types-list' %}">Tipo de humor</a>
+          <a class="menu__subitem{% if active_menu == 'complaint_types' %} is-active{% endif %}" href="{% url 'complaint-types-list' %}">Tipo de denuncia</a>
+        </div>
+      </div>
+      <div class="menu__group{% if active_menu == 'users' or active_menu == 'departments' or active_menu == 'ghes' %} is-open{% endif %}" data-menu-group>
+        <button class="menu__item menu__item--toggle{% if active_menu == 'users' or active_menu == 'departments' or active_menu == 'ghes' %} is-active{% endif %}" type="button" data-menu-group-toggle>
+          <svg class="menu__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3H3V5Zm0 5h18v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-9Zm4 2v2h3v-2H7Zm0 4v2h3v-2H7Z" fill="currentColor"/></svg>
+          <span class="menu__text">Cadastros</span>
+          <span class="menu__caret" aria-hidden="true">&#9662;</span>
+        </button>
+        <div class="menu__children">
+          <a class="menu__subitem{% if active_menu == 'users' %} is-active{% endif %}" href="{% url 'users-list' %}">Usuarios</a>
+          <a class="menu__subitem{% if active_menu == 'departments' %} is-active{% endif %}" href="{% url 'departments-list' %}">Setores</a>
+          <a class="menu__subitem{% if active_menu == 'ghes' %} is-active{% endif %}" href="{% url 'ghes-list' %}" data-match-path="/ghes/">GHE</a>
+        </div>
+      </div>
+      <a class="menu__item{% if active_menu == 'help_requests' %} is-active{% endif %}" href="{% url 'help-requests-list' %}" data-match-path="/help-requests/">
+        <svg class="menu__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2a10 10 0 1 0 10 10A10.01 10.01 0 0 0 12 2Zm1 15h-2v-2h2Zm1.9-7.5-.9.92A3.33 3.33 0 0 0 13 13h-2v-.5a2.5 2.5 0 0 1 .73-1.77l1.24-1.26a1.5 1.5 0 1 0-2.56-1.06H8.4a3.5 3.5 0 1 1 6.5 1.59Z" fill="currentColor"/></svg>
+        <span class="menu__text">Pedidos de ajuda</span>
+      </a>
+      <a class="menu__item{% if active_menu == 'complaints' %} is-active{% endif %}" href="{% url 'complaints-list' %}" data-match-path="/complaints/">
+        <svg class="menu__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 3h16a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1h-5l-3 3-3-3H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Zm2 4v2h12V7H6Zm0 4v2h8v-2H6Z" fill="currentColor"/></svg>
+        <span class="menu__text">Denuncias</span>
+      </a>
+      <a class="menu__item{% if active_menu == 'reports' %} is-active{% endif %}" href="{% url 'reports-list' %}" data-match-path="/relatorios/">
+        <svg class="menu__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm8 1.5V9h4.5M8 12h8v2H8v-2Zm0 4h8v2H8v-2Z" fill="currentColor"/></svg>
+        <span class="menu__text">Relatorios</span>
+      </a>
+      <a class="menu__item{% if active_menu == 'settings' %} is-active{% endif %}" href="{% url 'settings-alerts' %}" data-match-path="/settings/alerts/">
+        <svg class="menu__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19.14 12.94a7.48 7.48 0 0 0 .05-.94 7.48 7.48 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.42 7.42 0 0 0-1.63-.94l-.36-2.54A.5.5 0 0 0 13.9 2h-3.8a.5.5 0 0 0-.49.42l-.36 2.54c-.58.23-1.13.54-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.48a.5.5 0 0 0 .12.64l2.03 1.58a7.48 7.48 0 0 0-.05.94c0 .32.02.63.05.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.5.4 1.05.71 1.63.94l.36 2.54a.5.5 0 0 0 .49.42h3.8a.5.5 0 0 0 .49-.42l.36-2.54c.58-.23 1.13-.54 1.63-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58ZM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5Z" fill="currentColor"/></svg>
+        <span class="menu__text">Configuracoes</span>
+      </a>
+    {% endif %}
+  </nav>
+
+</aside>

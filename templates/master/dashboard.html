@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Master | PLATAFORMA NR-1{% endblock %}
+
+{% block extra_head %}
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}" />
+  <style>
+    .master-metrics-grid {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+    .master-metrics-grid .card {
+      min-height: 120px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .master-company-form {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      margin: 0;
+    }
+    .master-company-form .form-field {
+      margin: 0;
+      min-width: 260px;
+    }
+    .master-company-form select {
+      min-width: 260px;
+    }
+    @media (max-width: 980px) {
+      .master-company-form {
+        flex-direction: column;
+        align-items: stretch;
+      }
+    }
+    @media (max-width: 1200px) {
+      .master-metrics-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+    @media (max-width: 640px) {
+      .master-metrics-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<div class="app-layout">
+  {% include "partials/sidebar.html" with active_menu="master-dashboard" is_master=True %}
+
+  <main class="content">
+    <header class="content__header">
+      <div>
+        <h1 class="content__title">Painel master</h1>
+        <p class="content__subtitle">Visao geral das empresas cadastradas.</p>
+      </div>
+      <form method="post" action="{% url 'master-dashboard' %}" class="master-company-form">
+        {% csrf_token %}
+        <input type="hidden" name="next_url" value="{% url 'dashboard' %}" />
+        <div class="form-field">
+          <label for="master_company_id">Empresa</label>
+          <select id="master_company_id" name="company_id" required>
+            {% for company in companies %}
+              <option value="{{ company.id }}">{{ company.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+          <button class="btn btn--primary" type="submit">Acessar</button>
+      </form>
+    </header>
+
+    {% if messages %}
+      <section class="stack-gap" style="margin-bottom: 16px;">
+        {% for message in messages %}
+          <div class="notice{% if message.tags %} notice--{{ message.tags }}{% endif %}">{{ message }}</div>
+        {% endfor %}
+      </section>
+    {% endif %}
+
+    <section class="grid master-metrics-grid">
+      <article class="card">
+        <p class="card__label">Empresas cadastradas</p>
+        <p class="card__value">{{ total_companies }}</p>
+      </article>
+      <article class="card">
+        <p class="card__label">Empresas ativas</p>
+        <p class="card__value">{{ active_companies }}</p>
+      </article>
+      <article class="card">
+        <p class="card__label">Novas no periodo</p>
+        <p class="card__value">{{ new_companies_period }}</p>
+        <p class="help-inline">{{ period_start|date:"d/m/Y" }} - {{ period_end|date:"d/m/Y" }}</p>
+      </article>
+      <article class="card">
+        <p class="card__label">Campanhas</p>
+        <p class="card__value">{{ total_campaigns }}</p>
+      </article>
+      <article class="card">
+        <p class="card__label">Campanhas ativas</p>
+        <p class="card__value">{{ active_campaigns }}</p>
+      </article>
+      <article class="card">
+        <p class="card__label">Campanhas pausadas</p>
+        <p class="card__value">{{ paused_campaigns }}</p>
+      </article>
+      <article class="card">
+        <p class="card__label">Campanhas planejadas</p>
+        <p class="card__value">{{ planned_campaigns }}</p>
+      </article>
+      <article class="card">
+        <p class="card__label">Campanhas encerradas</p>
+        <p class="card__value">{{ finished_campaigns }}</p>
+      </article>
+    </section>
+  </main>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="{% static 'js/dashboard_sidebar.js' %}"></script>
+{% endblock %}

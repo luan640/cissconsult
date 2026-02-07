@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Campanha Pausada | PLATAFORMA NR-1{% endblock %}
+
+{% block extra_head %}
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}" />
+  <style>
+    .paused-screen {
+      min-height: 70vh;
+      display: grid;
+      place-items: center;
+      padding: 24px 16px;
+    }
+    .paused-card {
+      width: min(420px, 100%);
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 24px 20px;
+      text-align: center;
+      box-shadow: 0 16px 34px rgba(15, 23, 42, 0.08);
+    }
+    .paused-card__title {
+      margin: 0 0 8px;
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #0f172a;
+    }
+    .paused-card__text {
+      margin: 0;
+      color: #64748b;
+      font-size: 0.95rem;
+    }
+    .paused-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: #fef3c7;
+      color: #a16207;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-size: 0.78rem;
+      margin-bottom: 10px;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<main class="paused-screen">
+  <section class="paused-card">
+    <div class="paused-chip">Campanha Pausada</div>
+    <h1 class="paused-card__title">CAMPANHA PAUSADA</h1>
+    <p class="paused-card__text">Esta campanha esta temporariamente pausada. Tente novamente mais tarde.</p>
+  </section>
+</main>
+{% endblock %}

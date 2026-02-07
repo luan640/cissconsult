@@ -1,0 +1,21 @@
+<div>
+  <p style="margin: 0 0 10px; color: #334155;">
+    <strong>{{ complaint_type_label }}</strong> - {{ complaint.totem.name|default:"-" }}
+  </p>
+  {% if histories %}
+    <div style="display:grid; gap:10px;">
+      {% for item in histories %}
+        <article style="border:1px solid #e2e8f0; border-radius:10px; padding:10px 12px; background:#f8fafc;">
+          <div style="display:flex; justify-content:space-between; gap:8px; margin-bottom:6px;">
+            <span class="status-badge status-badge--{{ item.complaint_status|lower }}">{{ item.get_complaint_status_display }}</span>
+            <small style="color:#64748b;">{{ item.created_at|date:"d/m/Y H:i" }}</small>
+          </div>
+          <p style="margin:0; color:#0f172a;">{{ item.action_note|default:"Sem detalhes." }}</p>
+          <small style="color:#64748b;">Atualizado por: {{ item.created_by.username|default:"Sistema" }}</small>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p style="margin:0; color:#64748b;">Sem histórico de atualizações para esta denúncia.</p>
+  {% endif %}
+</div>

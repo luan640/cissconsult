@@ -1,0 +1,506 @@
+:root {
+  --blue-900: #0a3c79;
+  --blue-800: #0f56a8;
+  --blue-100: #eaf2fb;
+  --white: #ffffff;
+  --slate-900: #183047;
+  --slate-500: #3c5167;
+  --danger: #9f1239;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Manrope", "Segoe UI", sans-serif;
+  background: linear-gradient(180deg, #f2f5f9, #e7edf4);
+  color: var(--slate-900);
+}
+
+.totem-screen {
+  min-height: 100vh;
+  width: min(980px, 100%);
+  margin: 0 auto;
+  padding: 26px 24px 30px;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 10px;
+}
+
+.totem-header {
+  display: none;
+}
+
+.totem-header h1 {
+  margin: 0;
+  font-size: 2rem;
+}
+
+.totem-header p {
+  margin: 4px 0 0;
+  color: var(--slate-500);
+}
+
+.totem-panel {
+  border: 1px solid #d7dde5;
+  border-radius: 14px;
+  background: var(--white);
+  padding: 0;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+  min-height: calc(100vh - 56px);
+  align-self: stretch;
+  animation: panel-appear 0.25s ease;
+}
+
+.totem-panel h2 {
+  margin: 0;
+  padding: 18px 18px;
+  text-align: center;
+  font-size: 2.05rem;
+  color: var(--blue-900);
+  border-bottom: 1px solid #d7dde5;
+}
+
+.totem-panel p {
+  margin: 8px 0 16px;
+  color: var(--slate-500);
+}
+
+.totem-intro {
+  max-width: 840px;
+  margin: 0 auto;
+  padding: 28px 42px 34px;
+  display: grid;
+  gap: 16px;
+  min-height: 100%;
+  align-content: start;
+  text-align: center;
+}
+
+.totem-intro h2 {
+  margin-bottom: 0;
+}
+
+.totem-intro p {
+  margin: 0;
+  line-height: 1.45;
+  font-size: 1.42rem;
+  font-weight: 700;
+}
+
+.totem-intro__brand {
+  margin: 0;
+  text-align: center;
+  color: var(--blue-800);
+  font-weight: 800;
+  font-size: 2.25rem;
+  letter-spacing: 0.03em;
+}
+
+.totem-intro__brand img {
+  width: 220px;
+  max-width: 100%;
+  height: auto;
+}
+
+.totem-intro__technical {
+  margin-top: 2px;
+  padding: 18px 0 0;
+  border-top: 1px solid #c7d5e4;
+  border-radius: 0;
+  background: transparent;
+  display: grid;
+  gap: 5px;
+  text-align: center;
+}
+
+.totem-intro__technical p {
+  font-weight: 700;
+  color: var(--slate-900);
+}
+
+.is-hidden {
+  display: none;
+}
+
+.big-actions {
+  height: auto;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  padding: 28px;
+  align-content: start;
+}
+
+.big-btn {
+  border: 1px solid #c9d5e2;
+  border-radius: 12px;
+  background: #f4f8fd;
+  color: var(--blue-900);
+  font-size: 1.45rem;
+  font-weight: 800;
+  cursor: pointer;
+  min-height: 150px;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.big-btn:hover {
+  background: #eaf2fc;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(10, 60, 121, 0.14);
+}
+
+.big-btn--danger {
+  border-color: #f2c0ca;
+  background: #fff5f7;
+  color: #9f1239;
+}
+
+.totem-form {
+  display: grid;
+  gap: 14px;
+  padding: 24px 26px 28px;
+}
+
+.totem-panel[data-step="complaint"] {
+  display: flex;
+  flex-direction: column;
+}
+
+.totem-panel[data-step="complaint"] .totem-form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.totem-panel[data-step="complaint"] .flow-actions {
+  margin-top: auto;
+  justify-content: center;
+  position: sticky;
+  bottom: 0;
+  background: var(--white);
+  padding-top: 12px;
+}
+
+/* Keep hidden steps hidden even when a step has custom display rules */
+.totem-panel.is-hidden {
+  display: none;
+}
+
+.choice-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.choice-btn {
+  border: 1px solid #c9d5e2;
+  border-radius: 10px;
+  background: #f7fafd;
+  padding: 12px 10px;
+  min-height: 76px;
+  font-size: 1.12rem;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  text-align: center;
+  color: var(--blue-900);
+}
+
+.choice-btn.is-selected {
+  background: var(--blue-900);
+  color: var(--white);
+  border-color: var(--blue-900);
+}
+
+.choice-emoji {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.field label {
+  font-weight: 700;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  margin-top: 8px;
+  border: 1px solid #d7e5dd;
+  border-radius: 10px;
+  padding: 10px;
+  font: inherit;
+}
+
+.help-notice {
+  margin-top: 8px;
+  border: 1px solid #fecdd3;
+  background: #fff1f2;
+  border-radius: 12px;
+  padding: 12px;
+  color: #9f1239;
+  font-weight: 700;
+}
+
+.flow-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.totem-intro .flow-actions {
+  margin-top: 8px;
+}
+
+.btn {
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 24px;
+  font-size: 1.2rem;
+  font-weight: 800;
+  cursor: pointer;
+  min-width: 210px;
+}
+
+.btn--primary {
+  background: linear-gradient(180deg, #0f67c2, #0a4f98);
+  color: var(--white);
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.2), 0 6px 16px rgba(10, 60, 121, 0.25);
+}
+
+.btn--light {
+  background: var(--blue-100);
+  color: var(--blue-900);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.msg {
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-weight: 700;
+}
+
+.msg--success {
+  background: var(--blue-100);
+  color: var(--blue-900);
+}
+
+.msg--error {
+  background: #fff1f2;
+  color: var(--danger);
+}
+
+.totem-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 19, 13, 0.45);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 1200;
+}
+
+.totem-modal-backdrop.is-open {
+  display: flex;
+}
+
+.totem-modal-card {
+  width: min(440px, 100%);
+  background: #fff;
+  border: 1px solid #d7e5dd;
+  border-radius: 16px;
+  padding: 18px;
+}
+
+.totem-modal-card h3 {
+  margin: 0;
+}
+
+.totem-modal-card p {
+  margin: 8px 0 12px;
+  color: var(--slate-500);
+}
+
+.totem-modal-card .field {
+  margin-bottom: 14px;
+}
+
+.totem-modal-card .flow-actions {
+  margin-top: 10px;
+}
+
+@keyframes panel-appear {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.totem-toast-stack {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 2200;
+  display: grid;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.totem-toast {
+  transform: translateY(-8px);
+  z-index: 2201;
+  min-width: 260px;
+  max-width: min(88vw, 380px);
+  padding: 14px 16px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 3px 14px rgba(0, 0, 0, 0.3);
+  border: 0;
+  opacity: 0;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.totem-toast.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.totem-toast--success {
+  background: linear-gradient(135deg, #00b09b, #96c93d);
+}
+
+.totem-toast--error {
+  background: linear-gradient(135deg, #f12711, #f5af19);
+}
+
+.totem-toast__icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.24);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+@media (max-width: 1024px) {
+  .totem-panel {
+    min-height: auto;
+  }
+  .big-actions {
+    grid-template-columns: 1fr;
+  }
+  .choice-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1200px) {
+  .totem-screen {
+    width: min(960px, 100%);
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 26px 20px 32px;
+    gap: 18px;
+  }
+
+  .totem-header {
+    text-align: center;
+  }
+
+  .totem-header h1 {
+    font-size: 2.5rem;
+  }
+
+  .totem-header p {
+    font-size: 1.2rem;
+  }
+
+  .totem-panel {
+    width: 100%;
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0;
+  }
+
+  .totem-panel h2 {
+    font-size: 2.15rem;
+  }
+
+  .totem-panel p,
+  .totem-intro p,
+  .totem-modal-card p {
+    font-size: 1.36rem;
+    font-weight: 700;
+  }
+
+  .totem-intro {
+    margin: 0 auto;
+    text-align: center;
+    justify-items: center;
+    padding: 32px 40px 36px;
+  }
+
+  .totem-intro h2,
+  .totem-intro p,
+  .totem-intro__technical p {
+    text-align: center;
+  }
+
+  .totem-intro .flow-actions {
+    justify-content: center;
+  }
+
+  .big-btn {
+    font-size: 2rem;
+    min-height: 210px;
+  }
+
+  .choice-btn {
+    font-size: 1.2rem;
+    min-height: 94px;
+  }
+
+  .btn {
+    font-size: 1.35rem;
+    padding: 12px 20px;
+    min-width: 300px;
+  }
+
+  .field label {
+    font-size: 1.08rem;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 1.08rem;
+    padding: 12px;
+  }
+}

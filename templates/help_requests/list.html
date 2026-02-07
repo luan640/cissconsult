@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Pedidos de ajuda | PLATAFORMA NR-1{% endblock %}
+
+{% block extra_head %}
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}" />
+{% endblock %}
+
+{% block content %}
+<div class="app-layout">
+  {% include "partials/sidebar.html" with active_menu="help_requests" can_manage_access=True %}
+
+  <main class="content">
+    <header class="content__header">
+      <div>
+        <h1 class="content__title">Pedidos de ajuda</h1>
+        <!-- <p class="content__subtitle">Atendimentos solicitados via totem da empresa #{{ company_id }}</p> -->
+      </div>
+    </header>
+
+    <section class="card card--full table-filters-card">
+      <p class="card__label">Filtros</p>
+      <form method="get" action="{% url 'help-requests-list' %}" class="period-filter table-filters-form" data-help-requests-filter-form>
+        <div class="filter-field">
+          <label for="help_requests_status">Status</label>
+          <select id="help_requests_status" name="status">
+            <option value="">Todos</option>
+            {% for value, label in status_choices %}
+              <option value="{{ value }}"{% if selected_status == value %} selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="filter-field">
+          <label for="help_requests_department">Setor</label>
+          <select id="help_requests_department" name="department">
+            <option value="">Todos</option>
+            {% for department in department_choices %}
+              <option value="{{ department }}"{% if selected_department == department %} selected{% endif %}>{{ department }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="filter-field">
+          <label for="help_requests_totem">Totem</label>
+          <select id="help_requests_totem" name="totem">
+            <option value="">Todos</option>
+            {% for totem in totem_choices %}
+              <option value="{{ totem.id }}"{% if selected_totem == totem.id|stringformat:"s" %} selected{% endif %}>{{ totem.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button class="btn btn--primary" type="submit">Filtrar</button>
+        <a class="btn btn--light" href="{% url 'help-requests-list' %}" data-help-requests-clear-filters>Limpar</a>
+      </form>
+    </section>
+
+    {% include "help_requests/_table_container.html" %}
+  </main>
+</div>
+
+<div class="modal-backdrop" data-modal="edit-help-request-modal" aria-hidden="true">
+  <div class="modal-card">
+    <div class="modal-card__header">
+      <h2>Atualizar pedido de ajuda</h2>
+      <button type="button" class="modal-close" data-close-modal>&times;</button>
+    </div>
+    <form method="post" action="" class="form-grid modal-form help-request-edit-form" data-edit-help-request-form>
+      {% csrf_token %}
+      <div class="form-field">
+        <label for="edit_help_request_status">Status</label>
+        <select id="edit_help_request_status" name="status" required>
+          {% for value, label in status_choices %}
+            <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-field form-field--full">
+        <label for="edit_help_request_notes">Observações internas</label>
+        <textarea id="edit_help_request_notes" name="admin_notes" rows="4"></textarea>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn--primary" type="submit">Salvar</button>
+        <button class="btn btn--light" type="button" data-close-modal>Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-backdrop" data-modal="help-request-history-modal" aria-hidden="true">
+  <div class="modal-card">
+    <div class="modal-card__header">
+      <h2>Historico do pedido de ajuda</h2>
+      <button type="button" class="modal-close" data-close-modal>&times;</button>
+    </div>
+    <div class="form-grid modal-form modal-history-scroll" id="help-request-history-container" style="display:block;">
+      <p style="margin:0; color:#475569;">Selecione um pedido para visualizar o historico.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="{% static 'js/dashboard_sidebar.js' %}"></script>
+  <script src="{% static 'js/table_async.js' %}"></script>
+  <script src="{% static 'js/help_requests_modals.js' %}"></script>
+{% endblock %}

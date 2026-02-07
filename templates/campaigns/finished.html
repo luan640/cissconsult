@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Campanha Encerrada | PLATAFORMA NR-1{% endblock %}
+
+{% block extra_head %}
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}" />
+  <style>
+    .status-screen {
+      min-height: 70vh;
+      display: grid;
+      place-items: center;
+      padding: 24px 16px;
+    }
+    .status-card {
+      width: min(420px, 100%);
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 24px 20px;
+      text-align: center;
+      box-shadow: 0 16px 34px rgba(15, 23, 42, 0.08);
+    }
+    .status-card__title {
+      margin: 0 0 8px;
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #0f172a;
+    }
+    .status-card__text {
+      margin: 0;
+      color: #64748b;
+      font-size: 0.95rem;
+    }
+    .status-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 14px;
+      border-radius: 999px;
+      background: #dbeafe;
+      color: #1d4ed8;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      font-size: 0.78rem;
+      margin-bottom: 10px;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<main class="status-screen">
+  <section class="status-card">
+    <div class="status-chip">Campanha Encerrada</div>
+    <h1 class="status-card__title">CAMPANHA ENCERRADA</h1>
+    <p class="status-card__text">Esta campanha ja foi encerrada. Obrigado pelo interesse.</p>
+  </section>
+</main>
+{% endblock %}

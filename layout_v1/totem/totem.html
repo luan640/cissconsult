@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CISS • Totem</title>
+
+  <!-- Fonte -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui']
+          },
+          colors: {
+            brand: {
+              primary: '#084B47',
+              secondary: '#00B0A0',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+
+<body class="font-sans">
+
+  <!-- Fullscreen Totem -->
+  <div class="min-h-screen bg-brand-primary flex flex-col justify-between">
+
+    <!-- Header -->
+    <header class="px-8 py-6 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="h-12 w-12 rounded-xl bg-white/10 flex items-center justify-center">
+          <span class="text-brand-secondary text-xl font-bold">CISS</span>
+        </div>
+        <p class="text-white/70 text-sm">
+          Registro Anônimo de Bem-Estar
+        </p>
+      </div>
+
+      <span class="hidden md:inline-flex px-4 py-2 rounded-full bg-white/10 text-white/70 text-sm border border-white/10">
+        Toque na opção desejada
+      </span>
+    </header>
+
+    <!-- Conteúdo Central -->
+    <main class="flex-1 flex items-center justify-center px-10">
+      <div class="w-full max-w-4xl text-center">
+
+        <h1 class="text-white text-4xl md:text-5xl font-bold mb-4">
+          Como você está se sentindo hoje?
+        </h1>
+
+        <p class="text-white/70 text-lg mb-12">
+          Sua resposta é confidencial e nos ajuda a melhorar o ambiente de trabalho.
+        </p>
+
+        <!-- Opções -->
+        <div class="grid grid-cols-2 gap-8">
+
+          <!-- Feliz -->
+          <button class="bg-white rounded-3xl p-8 shadow-lg active:scale-95 transition">
+            <div class="text-6xl mb-4">😄</div>
+            <p class="text-xl font-bold text-slate-800">Feliz</p>
+            <p class="mt-1 text-slate-500 text-sm">Motivado e positivo</p>
+          </button>
+
+          <!-- Neutro -->
+          <button class="bg-white rounded-3xl p-8 shadow-lg active:scale-95 transition">
+            <div class="text-6xl mb-4">😐</div>
+            <p class="text-xl font-bold text-slate-800">Neutro</p>
+            <p class="mt-1 text-slate-500 text-sm">Tudo sob controle</p>
+          </button>
+
+          <!-- Triste -->
+          <button class="bg-white rounded-3xl p-8 shadow-lg active:scale-95 transition">
+            <div class="text-6xl mb-4">😔</div>
+            <p class="text-xl font-bold text-slate-800">Triste</p>
+            <p class="mt-1 text-slate-500 text-sm">Não estou me sentindo bem</p>
+          </button>
+
+          <!-- Estressado -->
+          <button class="bg-white rounded-3xl p-8 shadow-lg active:scale-95 transition">
+            <div class="text-6xl mb-4">😣</div>
+            <p class="text-xl font-bold text-slate-800">Estressado</p>
+            <p class="mt-1 text-slate-500 text-sm">Sob muita pressão</p>
+          </button>
+
+        </div>
+      </div>
+    </main>
+
+    <!-- Rodapé / Ajuda -->
+    <footer class="px-8 py-6 flex items-center justify-center">
+    </footer>
+
+  </div>
+
+</body>
+</html>

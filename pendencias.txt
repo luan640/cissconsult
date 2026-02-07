@@ -1,0 +1,20 @@
+filtro por setor (tela inicial)
+
+smart lab - site oficial do governo de observatorio de sst (mostra as estatisticas de afastamento por setor)
+
+modelo de negocio: venda link por funcionario cada avliação custa 20 reais (por exemplo)
+
+
+Tela de campanha (visão do colaborador que irá responder):
+
+
+GHE -> Cargo/função [GHE: 01 ADMINISTRATIVO - SETOR: auxiliar ADMINISTRATIVO]
+primeiro preenche o GHE e depois puxa os cargos/função atrelado a ele
+
+validador de cpf
+validador de cnpj
+
+não salva estado atual do questionário, caso saia ele retorna para a tela inicial das perguntas com tudo apagado
+
+PERGUNTAS (todas com tooltip explicando cada pergunta. Deixando o mais claro possivel e adicionando um exemplo):
+

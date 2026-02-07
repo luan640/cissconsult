@@ -1,0 +1,21 @@
+<div>
+  <p style="margin: 0 0 10px; color: #334155;">
+    <strong>{{ help_request.requester_name }}</strong> - {{ help_request.department_name }} - {{ help_request.totem.name|default:"-" }}
+  </p>
+  {% if histories %}
+    <div style="display:grid; gap:10px;">
+      {% for item in histories %}
+        <article style="border:1px solid #e2e8f0; border-radius:10px; padding:10px 12px; background:#f8fafc;">
+          <div style="display:flex; justify-content:space-between; gap:8px; margin-bottom:6px;">
+            <span class="status-badge status-badge--help-{{ item.status|lower }}">{{ item.get_status_display }}</span>
+            <small style="color:#64748b;">{{ item.created_at|date:"d/m/Y H:i" }}</small>
+          </div>
+          <p style="margin:0; color:#0f172a;">{{ item.admin_notes|default:"Sem observacoes." }}</p>
+          <small style="color:#64748b;">Atualizado por: {{ item.created_by.username|default:"Sistema" }}</small>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p style="margin:0; color:#64748b;">Sem historico de atualizacoes para este pedido.</p>
+  {% endif %}
+</div>

@@ -1,0 +1,63 @@
+<div id="users-table-container" data-table-container>
+  {% if messages %}
+    <section class="stack-gap">
+      {% for message in messages %}
+        <div class="notice{% if message.tags %} notice--{{ message.tags }}{% endif %}">{{ message }}</div>
+      {% endfor %}
+    </section>
+  {% endif %}
+
+  <section class="card card--table">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Usuario</th>
+          <th>Nome</th>
+          <th>Email</th>
+          <th>Papel</th>
+          <th>Status</th>
+          <th>Acoes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for membership in memberships %}
+          <tr>
+            <td>{{ membership.user.username }}</td>
+            <td>{{ membership.user.get_full_name|default:"-" }}</td>
+            <td>{{ membership.user.email|default:"-" }}</td>
+            <td>{{ membership.get_role_display }}</td>
+            <td>{% if membership.is_active %}Ativo{% else %}Inativo{% endif %}</td>
+            <td class="table__actions">
+              <button
+                class="btn btn--light btn--sm"
+                type="button"
+                data-open-edit
+                data-membership-id="{{ membership.id }}"
+                data-update-url="{% url 'users-update' membership.id %}"
+                data-username="{{ membership.user.username }}"
+                data-first-name="{{ membership.user.first_name }}"
+                data-last-name="{{ membership.user.last_name }}"
+                data-email="{{ membership.user.email }}"
+                data-role="{{ membership.role }}"
+                data-is-active="{% if membership.is_active %}1{% else %}0{% endif %}"
+              >
+                Editar
+              </button>
+              {% if membership.user_id != request.user.id %}
+                <form method="post" action="{% url 'users-delete' membership.id %}" onsubmit="return confirm('Remover acesso deste usuario da empresa?');">
+                  {% csrf_token %}
+                  <button class="btn btn--danger btn--sm" type="submit">Remover</button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="6">Nenhum usuario interno cadastrado nesta empresa.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% include "partials/_table_pagination.html" %}
+</div>

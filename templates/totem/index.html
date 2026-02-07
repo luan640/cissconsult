@@ -1,0 +1,188 @@
+﻿{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Totem | {{ company.name }}{% endblock %}
+
+{% block extra_head %}
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/totem.css' %}" />
+{% endblock %}
+
+{% block content %}
+<main class="totem-screen">
+  <header class="totem-header">
+    <h1>{{ company.name }} - {{ totem.name }}</h1>
+    <p>Totem psicossocial - coleta anonima</p>
+  </header>
+
+  {% if messages %}
+    <section class="totem-messages">
+      {% for message in messages %}
+        <div class="msg{% if message.tags == 'success' %} msg--success{% else %} msg--error{% endif %}">{{ message }}</div>
+      {% endfor %}
+    </section>
+  {% endif %}
+
+  <section class="totem-panel" data-step="intro">
+    <div class="totem-intro">
+      <p class="totem-intro__brand"><img src="{% static 'img/logo_vetorizada.png' %}" alt="Logo da empresa" /></p>
+      <h2>Canal institucional de escuta e prevenção</h2>
+      <p>
+        Esse sistema é um canal institucional de escuta e prevenção em saúde mental, com uso anônimo e confidencial.
+      </p>
+      <p>
+        As informações são analisadas de forma coletiva para fins preventivos e organizacionais, não substituindo atendimento psicológico individual.
+      </p>
+      <div class="totem-intro__technical">
+        <p><strong>Responsável técnico:</strong></p>
+        <p>Luis Taumaturgo de Souza Filho - Psicólogo</p>
+        <p>CRP 11/17405</p>
+      </div>
+      <div class="flow-actions">
+        <button type="button" class="btn btn--primary" data-open-step="home">Entendi e desejo continuar</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="totem-panel is-hidden" data-step="home">
+    <h2>Como deseja contribuir agora?</h2>
+    <div class="big-actions">
+      <button type="button" class="big-btn" data-open-step="complaint">Canal de denuncia</button>
+      <button type="button" class="big-btn" data-open-step="mood">Registrar humor</button>
+      <button type="button" class="big-btn big-btn--danger" data-open-step="help">Preciso de ajuda agora</button>
+    </div>
+  </section>
+
+  <section class="totem-panel is-hidden" data-step="complaint">
+    <h2>Canal de denúncia</h2>
+    <form method="post" action="{% url 'totem-complaint' company.slug totem.slug %}" class="totem-form">
+      {% csrf_token %}
+      <input type="hidden" name="complaint_category" data-selected-complaint />
+      <input type="hidden" name="complaint_department_name" data-selected-complaint-department />
+      <input type="hidden" name="complaint_additional_details" data-selected-complaint-extra />
+
+      <div class="choice-grid">
+        {% for complaint_option in complaint_options %}
+          <button type="button" class="choice-btn" data-complaint-option="{{ complaint_option.id }}"><span class="choice-emoji">!</span>{{ complaint_option.label }}</button>
+        {% endfor %}
+      </div>
+
+      <div class="field is-hidden" data-complaint-details>
+        <label for="details">De mais detalhes:</label>
+        <textarea id="details" name="details" rows="3"></textarea>
+      </div>
+
+      <div class="flow-actions">
+        <button type="button" class="btn btn--light" data-back-home>Voltar</button>
+        <button type="button" class="btn btn--primary" data-complaint-submit>Seguir</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="totem-panel is-hidden" data-step="mood">
+    <h2>Registrar humor</h2>
+    <form method="post" action="{% url 'totem-mood' company.slug totem.slug %}" class="totem-form">
+      {% csrf_token %}
+      <input type="hidden" name="mood_option" data-selected-mood />
+      <input type="hidden" name="department_id" data-selected-mood-department />
+
+      <div class="choice-grid">
+        {% for mood_option in mood_options %}
+          <button type="button" class="choice-btn" data-mood-option="{{ mood_option.id }}"><span class="choice-emoji">{{ mood_option.emoji|default:"🙂" }}</span>{{ mood_option.label }}</button>
+        {% endfor %}
+      </div>
+
+      <div class="flow-actions">
+        <button type="button" class="btn btn--light" data-back-home>Voltar</button>
+        <button type="button" class="btn btn--primary" data-open-mood-department-modal{% if not departments %} disabled{% endif %}>Seguir</button>
+      </div>
+      {% if not departments %}
+        <p class="help-notice">Nenhum setor ativo encontrado. Solicite o cadastro de setores para registrar humor.</p>
+      {% endif %}
+    </form>
+  </section>
+
+  <section class="totem-panel is-hidden" data-step="help">
+    <h2>Pedido de ajuda imediata</h2>
+    <p class="help-notice">Não se preocupe: informações sigilosas, vamos até você.</p>
+    <form method="post" action="{% url 'totem-help' company.slug totem.slug %}" class="totem-form">
+      {% csrf_token %}
+      <div class="field">
+        <label for="requester_name">Nome</label>
+        <input id="requester_name" name="requester_name" maxlength="150" required />
+      </div>
+      <div class="field">
+        <label for="department_name">Setor</label>
+        {% if departments %}
+          <select id="department_name" name="department_name" required>
+            <option value="">Selecione</option>
+            {% for department in departments %}
+              <option value="{{ department.name }}">{{ department.name }}</option>
+            {% endfor %}
+          </select>
+        {% else %}
+          <input id="department_name" name="department_name" maxlength="150" required />
+        {% endif %}
+      </div>
+      <div class="flow-actions">
+        <button type="button" class="btn btn--light" data-back-home>Voltar</button>
+        <button type="submit" class="btn btn--primary">Solicitar ajuda</button>
+      </div>
+    </form>
+  </section>
+</main>
+
+<div class="totem-modal-backdrop" data-mood-department-modal aria-hidden="true">
+  <div class="totem-modal-card">
+    <h3>Escolha seu setor</h3>
+    <p>Essas informacoes sao sigilosas.</p>
+    <div class="field">
+      <label for="modal_mood_department_id">Setor</label>
+      <select id="modal_mood_department_id" data-mood-department-select>
+        <option value="">Selecione</option>
+        {% for department in departments %}
+          <option value="{{ department.id }}">{{ department.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="flow-actions">
+      <button type="button" class="btn btn--light" data-close-mood-department-modal>Voltar</button>
+      <button type="button" class="btn btn--primary" data-confirm-mood-submit>Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<div class="totem-modal-backdrop" data-complaint-modal aria-hidden="true">
+  <div class="totem-modal-card">
+    <h3>Informacoes adicionais</h3>
+    <p>Informe setor e um breve relato para concluir o registro.</p>
+    <div class="field">
+      <label for="complaint_department_modal">Setor</label>
+      {% if departments %}
+        <select id="complaint_department_modal" data-complaint-department-select>
+          <option value="">Selecione</option>
+          {% for department in departments %}
+            <option value="{{ department.name }}">{{ department.name }}</option>
+          {% endfor %}
+        </select>
+      {% else %}
+        <input id="complaint_department_modal" data-complaint-department-select maxlength="150" />
+      {% endif %}
+    </div>
+    <div class="field">
+      <label for="complaint_details_modal">Descreva o ocorrido</label>
+      <textarea id="complaint_details_modal" rows="4" data-complaint-extra-input></textarea>
+    </div>
+    <div class="flow-actions">
+      <button type="button" class="btn btn--light" data-close-complaint-modal>Voltar</button>
+      <button type="button" class="btn btn--primary" data-confirm-complaint-submit>Confirmar</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="{% static 'js/totem_flow.js' %}"></script>
+{% endblock %}

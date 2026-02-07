@@ -1,0 +1,47 @@
+<div id="reports-table-container" data-table-container>
+  {% if messages %}
+    <section class="stack-gap">
+      {% for message in messages %}
+        <div class="notice{% if message.tags %} notice--{{ message.tags }}{% endif %}">{{ message }}</div>
+      {% endfor %}
+    </section>
+  {% endif %}
+
+  <section class="card card--table">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Titulo</th>
+          <th>Modelo</th>
+          <th>Periodicidade</th>
+          <th>Status</th>
+          <th>Data de referencia</th>
+          <th>Gerado em</th>
+          <th>Acoes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for report in reports %}
+          <tr>
+            <td>{{ report.title }}</td>
+            <td>{{ report.get_report_template_display }}</td>
+            <td>{{ report.get_report_type_display }}</td>
+            <td>{{ report.get_status_display }}</td>
+            <td>{{ report.record_date|date:"d/m/Y" }}</td>
+            <td>{% if report.generated_at %}{{ report.generated_at|date:"d/m/Y H:i" }}{% else %}-{% endif %}</td>
+            <td class="table__actions">
+              <a class="btn btn--light btn--sm" href="{% url 'reports-detail' report.id %}" target="_blank">Visualizar</a>
+              <a class="btn btn--primary btn--sm" href="{% url 'reports-detail' report.id %}?print=1" target="_blank">Imprimir/PDF</a>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="7">Nenhum relatorio encontrado para esta empresa.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  {% include "partials/_table_pagination.html" %}
+</div>

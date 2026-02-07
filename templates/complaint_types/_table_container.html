@@ -1,0 +1,39 @@
+<div id="complaint-types-table-container" data-table-container>
+  {% if messages %}
+    <section class="stack-gap">
+      {% for message in messages %}
+        <div class="notice{% if message.tags %} notice--{{ message.tags }}{% endif %}">{{ message }}</div>
+      {% endfor %}
+    </section>
+  {% endif %}
+  <section class="card card--table">
+    <table class="table">
+      <thead><tr><th>Label</th><th>Status</th><th>Ações</th></tr></thead>
+      <tbody>
+        {% for complaint_type in complaint_types %}
+          <tr>
+            <td>{{ complaint_type.label }}</td>
+            <td>{% if complaint_type.is_active %}Ativo{% else %}Inativo{% endif %}</td>
+            <td class="table__actions">
+              <button class="btn btn--light btn--sm" type="button"
+                data-open-edit-complaint-type
+                data-update-url="{% url 'complaint-types-update' complaint_type.id %}"
+                data-label="{{ complaint_type.label }}">
+                Editar
+              </button>
+              <form method="post" action="{% url 'complaint-types-delete' complaint_type.id %}" data-complaint-type-deactivate-form onsubmit="return confirm('{% if complaint_type.is_active %}Desativar{% else %}Ativar{% endif %} este tipo de denuncia?');">
+                {% csrf_token %}
+                <button class="btn {% if complaint_type.is_active %}btn--danger{% else %}btn--primary{% endif %} btn--sm" type="submit">
+                  {% if complaint_type.is_active %}Desativar{% else %}Ativar{% endif %}
+                </button>
+              </form>
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="3">Nenhum tipo de denuncia cadastrado.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% include "partials/_table_pagination.html" %}
+</div>

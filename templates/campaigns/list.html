@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Campanhas | PLATAFORMA NR-1{% endblock %}
+
+{% block extra_head %}
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}" />
+{% endblock %}
+
+{% block content %}
+<div class="app-layout">
+  {% include "partials/sidebar.html" with active_menu="campaigns" is_master=True %}
+  <main class="content">
+    <header class="content__header">
+      <div>
+        <h1 class="content__title">Campanhas</h1>
+        <p class="content__subtitle">Crie campanhas por empresa.</p>
+      </div>
+      <button class="btn btn--primary" type="button" data-open-modal="create-campaign-modal">Nova campanha</button>
+    </header>
+    {% include "campaigns/_table_container.html" %}
+  </main>
+</div>
+
+<div class="modal-backdrop" data-modal="create-campaign-modal" aria-hidden="true">
+  <div class="modal-card">
+    <div class="modal-card__header"><h2>Nova campanha</h2><button type="button" class="modal-close" data-close-modal>&times;</button></div>
+    <form method="post" action="{% url 'campaigns-create' %}" class="form-grid modal-form" data-campaign-create-form>
+      {% csrf_token %}
+      <div class="form-field"><label for="create_campaign_title">Titulo</label><input id="create_campaign_title" name="title" required maxlength="255" /></div>
+      <div class="form-field">
+        <label for="create_campaign_company">Empresa</label>
+        <select id="create_campaign_company" name="company_id" required>
+          {% for company in companies %}
+            <option value="{{ company.id }}">{{ company.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-field"><label for="create_campaign_start">Data inicial</label><input id="create_campaign_start" type="date" name="start_date" required /></div>
+      <div class="form-field"><label for="create_campaign_end">Data final</label><input id="create_campaign_end" type="date" name="end_date" required /></div>
+      <div class="form-field">
+        <label for="create_campaign_status">Status</label>
+        <select id="create_campaign_status" name="status" required>
+          {% for value, label in status_choices %}
+            <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-actions"><button class="btn btn--primary" type="submit">Salvar</button><button class="btn btn--light" type="button" data-close-modal>Cancelar</button></div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-backdrop" data-modal="edit-campaign-modal" aria-hidden="true">
+  <div class="modal-card">
+    <div class="modal-card__header"><h2>Editar campanha</h2><button type="button" class="modal-close" data-close-modal>&times;</button></div>
+    <form method="post" action="" class="form-grid modal-form" data-edit-campaign-form>
+      {% csrf_token %}
+      <div class="form-field"><label for="edit_campaign_title">Titulo</label><input id="edit_campaign_title" name="title" required maxlength="255" /></div>
+      <div class="form-field">
+        <label for="edit_campaign_company">Empresa</label>
+        <select id="edit_campaign_company" name="company_id" required>
+          {% for company in companies %}
+            <option value="{{ company.id }}">{{ company.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-field"><label for="edit_campaign_start">Data inicial</label><input id="edit_campaign_start" type="date" name="start_date" required /></div>
+      <div class="form-field"><label for="edit_campaign_end">Data final</label><input id="edit_campaign_end" type="date" name="end_date" required /></div>
+      <div class="form-field">
+        <label for="edit_campaign_status">Status</label>
+        <select id="edit_campaign_status" name="status" required>
+          {% for value, label in status_choices %}
+            <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-actions"><button class="btn btn--primary" type="submit">Salvar</button><button class="btn btn--light" type="button" data-close-modal>Cancelar</button></div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="{% static 'js/dashboard_sidebar.js' %}"></script>
+  <script src="{% static 'js/campaigns_modals.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,135 @@
+﻿{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Usuarios | PLATAFORMA NR-1{% endblock %}
+
+{% block extra_head %}
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}" />
+{% endblock %}
+
+{% block content %}
+<div class="app-layout">
+  {% include "partials/sidebar.html" with active_menu="users" can_manage_access=True %}
+
+  <main class="content">
+    <header class="content__header">
+      <div>
+        <h1 class="content__title">Gestao de usuarios</h1>
+        <p class="content__subtitle">Controle de acessos internos da empresa #{{ company_id }}</p>
+      </div>
+      <button class="btn btn--primary" type="button" data-open-modal="create-user-modal">Novo usuário</button>
+    </header>
+
+    {% include "users/_table_container.html" %}
+  </main>
+</div>
+
+<div class="modal-backdrop" data-modal="create-user-modal" aria-hidden="true">
+  <div class="modal-card">
+    <div class="modal-card__header">
+      <h2>Criar usuario interno</h2>
+      <button type="button" class="modal-close" data-close-modal>&times;</button>
+    </div>
+    <form method="post" action="{% url 'users-create' %}" class="form-grid modal-form">
+      {% csrf_token %}
+      <div class="form-field">
+        <label for="create_username">Username</label>
+        <input id="create_username" name="username" required maxlength="150" />
+      </div>
+      <div class="form-field">
+        <label for="create_email">Email</label>
+        <input id="create_email" type="email" name="email" />
+      </div>
+      <div class="form-field">
+        <label for="create_first_name">Nome</label>
+        <input id="create_first_name" name="first_name" maxlength="150" />
+      </div>
+      <div class="form-field">
+        <label for="create_last_name">Sobrenome</label>
+        <input id="create_last_name" name="last_name" maxlength="150" />
+      </div>
+      <div class="form-field">
+        <label for="create_role">Papel</label>
+        <select id="create_role" name="role" required>
+          {% for value, label in role_choices %}
+            <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-field">
+        <label for="create_password">Senha</label>
+        <input id="create_password" type="password" name="password" minlength="8" required />
+      </div>
+      <div class="form-field form-field--check">
+        <label>
+          <input type="checkbox" name="is_active" value="on" checked />
+          Ativo
+        </label>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn--primary" type="submit">Salvar</button>
+        <button class="btn btn--light" type="button" data-close-modal>Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-backdrop" data-modal="edit-user-modal" aria-hidden="true">
+  <div class="modal-card">
+    <div class="modal-card__header">
+      <h2>Editar usuario interno</h2>
+      <button type="button" class="modal-close" data-close-modal>&times;</button>
+    </div>
+    <form method="post" action="" class="form-grid modal-form" data-edit-form>
+      {% csrf_token %}
+      <div class="form-field">
+        <label for="edit_username">Username</label>
+        <input id="edit_username" name="username" required maxlength="150" />
+      </div>
+      <div class="form-field">
+        <label for="edit_email">Email</label>
+        <input id="edit_email" type="email" name="email" />
+      </div>
+      <div class="form-field">
+        <label for="edit_first_name">Nome</label>
+        <input id="edit_first_name" name="first_name" maxlength="150" />
+      </div>
+      <div class="form-field">
+        <label for="edit_last_name">Sobrenome</label>
+        <input id="edit_last_name" name="last_name" maxlength="150" />
+      </div>
+      <div class="form-field">
+        <label for="edit_role">Papel</label>
+        <select id="edit_role" name="role" required>
+          {% for value, label in role_choices %}
+            <option value="{{ value }}">{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-field">
+        <label for="edit_password">Nova senha (opcional)</label>
+        <input id="edit_password" type="password" name="password" minlength="8" />
+      </div>
+      <div class="form-field form-field--check">
+        <label>
+          <input type="checkbox" name="is_active" value="on" data-edit-active />
+          Ativo
+        </label>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn--primary" type="submit">Salvar</button>
+        <button class="btn btn--light" type="button" data-close-modal>Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="{% static 'js/dashboard_sidebar.js' %}"></script>
+  <script src="{% static 'js/table_async.js' %}"></script>
+  <script src="{% static 'js/users_modals.js' %}"></script>
+{% endblock %}

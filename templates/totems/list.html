@@ -1,0 +1,83 @@
+﻿{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Totens | PLATAFORMA NR-1{% endblock %}
+
+{% block extra_head %}
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}" />
+{% endblock %}
+
+{% block content %}
+<div class="app-layout">
+  {% include "partials/sidebar.html" with active_menu="totems" can_manage_access=True %}
+
+  <main class="content">
+    <header class="content__header">
+      <div>
+        <h1 class="content__title">Gestao de totens</h1>
+        <p class="content__subtitle">Controle de pontos de coleta da empresa #{{ company_id }}</p>
+      </div>
+      <button class="btn btn--primary" type="button" data-open-modal="create-totem-modal">Novo totem</button>
+    </header>
+
+    {% include "totems/_table_container.html" %}
+  </main>
+</div>
+
+<div class="modal-backdrop" data-modal="create-totem-modal" aria-hidden="true">
+  <div class="modal-card">
+    <div class="modal-card__header">
+      <h2>Criar totem</h2>
+      <button type="button" class="modal-close" data-close-modal>&times;</button>
+    </div>
+    <form method="post" action="{% url 'totems-create' %}" class="form-grid modal-form">
+      {% csrf_token %}
+      <div class="form-field">
+        <label for="create_totem_name">Nome</label>
+        <input id="create_totem_name" name="name" required maxlength="150" />
+      </div>
+      <div class="form-field">
+        <label for="create_totem_location">Localização</label>
+        <input id="create_totem_location" name="location" maxlength="180" />
+      </div>
+      <div class="form-actions">
+        <button class="btn btn--primary" type="submit">Salvar</button>
+        <button class="btn btn--light" type="button" data-close-modal>Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-backdrop" data-modal="edit-totem-modal" aria-hidden="true">
+  <div class="modal-card">
+    <div class="modal-card__header">
+      <h2>Editar totem</h2>
+      <button type="button" class="modal-close" data-close-modal>&times;</button>
+    </div>
+    <form method="post" action="" class="form-grid modal-form" data-edit-totem-form>
+      {% csrf_token %}
+      <div class="form-field">
+        <label for="edit_totem_name">Nome</label>
+        <input id="edit_totem_name" name="name" required maxlength="150" />
+      </div>
+      <div class="form-field">
+        <label for="edit_totem_location">Localização</label>
+        <input id="edit_totem_location" name="location" maxlength="180" />
+      </div>
+      <div class="form-actions">
+        <button class="btn btn--primary" type="submit">Salvar</button>
+        <button class="btn btn--light" type="button" data-close-modal>Cancelar</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="{% static 'js/dashboard_sidebar.js' %}"></script>
+  <script src="{% static 'js/table_async.js' %}"></script>
+  <script src="{% static 'js/totems_modals.js' %}"></script>
+{% endblock %}

@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ campaign.title }} | PLATAFORMA NR-1{% endblock %}
+
+{% block extra_head %}
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}" />
+  <style>
+    .finish-step {
+      max-width: 980px;
+      margin: 60px auto 80px;
+      width: 100%;
+      padding: 0 16px;
+      display: grid;
+      justify-items: center;
+      gap: 18px;
+    }
+    .finish-header {
+      width: min(640px, 100%);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #475569;
+      font-weight: 700;
+    }
+    .finish-progress {
+      width: min(640px, 100%);
+      height: 10px;
+      border-radius: 999px;
+      background: #e2e8f0;
+      border: 1px solid #cbd5e1;
+      overflow: hidden;
+      box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.08);
+    }
+    .finish-progress span {
+      display: block;
+      height: 100%;
+      width: 100%;
+      background: linear-gradient(90deg, #0f172a, #1e293b);
+      border-radius: inherit;
+    }
+    .finish-card {
+      width: min(360px, 100%);
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 22px 18px;
+      text-align: center;
+      box-shadow: 0 16px 34px rgba(15, 23, 42, 0.08);
+    }
+    .finish-card__icon {
+      width: 54px;
+      height: 54px;
+      margin: 0 auto 10px;
+      border-radius: 999px;
+      background: #ecfdf3;
+      border: 2px solid #22c55e;
+      color: #16a34a;
+      display: grid;
+      place-items: center;
+    }
+    .finish-card__title {
+      margin: 0 0 6px;
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #0f172a;
+    }
+    .finish-card__text {
+      margin: 0;
+      font-size: 0.9rem;
+      color: #64748b;
+      line-height: 1.5;
+    }
+    .finish-card__hint {
+      margin-top: 10px;
+      font-size: 0.85rem;
+      color: #94a3b8;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<main class="finish-step">
+  <div class="finish-header">
+    <span>{{ section_title|default:"Finalizacao" }}</span>
+    <span>Etapa 10 de 10</span>
+  </div>
+  <div class="finish-progress" role="presentation">
+    <span></span>
+  </div>
+  <section class="finish-card">
+    <div class="finish-card__icon" aria-hidden="true">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+        <path d="M20 7L10 17l-4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+    </div>
+    <h1 class="finish-card__title">Avaliacao Concluida!</h1>
+    <p class="finish-card__text">
+      Obrigado por sua participacao. Sua avaliacao foi registrada com sucesso e o relatorio sera
+      disponibilizado para sua empresa.
+    </p>
+    <p class="finish-card__hint">Voce pode fechar esta pagina.</p>
+  </section>
+</main>
+{% endblock %}

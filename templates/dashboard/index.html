@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Dashboard | PLATAFORMA NR-1{% endblock %}
+
+{% block extra_head %}
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="app-layout">
+  {% include "partials/sidebar.html" with active_menu="dashboard" %}
+
+  <main class="content">
+    <header class="content__header">
+      <div>
+        <h1 class="content__title">Bem-vindo, {{ username }}</h1>
+        <!-- <p class="content__subtitle">Visao geral da operacao da empresa #{{ company_id }}</p> -->
+      </div>
+      <form method="post" action="{% url 'logout' %}" style="margin: 0;">
+        {% csrf_token %}
+        <button class="btn btn--primary" type="submit">Sair</button>
+      </form>
+    </header>
+
+    <!-- <section class="hero">
+      <h2 class="hero__title">Painel executivo</h2>
+      <p class="hero__text">Acompanhe sinais de risco e mantenha o plano de acao da empresa sempre atualizado.</p>
+    </section> -->
+
+    {% include "dashboard/_data_container.html" %}
+  </main>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="{% static 'js/dashboard_sidebar.js' %}"></script>
+  <script src="{% static 'js/dashboard_charts.js' %}"></script>
+  <script src="{% static 'js/dashboard_filters.js' %}"></script>
+{% endblock %}

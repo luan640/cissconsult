@@ -1,0 +1,288 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ campaign.title }} | PLATAFORMA NR-1{% endblock %}
+
+{% block extra_head %}
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}" />
+  <style>
+    .campaign-step {
+      max-width: 980px;
+      margin: 32px auto 60px;
+      width: 100%;
+      padding: 0 16px;
+    }
+    .campaign-step__header {
+      text-align: center;
+      display: grid;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .campaign-step__icon {
+      width: 34px;
+      height: 34px;
+      margin: 0 auto;
+      border-radius: 12px;
+      background: #e6efff;
+      color: #2563eb;
+      display: grid;
+      place-items: center;
+      box-shadow: 0 8px 18px rgba(37, 99, 235, 0.18);
+    }
+    .campaign-step__title {
+      margin: 0;
+      font-size: clamp(1.55rem, 2vw + 1rem, 2.2rem);
+      line-height: 1.2;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+    .campaign-step__badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 12px;
+      border-radius: 999px;
+      background: #dbeafe;
+      color: #1d4ed8;
+      font-weight: 700;
+      font-size: 0.82rem;
+      width: fit-content;
+      margin: 0 auto;
+    }
+    .campaign-step__lead {
+      margin: 0 auto;
+      max-width: 620px;
+      color: var(--slate-600);
+      font-size: 0.98rem;
+    }
+    .campaign-step__progress {
+      height: 10px;
+      border-radius: 999px;
+      background: #e2e8f0;
+      border: 1px solid #cbd5e1;
+      overflow: hidden;
+      max-width: 560px;
+      margin: 12px auto 0;
+      box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.08);
+    }
+    .campaign-step__progress span {
+      display: block;
+      height: 100%;
+      width: 0;
+      background: linear-gradient(90deg, #0f172a, #1e293b);
+      border-radius: inherit;
+    }
+    .campaign-step__card {
+      padding: 22px 22px 18px;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+    .campaign-step__company {
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .campaign-step__company p {
+      margin: 4px 0 0;
+      color: var(--slate-600);
+    }
+    .question-section {
+      display: grid;
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+    .question-section__title {
+      margin: 0;
+      font-size: 1rem;
+      font-weight: 800;
+      color: #1d4ed8;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .question-section__subtitle {
+      margin: 0;
+      color: #64748b;
+      font-size: 0.88rem;
+    }
+    .question-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 12px 14px;
+      background: #f8fbff;
+      display: grid;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .question-card__title-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+    .question-card__title {
+      margin: 0;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .question-card__hint {
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      border: 1px solid #bfdbfe;
+      color: #2563eb;
+      display: grid;
+      place-items: center;
+      font-size: 0.72rem;
+      background: #eff6ff;
+    }
+    .question-card__options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 0.82rem;
+      color: #475569;
+    }
+    .question-option {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .question-option input {
+      accent-color: #2563eb;
+    }
+    .question-actions {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 10px;
+    }
+    .btn--ghost {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      color: #0f172a;
+    }
+    @media (max-width: 720px) {
+      .campaign-step__card {
+        padding: 18px 16px;
+      }
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<main class="campaign-step">
+  <header class="campaign-step__header">
+    <div class="campaign-step__icon" aria-hidden="true">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+        <path d="M12 12c2.76 0 5-2.3 5-5.1C17 4.1 14.76 2 12 2S7 4.1 7 6.9C7 9.7 9.24 12 12 12Z" stroke="currentColor" stroke-width="1.6" />
+        <path d="M4 21c0-4.2 3.6-7.6 8-7.6s8 3.4 8 7.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+      </svg>
+    </div>
+    <h1 class="campaign-step__title">AVALIA NR01 | Ferramenta de Indicador de Estresse</h1>
+    <div class="campaign-step__badge">Etapa 3 de 10</div>
+    <p class="campaign-step__lead">
+      Este questionario e totalmente anonimo e contem perguntas sobre suas condicoes de trabalho.
+      Sua opiniao e essencial para melhorar o ambiente de trabalho.
+    </p>
+    <div class="campaign-step__progress" role="presentation" style="height: 10px; background: #e2e8f0; border: 1px solid #cbd5e1;">
+      <span style="display: block; height: 100%; width: 30%; background: #0f172a;"></span>
+    </div>
+  </header>
+
+  <section class="card campaign-step__card">
+    <div class="campaign-step__company">
+      <strong>{{ company.name }}</strong>
+      <p>CNPJ: {{ company.cnpj|default:"-" }}</p>
+    </div>
+
+    <div class="question-section">
+      <h2 class="question-section__title">
+        <span aria-hidden="true">📊</span> {{ section_title|default:"Controle" }}
+      </h2>
+      <p class="question-section__subtitle">
+        {{ section_description|default:"Grau de autonomia do trabalhador sobre como e quando realizar suas tarefas." }}
+      </p>
+    </div>
+
+    <form id="step-form" method="post" action="{% url 'campaigns-access' campaign.uuid %}">
+      {% csrf_token %}
+      <input type="hidden" name="step" value="3" />
+      {% if question_items %}
+        {% for question in question_items %}
+        <div class="question-card">
+          <div class="question-card__title-row">
+            <p class="question-card__title">{{ forloop.counter }}. {{ question.text }}</p>
+            <span class="question-card__hint" aria-hidden="true">i</span>
+          </div>
+          <div class="question-card__options">
+            {% for option in scale_options %}
+              <label class="question-option">
+                <input type="radio" name="q{{ forloop.parentloop.counter }}" value="{{ option }}"{% if question.answer == option %} checked{% endif %} />
+                <span>{{ option }}</span>
+              </label>
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
+      {% else %}
+        {% for question in questions %}
+          <div class="question-card">
+            <div class="question-card__title-row">
+              <p class="question-card__title">{{ forloop.counter }}. {{ question }}</p>
+              <span class="question-card__hint" aria-hidden="true">i</span>
+            </div>
+            <div class="question-card__options">
+              {% for option in scale_options %}
+                <label class="question-option">
+                  <input type="radio" name="q{{ forloop.parentloop.counter }}" value="{{ option }}" />
+                  <span>{{ option }}</span>
+                </label>
+              {% endfor %}
+            </div>
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      <div class="question-actions">
+        <a class="btn btn--ghost" href="{% url 'campaigns-access' campaign.uuid %}?step=2">← Voltar</a>
+        <button class="btn btn--primary" type="submit" data-next-step>Proxima →</button>
+      </div>
+    </form>
+  </section>
+</main>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script>
+    (function () {
+      const form = document.getElementById('step-form');
+      const nextLink = form ? form.querySelector('[data-next-step]') : null;
+      if (!form || !nextLink) return;
+
+      form.addEventListener('submit', function (event) {
+        const groups = Array.from(form.querySelectorAll('.question-card'));
+        let firstInvalid = null;
+        for (const group of groups) {
+          const radios = group.querySelectorAll('input[type="radio"]');
+          const checked = Array.from(radios).some((radio) => radio.checked);
+          if (!checked && !firstInvalid) {
+            firstInvalid = group;
+          }
+        }
+
+        if (firstInvalid) {
+          event.preventDefault();
+          firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          firstInvalid.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.25)';
+          setTimeout(() => {
+            firstInvalid.style.boxShadow = '';
+          }, 1200);
+          alert('Responda todas as perguntas para continuar.');
+        }
+      });
+    })();
+  </script>
+{% endblock %}

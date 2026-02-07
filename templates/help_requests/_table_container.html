@@ -1,0 +1,58 @@
+﻿<div id="help-requests-table-container" data-table-container>
+  {% if messages %}
+    <section class="stack-gap">
+      {% for message in messages %}
+        <div class="notice{% if message.tags %} notice--{{ message.tags }}{% endif %}">{{ message }}</div>
+      {% endfor %}
+    </section>
+  {% endif %}
+
+  <section class="card card--table">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Data/Hora</th>
+          <th>Última atualização</th>
+          <th>Nome</th>
+          <th>Setor</th>
+          <th>Totem</th>
+          <th>Status</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for help_request in help_requests %}
+          <tr>
+            <td>{{ help_request.created_at|date:"d/m/Y H:i" }}</td>
+            <td>{{ help_request.updated_at|date:"d/m/Y H:i" }}</td>
+            <td>{{ help_request.requester_name }}</td>
+            <td>{{ help_request.department_name }}</td>
+            <td>{{ help_request.totem.name|default:"-" }}</td>
+            <td>
+              <span class="status-badge status-badge--help-{{ help_request.status|lower }}">
+                {{ help_request.get_status_display }}
+              </span>
+            </td>
+            <td class="table__actions">
+              <button class="icon-btn" type="button" data-open-help-request-history data-history-url="{% url 'help-requests-history' help_request.id %}" title="Ver historico" aria-label="Ver historico">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 5a9 9 0 1 0 9 9h-2a7 7 0 1 1-7-7V5Zm1 1v6h5v2h-7V6h2Z" fill="currentColor"/>
+                </svg>
+              </button>
+              <button class="icon-btn" type="button" data-open-edit-help-request data-update-url="{% url 'help-requests-update' help_request.id %}" data-status="{{ help_request.status }}" title="Atualizar" aria-label="Atualizar">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M4 17.25V20h2.75l8.11-8.11-2.75-2.75L4 17.25Zm13.71-8.04a1 1 0 0 0 0-1.42l-1.5-1.5a1 1 0 0 0-1.42 0l-1.17 1.17 2.75 2.75 1.34-1.3Z" fill="currentColor"/>
+                </svg>
+              </button>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="7">Nenhum pedido de ajuda registrado.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% include "partials/_table_pagination.html" %}
+</div>

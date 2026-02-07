@@ -1,0 +1,112 @@
+<div id="dashboard-data-container" data-table-container>
+  <section class="grid">
+    <article class="card card--full">
+      <p class="card__label">Filtro de período</p>
+      <form method="get" class="period-filter">
+        <div class="filter-field">
+          <label for="start">Início</label>
+          <input id="start" type="date" name="start" value="{{ period_start }}" />
+        </div>
+        <div class="filter-field">
+          <label for="end">Fim</label>
+          <input id="end" type="date" name="end" value="{{ period_end }}" />
+        </div>
+        <div class="filter-field">
+          <label for="totem">Totem</label>
+          <select id="totem" name="totem">
+            <option value="">Todos</option>
+            {% for totem in active_totems %}
+              <option value="{{ totem.slug }}"{% if selected_totem_slug == totem.slug %} selected{% endif %}>
+                {{ totem.name }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <button class="btn btn--primary" type="submit">Filtrar</button>
+      </form>
+    </article>
+
+    <article class="card card--risk">
+      <div class="card__label-row">
+        <p class="card__label">Risco psicossocial</p>
+        <span class="tooltip">
+          ?
+          <span class="tooltip__text">
+            Regra atual: conta total de denuncias no período filtrado.
+            Menor que 2 = Baixo; de 2 a 4 = Medio; 5 ou mais = Alto.
+          </span>
+        </span>
+      </div>
+      <p class="card__value">{{ metrics.risk_level }}</p>
+    </article>
+    <article class="card">
+      <p class="card__label">Registros de humor (período)</p>
+      <p class="card__value">{{ metrics.mood_count_period }}</p>
+    </article>
+    <article class="card">
+      <p class="card__label">Denuncias (período)</p>
+      <p class="card__value">{{ metrics.complaint_count_period }}</p>
+    </article>
+    <article class="card">
+      <p class="card__label">Cliques em "Preciso de ajuda agora" (período)</p>
+      <p class="card__value">{{ metrics.help_request_count_period }}</p>
+    </article>
+    <article class="card">
+      <p class="card__label">Sentimento predominante (período)</p>
+      <p class="card__value">{{ metrics.top_sentiment }}</p>
+    </article>
+    <article class="card">
+      <p class="card__label">Sentimento predominante (geral)</p>
+      <p class="card__value">{{ metrics.top_sentiment_overall }}</p>
+    </article>
+
+    <article class="card card--chart card--full">
+      <p class="card__label">Linha do tempo (humor x denúncias)</p>
+      <canvas id="chartTimeline"></canvas>
+    </article>
+
+    <article class="card card--chart">
+      <p class="card__label">Distribuição de humor</p>
+      <canvas id="chartMoodDistribution"></canvas>
+    </article>
+
+    <article class="card card--chart">
+      <p class="card__label">Frequência de uso por dia da semana</p>
+      <canvas id="chartWeekday"></canvas>
+    </article>
+
+    <article class="card card--chart">
+      <div class="card__label-row">
+        <p class="card__label">Comparativo entre períodos</p>
+        <span class="tooltip">
+          ?
+          <span class="tooltip__text">
+            Período atual = intervalo filtrado (início até fim). Período anterior = janela imediatamente anterior, com a mesma quantidade de dias.
+          </span>
+        </span>
+      </div>
+      <canvas id="chartPeriodComparison"></canvas>
+    </article>
+
+    <article class="card card--chart card--span2">
+      <p class="card__label">Registros por totem</p>
+      <canvas id="chartTotemUsage"></canvas>
+    </article>
+
+    <article class="card card--chart">
+      <p class="card__label">Distribuição de humor por setor</p>
+      <canvas id="chartMoodByDepartment"></canvas>
+    </article>
+
+    <article class="card card--chart">
+      <p class="card__label">Denúncia por setor</p>
+      <canvas id="chartComplaintByDepartment"></canvas>
+    </article>
+
+    <article class="card card--chart">
+      <p class="card__label">Denúncia por tipo</p>
+      <canvas id="chartComplaintByType"></canvas>
+    </article>
+  </section>
+  {{ chart_data|json_script:"dashboard-chart-data" }}
+</div>

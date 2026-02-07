@@ -1,0 +1,97 @@
+1.	Identificação dos riscos psicossociais
+✔️ Registro de humor, reações e indicadores
+	2.	Monitoramento contínuo
+✔️ Totem + dashboard + histórico
+	3.	Registro e evidência documental
+✔️ Relatórios em PDF automatizados
+	4.	Canal de denúncia
+✔️ Estruturado, anônimo e rastreável
+
+
+Sistema interno:
+
+📊 1. Relatório de Clima Psicossocial (gerencial)
+	•	Frequência de uso do totem
+	•	Distribuição de humor (feliz, neutro, estressado, irritado etc.)
+	•	Evolução semanal / mensal
+	•	Comparativo entre períodos
+
+📌 Uso: diretoria, RH, SESMT, auditorias.
+
+⸻
+
+⚠️ 2. Relatório de Risco Psicossocial (NR-1)
+	•	Tendências de estresse, irritação e tristeza
+	•	Setores / turnos com maior risco (sem identificar pessoas)
+	•	Alertas automáticos quando índices ultrapassam limites seguros
+
+📌 Uso: PGR, GRO, inspeção do trabalho.
+
+⸻
+
+📢 3. Relatório de Canal de Denúncia
+	•	Número de denúncias por período
+	•	Tipologia:
+	•	Assédio moral
+	•	Assédio sexual
+	•	Sobrecarga
+	•	Violência psicológica
+	•	Status:
+	•	Recebida
+	•	Em apuração
+	•	Encerrada
+
+📌 Uso: compliance, jurídico, controladorias, licitação pública.
+
+⸻
+
+🧠 4. Relatório de Ações Psicossociais
+	•	Quantas pessoas buscaram ajuda
+	•	Quantos acessaram contatos de apoio
+	•	Quantos clicaram em “preciso de ajuda agora”
+	•	Indicadores de adesão às ações da empresa
+
+📌 Uso: prova de cuidado institucional.
+
+⸻
+
+🧾 5. Relatório para Auditoria / Fiscalização
+
+Relatório em PDF automático, com:
+	•	Identificação da instituição
+	•	Período analisado
+	•	Metodologia
+	•	Indicadores consolidados
+	•	Declaração de anonimato
+	•	Assinatura técnica (psicólogo responsável)
+
+📌 Esse relatório é ouro para licitações.
+
+⸻
+
+3️⃣ Funcionalidades inteligentes que elevam o nível da plataforma
+
+🔔 Alertas automáticos
+	•	E-mail para RH / SESMT quando:
+	•	Pico de estresse
+	•	Aumento abrupto de denúncias
+	•	Uso frequente do “preciso de ajuda agora”
+
+⸻
+
+🗂️ Dashboard interno (web)
+	•	Acesso restrito (login)
+	•	Gráficos simples:
+	•	Termômetro psicossocial
+	•	Linha do tempo
+	•	Mapa de risco institucional
+
+⸻
+
+📅 Relatórios agendados
+	•	Envio automático:
+	•	Mensal para RH
+	•	Trimestral para diretoria
+	•	Anual para auditoria / fiscalização
+
+

@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Outro relatorio | PLATAFORMA NR-1{% endblock %}
+
+{% block extra_head %}
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}" />
+  <style>
+    .report-doc {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 70px 70px 38px;
+    }
+    .report-doc__header {
+      display: grid;
+      justify-items: center;
+      gap: 10px;
+      margin-bottom: 22px;
+      text-align: center;
+    }
+    .report-doc__title-row {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      width: 100%;
+    }
+    .report-doc__logo {
+      width: 56px;
+      height: 56px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+    .report-doc__title {
+      margin: 0;
+      font-size: 1.55rem;
+      color: #0f172a;
+      text-align: center;
+    }
+    .report-doc__meta {
+      margin: 6px 0 0;
+      color: #475569;
+      font-size: 0.92rem;
+    }
+    .report-section {
+      padding: 10px 0 14px;
+      margin-bottom: 10px;
+    }
+    .report-section h2 {
+      margin: 0 0 10px;
+      font-size: 1.02rem;
+      color: #0f172a;
+    }
+    .report-section p {
+      margin: 0 0 8px;
+      line-height: 1.5;
+      color: #1e293b;
+      text-align: justify;
+      text-indent: 1.6em;
+    }
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .metric-card {
+      border: 1px solid #dbeafe;
+      border-radius: 8px;
+      padding: 10px;
+      background: #f8fbff;
+      text-align: center;
+    }
+    .metric-label {
+      font-size: 0.82rem;
+      color: #475569;
+    }
+    .metric-value {
+      display: block;
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: #0f172a;
+      margin-top: 2px;
+    }
+    .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+    }
+    .summary-table th,
+    .summary-table td {
+      border: 1px solid #e2e8f0;
+      padding: 8px;
+      text-align: left;
+      font-size: 0.9rem;
+    }
+    .summary-table th {
+      background: #f1f5f9;
+      color: #0f172a;
+    }
+    @media print {
+      @page {
+        size: A4;
+        margin: 24mm 12mm 14mm;
+      }
+      .report-actions {
+        display: none !important;
+      }
+      .report-doc {
+        width: 166mm;
+        max-width: 166mm;
+        margin: 0 auto;
+        padding: 0;
+      }
+      body {
+        background: #fff !important;
+      }
+      .report-section { break-inside: avoid; }
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<main class="report-doc">
+  <header class="report-doc__header">
+    <div>
+      <div class="report-doc__title-row">
+        <img class="report-doc__logo" src="{% static 'img/logo_vetorizada.png' %}" alt="Logo" />
+        <h1 class="report-doc__title">OUTRO RELATORIO</h1>
+      </div>
+      <p class="report-doc__meta">
+        Periodo analisado: {{ report.period_start|date:"d/m/Y" }} a {{ report.period_end|date:"d/m/Y" }} |
+        Gerado em: {% if report.generated_at %}{{ report.generated_at|date:"d/m/Y H:i" }}{% else %}-{% endif %}
+      </p>
+    </div>
+    <div class="report-actions">
+      <button class="btn btn--primary" type="button" onclick="window.print()">Imprimir / Salvar PDF</button>
+    </div>
+  </header>
+
+  <section class="report-section">
+    <h2>1. Resumo Executivo</h2>
+    <p>
+      Este modelo apresenta uma leitura objetiva dos registros coletivos do periodo, com foco em volume
+      de ocorrencias e distribuicao geral dos principais indicadores.
+    </p>
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <span class="metric-label">Registros de humor</span>
+        <span class="metric-value">{{ metrics.mood_count }}</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Denuncias</span>
+        <span class="metric-value">{{ metrics.complaint_count }}</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label">Pedidos de ajuda</span>
+        <span class="metric-value">{{ metrics.help_count }}</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="report-section">
+    <h2>2. Sentimento Predominante</h2>
+    <p>Sentimento com maior volume no periodo: <strong>{{ metrics.top_sentiment }}</strong>.</p>
+  </section>
+
+  <section class="report-section">
+    <h2>3. Distribuicao de Denuncias por Status</h2>
+    <table class="summary-table">
+      <thead>
+        <tr>
+          <th>Status</th>
+          <th>Quantidade</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in metrics.complaint_status %}
+          <tr>
+            <td>{{ item.complaint_status }}</td>
+            <td>{{ item.total }}</td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="2">Sem registros no periodo.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  <section class="report-section">
+    <h2>4. Encaminhamento</h2>
+    <p>
+      Recomenda-se revisao do plano de acao com base nos maiores volumes observados e acompanhamento
+      continuo para validacao de tendencia nos proximos periodos.
+    </p>
+  </section>
+</main>
+{% endblock %}
+
+{% block extra_scripts %}
+  {% if auto_print %}
+    <script>
+      window.addEventListener('load', function () {
+        window.print();
+      });
+    </script>
+  {% endif %}
+{% endblock %}

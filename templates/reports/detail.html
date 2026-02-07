@@ -1,0 +1,403 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Relatorio Tecnico | PLATAFORMA NR-1{% endblock %}
+
+{% block extra_head %}
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .report-doc {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 70px 70px 38px;
+    }
+    .report-doc__header {
+      display: grid;
+      justify-items: center;
+      gap: 10px;
+      margin-bottom: 22px;
+      text-align: center;
+    }
+    .report-doc__title-row {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      width: 100%;
+    }
+    .report-doc__logo {
+      width: 56px;
+      height: 56px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+    .report-doc__title {
+      margin: 0;
+      font-size: 1.55rem;
+      color: #0f172a;
+      text-align: center;
+    }
+    .report-doc__meta {
+      margin: 6px 0 0;
+      color: #475569;
+      font-size: 0.92rem;
+    }
+    .report-section {
+      padding: 10px 0 14px;
+      margin-bottom: 10px;
+    }
+    .report-section h2 {
+      margin: 0 0 10px;
+      font-size: 1.02rem;
+      color: #0f172a;
+    }
+    .report-section p {
+      margin: 0 0 8px;
+      line-height: 1.5;
+      color: #1e293b;
+      text-align: justify;
+      text-indent: 1.6em;
+    }
+    .report-list {
+      margin: 0;
+      padding-left: 18px;
+      display: grid;
+      gap: 4px;
+    }
+    .report-edit {
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 12px;
+      margin-top: 14px;
+      background: #f8fafc;
+    }
+    .report-edit h3 {
+      margin: 0 0 8px;
+      font-size: 0.95rem;
+      color: #0f172a;
+    }
+    .report-edit label {
+      display: block;
+      font-size: 0.82rem;
+      color: #334155;
+      margin: 8px 0 4px;
+      font-weight: 700;
+    }
+    .field-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .field-header label {
+      margin: 0;
+    }
+    .report-edit textarea {
+      width: 100%;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      padding: 8px 10px;
+      font: inherit;
+      resize: vertical;
+      min-height: 90px;
+    }
+    .report-edit .form-actions {
+      margin-top: 10px;
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    .report-edit__feedback {
+      margin-bottom: 8px;
+    }
+    .is-loading {
+      opacity: 0.7;
+      pointer-events: none;
+    }
+    .chart-wrap { margin: 10px 0 4px; }
+    .chart-wrap canvas { width: 100% !important; height: 280px !important; }
+    .signature {
+      margin-top: 8px;
+      line-height: 1.5;
+      text-align: center;
+      text-indent: 0;
+    }
+    @media print {
+      @page {
+        size: A4;
+        margin: 24mm 12mm 14mm;
+      }
+      .report-actions {
+        display: none !important;
+      }
+      .report-edit {
+        display: none !important;
+      }
+      .report-doc {
+        width: 166mm;
+        max-width: 166mm;
+        margin: 0 auto;
+        padding: 0;
+      }
+      body {
+        background: #fff !important;
+      }
+      .report-section { break-inside: avoid; }
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<main class="report-doc">
+  <header class="report-doc__header">
+    <div>
+      <div class="report-doc__title-row">
+        <img class="report-doc__logo" src="{% static 'img/logo_vetorizada.png' %}" alt="Logo" />
+        <h1 class="report-doc__title">RELATORIO TECNICO DE SAUDE MENTAL ORGANIZACIONAL</h1>
+      </div>
+      <p class="report-doc__meta">
+        Periodo analisado: {{ report.period_start|date:"d/m/Y" }} a {{ report.period_end|date:"d/m/Y" }} |
+        Gerado em: {% if report.generated_at %}{{ report.generated_at|date:"d/m/Y H:i" }}{% else %}-{% endif %}
+      </p>
+    </div>
+    <div class="report-actions">
+      <button class="btn btn--primary" type="button" onclick="window.print()">Imprimir / Salvar PDF</button>
+    </div>
+  </header>
+
+  {% if messages %}
+    <section class="report-actions">
+      {% for message in messages %}
+        <div class="notice{% if message.tags %} notice--{{ message.tags }}{% endif %}">{{ message }}</div>
+      {% endfor %}
+    </section>
+  {% endif %}
+
+  <section class="report-section">
+    <h2>1. Apresentacao Tecnica</h2>
+    <p>
+      Este relatorio apresenta a consolidacao tecnica e estatistica dos registros coletados por meio do
+      Sistema Institucional de Escuta e Prevencao em Saude Mental, com finalidade preventiva, coletiva
+      e organizacional, em conformidade com a Norma Regulamentadora n 01 (NR-01), integrando o
+      Gerenciamento de Riscos Ocupacionais (GRO).
+    </p>
+  </section>
+
+  <section class="report-section">
+    <h2>2. Metodologia Utilizada</h2>
+    <p>
+      Os dados foram coletados de forma anonima e voluntaria por colaboradores, por meio de interface
+      digital em tablet/totem. As informacoes foram analisadas exclusivamente em nivel coletivo, sem
+      qualquer possibilidade de identificacao individual, respeitando os principios eticos da Psicologia e a
+      legislacao vigente.
+    </p>
+  </section>
+
+  <section class="report-section">
+    <h2>3. Indicadores de Humor Organizacional</h2>
+    <div class="chart-wrap"><canvas id="moodBarChart"></canvas></div>
+    <p>{{ report.mood_analysis }}</p>
+  </section>
+
+  <section class="report-section">
+    <h2>4. Analise do Canal de Denuncia Anonima</h2>
+    <div class="chart-wrap"><canvas id="complaintBarChart"></canvas></div>
+    <p>{{ report.complaint_analysis }}</p>
+  </section>
+
+  <section class="report-section">
+    <h2>5. Recomendacoes Tecnicas</h2>
+    <ul class="report-list">
+      {% for item in recommendations %}
+        <li>{{ item }}</li>
+      {% empty %}
+        <li>Nenhuma recomendacao preenchida.</li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  <section class="report-section">
+    <h2>6. Responsabilidade Tecnica</h2>
+    <p>Relatorio elaborado sob responsabilidade tecnica de:</p>
+    <p class="signature">
+      Luis Taumaturgo de Souza Filho
+      <br />
+    </p>
+    <p>Psicologo - CRP 11/17405</p>
+    <p>Dados apresentados para fins ilustrativos e demonstrativos.</p>
+  </section>
+
+  <section class="report-edit">
+    <h3>Edicao do conteudo gerado por IA</h3>
+    <form method="post" action="{% url 'reports-detail' report.id %}">
+      {% csrf_token %}
+      <div id="report-ai-feedback" class="report-edit__feedback" aria-live="polite"></div>
+      <div class="field-header">
+        <label for="edit_mood_analysis">Secao 3 - Humor organizacional</label>
+        <button class="btn btn--light btn--sm" type="button" data-ai-action="generate_mood_analysis" data-target="edit_mood_analysis">Gerar com IA</button>
+      </div>
+      <textarea id="edit_mood_analysis" name="mood_analysis">{{ report.mood_analysis }}</textarea>
+
+      <div class="field-header">
+        <label for="edit_complaint_analysis">Secao 4 - Canal de denuncia anonima</label>
+        <button class="btn btn--light btn--sm" type="button" data-ai-action="generate_complaint_analysis" data-target="edit_complaint_analysis">Gerar com IA</button>
+      </div>
+      <textarea id="edit_complaint_analysis" name="complaint_analysis">{{ report.complaint_analysis }}</textarea>
+
+      <div class="field-header">
+        <label for="edit_technical_recommendations">Secao 5 - Recomendacoes tecnicas (uma por linha)</label>
+        <button class="btn btn--light btn--sm" type="button" data-ai-action="generate_recommendations" data-target="edit_technical_recommendations">Gerar com IA</button>
+      </div>
+      <textarea id="edit_technical_recommendations" name="technical_recommendations">{{ report.technical_recommendations }}</textarea>
+
+      <div class="form-actions">
+        <button class="btn btn--primary" type="submit">Salvar conteudo</button>
+      </div>
+    </form>
+  </section>
+</main>
+{{ metrics.mood_distribution|json_script:"report-mood-distribution" }}
+{{ metrics.complaint_distribution|json_script:"report-complaint-distribution" }}
+{% endblock %}
+
+{% block extra_scripts %}
+  <script>
+    (function () {
+      const parseData = (id) => {
+        const node = document.getElementById(id);
+        if (!node) return [];
+        try { return JSON.parse(node.textContent || '[]'); } catch (_) { return []; }
+      };
+      const moodData = parseData('report-mood-distribution');
+      const complaintData = parseData('report-complaint-distribution');
+      const valueLabelPlugin = {
+        id: 'valueLabelPlugin',
+        afterDatasetsDraw(chart) {
+          const { ctx } = chart;
+          ctx.save();
+          ctx.fillStyle = '#0f172a';
+          ctx.font = '700 11px Manrope, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'bottom';
+          const meta = chart.getDatasetMeta(0);
+          meta.data.forEach((bar, index) => {
+            const value = chart.data.datasets[0].data[index];
+            ctx.fillText(`${value}%`, bar.x, bar.y - 4);
+          });
+          ctx.restore();
+        },
+      };
+
+      const buildBarChart = (canvasId, data, color) => {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas || !window.Chart || !data.length) return;
+        new Chart(canvas, {
+          type: 'bar',
+          data: {
+            labels: data.map((item) => item.label),
+            datasets: [{
+              data: data.map((item) => item.percent),
+              backgroundColor: color,
+              borderRadius: 6,
+            }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => `${ctx.parsed.y}%`,
+                },
+              },
+            },
+            scales: {
+              x: {
+                ticks: { display: true, color: '#0f172a', font: { weight: 700 } },
+              },
+              y: {
+                beginAtZero: true,
+                max: 100,
+                ticks: { callback: (value) => `${value}%` },
+              },
+            },
+          },
+          plugins: [valueLabelPlugin],
+        });
+      };
+
+      buildBarChart('moodBarChart', moodData, '#0f56a8');
+      buildBarChart('complaintBarChart', complaintData, '#1e6b4a');
+
+      const editForm = document.querySelector('.report-edit form');
+      const feedback = document.getElementById('report-ai-feedback');
+      const setFeedback = (message, isError) => {
+        if (!feedback) return;
+        if (!message) {
+          feedback.innerHTML = '';
+          return;
+        }
+        const cssClass = isError ? 'notice--error' : 'notice--success';
+        feedback.innerHTML = `<div class="notice ${cssClass}">${message}</div>`;
+      };
+
+      if (editForm) {
+        const generateButtons = editForm.querySelectorAll('button[data-ai-action]');
+        generateButtons.forEach((button) => {
+          button.addEventListener('click', async () => {
+            const action = button.getAttribute('data-ai-action');
+            const targetId = button.getAttribute('data-target');
+            const textarea = targetId ? document.getElementById(targetId) : null;
+            if (!action || !textarea) return;
+
+            const originalText = button.textContent;
+            setFeedback('', false);
+            button.disabled = true;
+            button.classList.add('is-loading');
+            button.textContent = 'Gerando...';
+            textarea.disabled = true;
+            textarea.classList.add('is-loading');
+
+            try {
+              const formData = new FormData(editForm);
+              formData.set('action', action);
+              const response = await fetch(editForm.action, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin',
+                body: formData,
+              });
+              const payload = await response.json().catch(() => ({}));
+              if (!response.ok || !payload.ok) {
+                throw new Error(payload.message || 'Nao foi possivel gerar com IA.');
+              }
+              textarea.value = payload.value || '';
+              setFeedback(payload.message || 'Conteudo gerado com sucesso.', false);
+            } catch (error) {
+              setFeedback(error.message || 'Erro ao gerar conteudo com IA.', true);
+            } finally {
+              button.disabled = false;
+              button.classList.remove('is-loading');
+              button.textContent = originalText;
+              textarea.disabled = false;
+              textarea.classList.remove('is-loading');
+            }
+          });
+        });
+      }
+    })();
+  </script>
+  {% if auto_print %}
+    <script>
+      window.addEventListener('load', function () {
+        window.print();
+      });
+    </script>
+  {% endif %}
+{% endblock %}

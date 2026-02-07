@@ -1,0 +1,722 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Relatorio | PLATAFORMA NR-1{% endblock %}
+
+{% block extra_head %}
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}" />
+  <style>
+    .report-page {
+      max-width: 980px;
+      margin: 40px auto 60px;
+      padding: 0 16px;
+    }
+    .report-card {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 28px;
+      box-shadow: 0 16px 36px rgba(15, 23, 42, 0.08);
+    }
+    .report-title {
+      text-align: center;
+      margin: 0 0 12px;
+      font-size: 1.3rem;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+    }
+    .report-subtitle {
+      text-align: center;
+      margin: 0 0 10px;
+      color: #475569;
+      font-size: 0.95rem;
+    }
+    .report-section {
+      margin-top: 16px;
+      padding-top: 12px;
+      border-top: 1px solid #e2e8f0;
+      line-height: 1.6;
+      color: #0f172a;
+    }
+    .report-section strong {
+      font-weight: 800;
+    }
+    .report-company {
+      margin-top: 18px;
+      font-size: 0.95rem;
+      color: #334155;
+    }
+  </style>
+  <style media="print">
+    @page {
+      size: A4;
+      margin: 20mm 18mm;
+    }
+    body {
+      background: #fff !important;
+    }
+    .report-page {
+      max-width: none !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    .report-card {
+      box-shadow: none !important;
+      border: 0 !important;
+      padding: 6mm 8mm !important;
+    }
+    .report-section {
+      border-top: 1px solid #dbeafe !important;
+      padding-top: 4mm !important;
+      margin-top: 4mm !important;
+      page-break-before: always;
+      break-before: page;
+    }
+    .report-section.no-break {
+      page-break-before: auto !important;
+      break-before: auto !important;
+    }
+    .report-section:first-of-type {
+      page-break-before: auto;
+      break-before: auto;
+    }
+    .report-graphics-card {
+      page-break-before: always;
+      break-before: page;
+      margin-top: 10mm !important;
+    }
+    .card,
+    .status-card,
+    .finish-card {
+      box-shadow: none !important;
+    }
+    .card,
+    .report-section,
+    table,
+    .report-card,
+    .report-page {
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    thead {
+      display: table-header-group;
+    }
+    tbody {
+      display: table-row-group;
+    }
+    * {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<main class="report-page">
+  <section class="report-card">
+    <div style="display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 8px;">
+      <button type="button" class="btn btn--sm" id="report-save-btn">Salvar</button>
+      <a class="btn btn--primary btn--sm" href="{% url 'campaigns-report-pdf' campaign.uuid %}">Baixar PDF</a>
+    </div>
+    <h1 class="report-title">Analise os dados a seguir e proponha planos de ação</h1>
+
+    <div class="report-section" style="margin-top: 22px;">
+      <div style="display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 1.05rem; color: #0f172a;">
+        <span style="width: 26px; height: 26px; border-radius: 999px; background: #1d4ed8; color: #ffffff; display: inline-flex; align-items: center; justify-content: center; font-size: 0.85rem;">1</span>
+        <span>RESULTADOS GERAIS</span>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 16px; margin-top: 10px; align-items: stretch;">
+        <div class="card" style="text-align: center; grid-column: 1; grid-row: 1; height: 100%; display: flex; flex-direction: column; justify-content: center;">
+          <p class="card__label">Media geral da empresa</p>
+          <p style="margin: 8px 0 0; font-size: 2rem; font-weight: 800; color: #22c55e;">
+            {{ results.overall_percent }}%
+          </p>
+          <div style="margin-top: 6px; display: inline-flex; gap: 8px; align-items: center; justify-content: center;">
+            <span style="padding: 4px 10px; border-radius: 999px; background: #ecfdf3; color: #16a34a; font-weight: 700; font-size: 0.82rem;">
+              {{ results.overall_avg }} {{ results.overall_label }}
+            </span>
+          </div>
+        </div>
+        <div class="card" style="grid-column: 2; grid-row: 1 / span 2;">
+          <p class="card__label">Media por dominio</p>
+          <div style="margin-top: 10px; display: grid; gap: 10px;">
+            {% for domain in results.domains %}
+              <div>
+                <div style="display: flex; justify-content: space-between; font-size: 0.82rem; font-weight: 700; color: #0f172a;">
+                  <span>{{ domain.label }}</span>
+                  <span>{{ domain.percent }}% | {{ domain.avg }}</span>
+                </div>
+                <div style="height: 12px; border-radius: 999px; background: #e2e8f0; border: 1px solid #cbd5e1; overflow: hidden;">
+                  <span style="display: block; height: 100%; width: {{ domain.percent_css }}%; background: {% if domain.percent >= 75 %}#22c55e{% elif domain.percent >= 40 %}#f59e0b{% else %}#ef4444{% endif %};"></span>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+        <div aria-hidden="true" style="grid-column: 1; grid-row: 2;"></div>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 16px;">
+        <div style="border: 1px solid #fecaca; background: #fff1f2; border-radius: 10px; padding: 10px;">
+          <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #b91c1c; font-size: 0.85rem;">
+            <span style="width: 10px; height: 10px; border-radius: 3px; background: #ef4444;"></span>
+            Zona Vermelha (0% a 39.99%)
+          </div>
+          <p style="margin: 6px 0 0; font-size: 0.82rem; color: #7f1d1d;">Risco elevado: acao corretiva imediata</p>
+        </div>
+        <div style="border: 1px solid #fde68a; background: #fffbeb; border-radius: 10px; padding: 10px;">
+          <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #a16207; font-size: 0.85rem;">
+            <span style="width: 10px; height: 10px; border-radius: 3px; background: #f59e0b;"></span>
+            Zona Amarela (40% a 74.99%)
+          </div>
+          <p style="margin: 6px 0 0; font-size: 0.82rem; color: #92400e;">ATENÇÃO: possivel risco psicossocial; revisar praticas.</p>
+        </div>
+        <div style="border: 1px solid #bbf7d0; background: #f0fdf4; border-radius: 10px; padding: 10px;">
+          <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; color: #166534; font-size: 0.85rem;">
+            <span style="width: 10px; height: 10px; border-radius: 3px; background: #22c55e;"></span>
+            Zona Verde (75% a 100%)
+          </div>
+          <p style="margin: 6px 0 0; font-size: 0.82rem; color: #166534;">Boa percepcao: manutencao recomendada.</p>
+        </div>
+      </div>
+      <div class="card" style="margin-top: 16px; text-align: center;">
+        <p class="card__label">Amostra de Respostas</p>
+        <p style="margin: 6px 0 0; color: #64748b; font-size: 0.88rem;">
+          {{ responses_count }} de {{ total_workers }} funcionarios responderam
+        </p>
+        <p style="margin: 8px 0 0; font-size: 2rem; font-weight: 800; color: #ef4444;">
+          {{ response_rate }}%
+        </p>
+        <span style="display: inline-flex; align-items: center; justify-content: center; margin-top: 6px; padding: 4px 10px; border-radius: 999px; border: 1px solid #fecaca; color: #b91c1c; font-weight: 700; font-size: 0.82rem;">
+          {{ response_label }}
+        </span>
+      </div>
+      <div style="margin: 18px auto 0; max-width: 860px;">
+        <p style="margin: 0 0 8px; font-weight: 800;">Grafico dos resultados</p>
+        {% for domain in results.domain_details %}
+          <div class="card report-graphics-card" style="margin-bottom: 16px; border: 1px solid #dbeafe;">
+            <div style="font-weight: 800; margin-bottom: 6px;">{{ domain.label|upper }}</div>
+            <div style="display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; margin: 2px 0 8px; font-size: 0.72rem; font-weight: 700; color: #64748b;">
+              <span style="display: inline-flex; align-items: center; gap: 6px;">
+                <span style="width: 8px; height: 8px; border-radius: 2px; background: #22c55e;"></span>
+                NUNCA - POSITIVO | BOM
+              </span>
+              <span style="display: inline-flex; align-items: center; gap: 6px;">
+                <span style="width: 8px; height: 8px; border-radius: 2px; background: #f59e0b;"></span>
+                As vezes - ATENÇÃO
+              </span>
+              <span style="display: inline-flex; align-items: center; gap: 6px;">
+                <span style="width: 8px; height: 8px; border-radius: 2px; background: #ef4444;"></span>
+                SEMPRE - NEGATIVO | RUIM
+              </span>
+            </div>
+            {% if domain.ghes %}
+              <div style="margin-top: 10px; font-size: 0.82rem; font-weight: 700; color: #334155;">Analise por Setor</div>
+              <div style="display: grid; gap: 8px; margin-top: 6px;">
+                {% for ghe in domain.ghes %}
+                  <div>
+                    <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700;">
+                      <span>{{ ghe.name }}</span>
+                      <span>{{ ghe.percent }}% | {{ ghe.avg }}</span>
+                    </div>
+                    <div style="height: 16px; border-radius: 999px; background: #e2e8f0; border: 1px solid #cbd5e1; overflow: hidden;">
+                      <span style="display: block; height: 100%; width: {{ ghe.percent_css }}%; background: {% if ghe.percent >= 75 %}#22c55e{% elif ghe.percent >= 40 %}#f59e0b{% else %}#ef4444{% endif %};"></span>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            {% endif %}
+
+            <div style="margin-top: 12px; font-size: 0.82rem; font-weight: 700; margin-bottom: 6px; color: #334155;">Media Geral</div>
+            <div style="display: flex; justify-content: space-between; font-size: 0.82rem; font-weight: 700; color: #0f172a;">
+              <span>{{ domain.percent }}%</span>
+              <span>{{ domain.avg }}</span>
+            </div>
+            <div style="height: 16px; border-radius: 999px; background: #e2e8f0; border: 1px solid #cbd5e1; overflow: hidden;">
+              <span style="display: block; height: 100%; width: {{ domain.percent_css }}%; background: {% if domain.percent >= 75 %}#22c55e{% elif domain.percent >= 40 %}#f59e0b{% else %}#ef4444{% endif %};"></span>
+            </div>
+
+            {% if domain.questions %}
+              <div style="margin-top: 12px; font-size: 0.82rem; font-weight: 800;">{{ domain.label|upper }} (Analise Geral)</div>
+              <div style="display: grid; gap: 10px; margin-top: 6px;">
+                {% for question in domain.questions %}
+                  <div style="display: grid; grid-template-columns: 1fr 120px; gap: 10px; align-items: center;">
+                    <div>
+                      <div style="font-size: 0.82rem; color: #334155;">{{ question.text }}</div>
+                      <div style="height: 22px; border-radius: 999px; background: #e2e8f0; border: 1px solid #cbd5e1; overflow: hidden; margin-top: 6px; position: relative;">
+                        <span style="display: block; height: 100%; width: {{ question.percent_css }}%; background: {% if question.zone == 'BOM' %}#22c55e{% elif question.zone == 'ATENÇÃO' %}#f59e0b{% elif question.zone == 'RUIM' %}#ef4444{% else %}#94a3b8{% endif %};"></span>
+                        <span style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 800; color: #0f172a;">
+                          {{ question.percent }}% | {{ question.zone }}
+                        </span>
+                      </div>
+                    </div>
+                    <div style="text-align: right; font-size: 0.8rem; font-weight: 700;">
+                      <div>{{ question.percent }}%</div>
+                      <div style="color: #64748b;">{{ question.avg }} | {{ question.zone }}</div>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
+            {% endif %}
+
+            {% if domain.ghe_questions %}
+              <div style="margin-top: 14px; font-size: 0.82rem; font-weight: 800;">{{ domain.label|upper }} (Analise por Setor)</div>
+              {% for ghe in domain.ghe_questions %}
+                <div style="margin-top: 10px; font-size: 0.8rem; font-weight: 700; color: #0f172a;">
+                  SETOR: {{ ghe.name|upper }}
+                </div>
+                <div style="display: grid; gap: 10px; margin-top: 6px;">
+                  {% for question in ghe.questions %}
+                    <div style="display: grid; grid-template-columns: 1fr 120px; gap: 10px; align-items: center;">
+                      <div>
+                        <div style="font-size: 0.82rem; color: #334155;">{{ question.text }}</div>
+                        <div style="height: 22px; border-radius: 999px; background: #e2e8f0; border: 1px solid #cbd5e1; overflow: hidden; margin-top: 6px; position: relative;">
+                          <span style="display: block; height: 100%; width: {{ question.percent_css }}%; background: {% if question.zone == 'BOM' %}#22c55e{% elif question.zone == 'ATENÇÃO' %}#f59e0b{% elif question.zone == 'RUIM' %}#ef4444{% else %}#94a3b8{% endif %};"></span>
+                          <span style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 800; color: #0f172a;">
+                            {{ question.percent }}% | {{ question.zone }}
+                          </span>
+                        </div>
+                      </div>
+                      <div style="text-align: right; font-size: 0.8rem; font-weight: 700;">
+                        <div>{{ question.percent }}%</div>
+                        <div style="color: #64748b;">{{ question.avg }} | {{ question.zone }}</div>
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% endfor %}
+            {% endif %}
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="report-section" style="margin-top: 22px;">
+      <div style="display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 1.05rem; color: #0f172a;">
+        <span style="width: 26px; height: 26px; border-radius: 999px; background: #1d4ed8; color: #ffffff; display: inline-flex; align-items: center; justify-content: center; font-size: 0.85rem;">2</span>
+        <span>CONCLUSOES E RECOMENDACOES PRELIMINARES</span>
+      </div>
+      <div style="height: 2px; background: #1d4ed8; margin: 10px 0 12px;"></div>
+      <div style="display: grid; gap: 8px; padding: 12px 14px; border: 1px solid #cbd5f5; border-radius: 12px; background: #f8fbff;">
+        <div style="display: flex; gap: 8px; align-items: flex-start;">
+          <span style="width: 6px; height: 6px; border-radius: 999px; background: #1d4ed8; margin-top: 6px;"></span>
+          <span style="font-size: 0.9rem;">Priorizar dominios com risco elevado.</span>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <span style="width: 6px; height: 6px; border-radius: 999px; background: #1d4ed8;"></span>
+          <span style="font-size: 0.9rem;">Reavaliar periodicamente: daqui</span>
+          <input type="number" inputmode="numeric" min="1" step="1" value="{{ report_settings.reevaluate_months|default:3 }}" id="reevaluate-months" style="width: 44px; height: 28px; text-align: center; border-radius: 6px; border: 1px solid #cbd5e1; background: #ffffff; font-weight: 700; color: #0f172a; box-shadow: inset 0 1px 1px rgba(15,23,42,0.08);" />
+          <span style="font-size: 0.9rem;">meses</span>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: flex-start;">
+          <span style="width: 6px; height: 6px; border-radius: 999px; background: #1d4ed8; margin-top: 6px;"></span>
+          <span style="font-size: 0.9rem;">Promover treinamentos sobre saude mental e fatores psicossociais.</span>
+        </div>
+        <div style="display: flex; gap: 8px; align-items: flex-start;">
+          <span style="width: 6px; height: 6px; border-radius: 999px; background: #1d4ed8; margin-top: 6px;"></span>
+          <span style="font-size: 0.9rem;">Caso necessario, realizar AET aprofundada conforme NR-17.</span>
+        </div>
+      </div>
+      <div style="margin-top: 14px; font-weight: 800; color: #92400e;">Plano de Acao Recomendado</div>
+      <div style="display: grid; gap: 12px; margin-top: 10px;">
+        {% for domain in results.domain_details %}
+          <div style="border-radius: 12px; border: 1px solid #fde68a; background: #fffbeb; padding: 12px;">
+            <div style="font-weight: 800; color: #92400e;">{{ domain.label|upper }}</div>
+            <div style="display: grid; gap: 10px; margin-top: 8px;">
+              {% for question in domain.questions %}
+                {% if question.avg < 4.3 %}
+                  <div style="border-radius: 10px; border: 1px solid #fed7aa; background: #ffffff; padding: 10px;" data-question-card data-question-text="{{ question.text|escape }}">
+                    <div style="font-size: 0.9rem; font-weight: 700; color: #0f172a;">{{ question.text }}</div>
+                    <div style="margin-top: 6px; font-size: 0.82rem; color: #7c2d12;">
+                      Media: {{ question.avg }} | Nivel de Risco: {{ question.zone }} |
+                      {% if question.avg < 4.0 %}
+                        Zona Vermelha
+                      {% else %}
+                        Zona Amarela
+                      {% endif %}
+                    </div>
+                    <div class="action-box" data-action-box style="margin-top: 6px;">
+                      <button type="button" class="action-add" data-action-add style="font-size: 0.8rem; color: #1d4ed8; font-weight: 700; background: transparent; border: 0; padding: 0; cursor: pointer;">
+                        + adicionar medida temporaria
+                      </button>
+                      <div class="action-list" data-action-list style="display: grid; gap: 6px; margin-top: 6px;"></div>
+                      <template class="action-template">
+                        <div class="action-row" style="display: grid; grid-template-columns: 1fr 28px 28px; gap: 6px; align-items: center;">
+                          <input type="text" placeholder="Descreva a medida temporaria" style="height: 28px; border-radius: 6px; border: 1px solid #cbd5e1; padding: 0 8px; font-size: 0.82rem;" />
+                          <button type="button" title="Salvar" class="action-save" style="height: 28px; width: 28px; border-radius: 6px; border: 1px solid #cbd5e1; background: #ecfdf3; color: #16a34a; font-weight: 800; cursor: pointer;">✓</button>
+                          <button type="button" title="Excluir" class="action-remove" style="height: 28px; width: 28px; border-radius: 6px; border: 1px solid #fecaca; background: #fff1f2; color: #b91c1c; font-weight: 800; cursor: pointer;">🗑</button>
+                        </div>
+                      </template>
+                    </div>
+                    <div class="when-box" data-when-box data-company="{{ company.name }}" style="margin-top: 8px; display: grid; gap: 6px;">
+                      <button type="button" class="when-toggle" data-when-toggle style="font-size: 0.8rem; color: #0f172a; font-weight: 700; background: #f8fafc; border: 1px solid #cbd5e1; padding: 4px 10px; border-radius: 6px; cursor: pointer; width: fit-content;">
+                        quando
+                      </button>
+                      <div class="when-panel" data-when-panel style="display: none; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; background: #f8fafc;">
+                        <div class="when-options" data-when-options style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px;"></div>
+                      </div>
+                      <div class="when-table" data-when-table style="display: none; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+                        <div style="display: grid; grid-template-columns: 1.2fr 1fr 0.8fr 0.8fr 0.8fr 0.8fr 1fr; background: #f1f5f9; font-size: 0.78rem; font-weight: 800; color: #334155;">
+                          <div style="padding: 6px 8px;">Responsavel</div>
+                          <div style="padding: 6px 8px;">Data da implantacao</div>
+                          <div style="padding: 6px 8px;">A fazer</div>
+                          <div style="padding: 6px 8px;">Fazendo</div>
+                          <div style="padding: 6px 8px;">Adiado</div>
+                          <div style="padding: 6px 8px;">Concluido</div>
+                          <div style="padding: 6px 8px;">Concluido em</div>
+                        </div>
+                        <div class="when-row" data-when-row style="display: grid; grid-template-columns: 1.2fr 1fr 0.8fr 0.8fr 0.8fr 0.8fr 1fr; font-size: 0.78rem; color: #0f172a;">
+                          <div class="when-company" style="padding: 6px 8px;"></div>
+                          <div class="when-dates" style="padding: 6px 8px;"></div>
+                          <div style="padding: 6px 8px; text-align: center;"><input type="checkbox" data-status="a_fazer" /></div>
+                          <div style="padding: 6px 8px; text-align: center;"><input type="checkbox" data-status="fazendo" /></div>
+                          <div style="padding: 6px 8px; text-align: center;"><input type="checkbox" data-status="adiado" /></div>
+                          <div style="padding: 6px 8px; text-align: center;"><input type="checkbox" data-status="concluido" /></div>
+                          <div style="padding: 6px 8px; font-family: monospace;">
+                            <input type="text" class="when-concluded" placeholder="___/_____/___" style="width: 100%; border: 0; background: transparent; font-family: monospace;" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                {% endif %}
+              {% endfor %}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="report-section" style="margin-top: 22px;">
+      <div style="display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 1.05rem; color: #0f172a;">
+        <span style="width: 26px; height: 26px; border-radius: 999px; background: #1d4ed8; color: #ffffff; display: inline-flex; align-items: center; justify-content: center; font-size: 0.85rem;">3</span>
+        <span>ANEXOS</span>
+      </div>
+      <div style="height: 2px; background: #1d4ed8; margin: 10px 0 12px;"></div>
+      <p style="margin: 0 0 10px; font-size: 0.9rem; color: #334155;">
+        Inclua documentos relacionados ao relatorio.
+      </p>
+      <div data-attachments-list style="display: grid; gap: 10px;"></div>
+      <button type="button" data-attachments-add class="btn btn--sm" style="margin-top: 10px;">+ adicionar anexo</button>
+      <template id="attachment-template">
+        <div data-attachment-row style="border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px; background: #f8fafc; display: grid; gap: 8px;">
+          <input type="text" data-attachment-name placeholder="Titulo do anexo" style="height: 32px; border-radius: 6px; border: 1px solid #cbd5e1; padding: 0 10px; font-size: 0.85rem;" />
+          <input type="text" data-attachment-desc placeholder="Descricao (opcional)" style="height: 32px; border-radius: 6px; border: 1px solid #cbd5e1; padding: 0 10px; font-size: 0.85rem;" />
+          <input type="file" data-attachment-file style="height: 32px; border-radius: 6px; border: 1px solid #cbd5e1; padding: 3px 6px; font-size: 0.85rem; background: #ffffff;" />
+          <input type="hidden" data-attachment-stored />
+          <input type="hidden" data-attachment-original />
+          <div style="display: flex; justify-content: flex-end;">
+            <button type="button" data-attachment-remove class="btn btn--sm" style="background: #fee2e2; color: #b91c1c;">Remover</button>
+          </div>
+        </div>
+      </template>
+    </div>
+  </section>
+</main>
+<script>
+  (function () {
+    const boxes = document.querySelectorAll('[data-action-box]');
+    boxes.forEach((box) => {
+      const addBtn = box.querySelector('[data-action-add]');
+      const list = box.querySelector('[data-action-list]');
+      const tpl = box.querySelector('.action-template');
+
+      const addRow = () => {
+        const fragment = tpl.content.cloneNode(true);
+        const row = fragment.querySelector('.action-row');
+        const input = fragment.querySelector('input');
+        const saveBtn = fragment.querySelector('.action-save');
+        const removeBtn = fragment.querySelector('.action-remove');
+
+        saveBtn.addEventListener('click', () => {
+          input.readOnly = true;
+          input.style.background = '#f8fafc';
+          input.style.borderColor = '#bbf7d0';
+        });
+
+        removeBtn.addEventListener('click', () => {
+          row.remove();
+        });
+
+        list.appendChild(fragment);
+        input.focus();
+      };
+
+      addBtn.addEventListener('click', addRow);
+    });
+  })();
+</script>
+<script>
+  (function () {
+    const list = document.querySelector('[data-attachments-list]');
+    const addBtn = document.querySelector('[data-attachments-add]');
+    const template = document.getElementById('attachment-template');
+    if (!list || !addBtn || !template) return;
+
+    const nowStamp = () => {
+      const d = new Date();
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+    };
+
+    const addRow = (item = {}) => {
+      const fragment = template.content.cloneNode(true);
+      const row = fragment.querySelector('[data-attachment-row]');
+      const nameInput = fragment.querySelector('[data-attachment-name]');
+      const descInput = fragment.querySelector('[data-attachment-desc]');
+      const fileInput = fragment.querySelector('[data-attachment-file]');
+      const storedInput = fragment.querySelector('[data-attachment-stored]');
+      const originalInput = fragment.querySelector('[data-attachment-original]');
+      const removeBtn = fragment.querySelector('[data-attachment-remove]');
+
+      nameInput.value = item.title || '';
+      descInput.value = item.description || '';
+      storedInput.value = item.stored_path || '';
+      originalInput.value = item.original_name || '';
+
+      fileInput.addEventListener('change', () => {
+        const file = fileInput.files && fileInput.files[0];
+        if (!file) return;
+        const stamped = `${nowStamp()}_${file.name}`;
+        nameInput.value = stamped;
+      });
+
+      removeBtn.addEventListener('click', () => row.remove());
+      list.appendChild(fragment);
+    };
+
+    addBtn.addEventListener('click', () => addRow());
+
+    const saved = {{ report_attachments_json|safe|default:"[]" }};
+    if (Array.isArray(saved) && saved.length) {
+      saved.forEach((item) => addRow(item || {}));
+    } else {
+      addRow();
+    }
+  })();
+</script>
+<script>
+  (function () {
+    const boxes = document.querySelectorAll('[data-when-box]');
+    const makeMonths = () => {
+      const now = new Date();
+      const months = [];
+      for (let i = 0; i <= 12; i += 1) {
+        const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const yy = d.getFullYear();
+        months.push(`${mm}/${yy}`);
+      }
+      return months;
+    };
+
+    boxes.forEach((box) => {
+      const toggle = box.querySelector('[data-when-toggle]');
+      const panel = box.querySelector('[data-when-panel]');
+      const options = box.querySelector('[data-when-options]');
+      const table = box.querySelector('[data-when-table]');
+      const companyCell = box.querySelector('.when-company');
+      const datesCell = box.querySelector('.when-dates');
+      const company = box.getAttribute('data-company') || '';
+
+      companyCell.textContent = company;
+
+      const months = makeMonths();
+      options.innerHTML = months
+        .map(
+          (m, idx) =>
+            `<label style="display:flex; align-items:center; gap:6px; font-size:0.78rem; color:#0f172a;">` +
+            `<input type="checkbox" data-month value="${m}" /> ${m}</label>`
+        )
+        .join('');
+
+      const updateTable = () => {
+        const selected = Array.from(options.querySelectorAll('input[data-month]:checked')).map((i) => i.value);
+        if (selected.length === 0) {
+          table.style.display = 'none';
+          datesCell.textContent = '';
+          return;
+        }
+        const sorted = selected.slice().sort((a, b) => {
+          const [am, ay] = a.split('/').map(Number);
+          const [bm, by] = b.split('/').map(Number);
+          return ay === by ? am - bm : ay - by;
+        });
+        const start = sorted[0];
+        const end = sorted[sorted.length - 1];
+        datesCell.textContent = `${start} - ${end}`;
+        table.style.display = 'block';
+      };
+
+      options.addEventListener('change', updateTable);
+      toggle.addEventListener('click', () => {
+        panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+      });
+    });
+  })();
+</script>
+<script>
+  (function () {
+    const saveBtn = document.getElementById('report-save-btn');
+    if (!saveBtn) return;
+
+    const csrfToken = document.cookie
+      .split('; ')
+      .find((row) => row.startsWith('csrftoken='))
+      ?.split('=')[1];
+
+    const collectData = () => {
+      const cards = document.querySelectorAll('[data-question-card]');
+      const reevaluateMonths = Number(document.getElementById('reevaluate-months')?.value || 3);
+      const attachmentRows = Array.from(document.querySelectorAll('[data-attachment-row]'));
+      const attachments = attachmentRows.map((row, idx) => {
+        const title = row.querySelector('[data-attachment-name]')?.value?.trim() || '';
+        const description = row.querySelector('[data-attachment-desc]')?.value?.trim() || '';
+        const storedPath = row.querySelector('[data-attachment-stored]')?.value?.trim() || '';
+        const originalName = row.querySelector('[data-attachment-original]')?.value?.trim() || '';
+        const fileInput = row.querySelector('[data-attachment-file]');
+        const file = fileInput?.files?.[0] || null;
+        return {
+          title,
+          description,
+          stored_path: storedPath,
+          original_name: originalName,
+          file_index: file ? idx : null,
+        };
+      }).filter((item) => item.title || item.description || item.stored_path || item.original_name || item.file_index !== null);
+      const files = attachmentRows
+        .map((row, idx) => {
+          const file = row.querySelector('[data-attachment-file]')?.files?.[0] || null;
+          return file ? { idx, file } : null;
+        })
+        .filter(Boolean);
+      return {
+        items: Array.from(cards).map((card) => {
+          const questionText = card.getAttribute('data-question-text') || '';
+          const measures = Array.from(card.querySelectorAll('.action-list input'))
+            .map((i) => i.value.trim())
+            .filter((v) => v.length > 0);
+        const whenBox = card.querySelector('[data-when-box]');
+        const months = whenBox
+          ? Array.from(whenBox.querySelectorAll('input[data-month]:checked')).map((i) => i.value)
+          : [];
+        const status = {};
+        if (whenBox) {
+          whenBox.querySelectorAll('input[data-status]').forEach((input) => {
+            status[input.getAttribute('data-status')] = input.checked;
+          });
+        }
+        const concludedOn = whenBox?.querySelector('.when-concluded')?.value?.trim() || '';
+        return {
+          question_text: questionText,
+          measures,
+          implantation_months: months,
+          status,
+          concluded_on: concludedOn,
+        };
+        }),
+        meta: { reevaluate_months: reevaluateMonths, attachments },
+        files,
+      };
+    };
+
+    saveBtn.addEventListener('click', async () => {
+      const collected = collectData();
+      const meta = collected.meta || {};
+      const payloadItems = collected.items || [];
+      const attachments = meta.attachments || [];
+      const files = collected.files || [];
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Salvando...';
+      try {
+        const formData = new FormData();
+        formData.append('payload', JSON.stringify({ items: payloadItems, reevaluate_months: meta.reevaluate_months, attachments }));
+        files.forEach((entry) => {
+          formData.append(`attachments_file_${entry.idx}`, entry.file);
+        });
+        const resp = await fetch("{% url 'campaigns-report-save' campaign.uuid %}", {
+          method: 'POST',
+          headers: {
+            'X-CSRFToken': csrfToken,
+          },
+          body: formData,
+        });
+        if (!resp.ok) throw new Error('Falha ao salvar.');
+        saveBtn.textContent = 'Salvo';
+        setTimeout(() => (saveBtn.textContent = 'Salvar'), 1500);
+      } catch (err) {
+        saveBtn.textContent = 'Erro ao salvar';
+        setTimeout(() => (saveBtn.textContent = 'Salvar'), 2000);
+      } finally {
+        saveBtn.disabled = false;
+      }
+    });
+  })();
+</script>
+<script>
+  (function () {
+    const saved = {{ report_actions_json|safe|default:"[]" }};
+    if (!Array.isArray(saved) || saved.length === 0) return;
+
+    const cards = new Map();
+    document.querySelectorAll('[data-question-card]').forEach((card) => {
+      cards.set(card.getAttribute('data-question-text') || '', card);
+    });
+
+    saved.forEach((item) => {
+      const card = cards.get(item.question_text);
+      if (!card) return;
+
+      const actionList = card.querySelector('.action-list');
+      const template = card.querySelector('.action-template');
+      (item.measures || []).forEach((text) => {
+        const fragment = template.content.cloneNode(true);
+        const row = fragment.querySelector('.action-row');
+        const input = fragment.querySelector('input');
+        const saveBtn = fragment.querySelector('.action-save');
+        const removeBtn = fragment.querySelector('.action-remove');
+        input.value = text;
+        input.readOnly = true;
+        input.style.background = '#f8fafc';
+        input.style.borderColor = '#bbf7d0';
+        saveBtn.addEventListener('click', () => {
+          input.readOnly = true;
+          input.style.background = '#f8fafc';
+          input.style.borderColor = '#bbf7d0';
+        });
+        removeBtn.addEventListener('click', () => row.remove());
+        actionList.appendChild(fragment);
+      });
+
+      const whenBox = card.querySelector('[data-when-box]');
+      if (!whenBox) return;
+      const options = whenBox.querySelector('[data-when-options]');
+      const table = whenBox.querySelector('[data-when-table]');
+      const datesCell = whenBox.querySelector('.when-dates');
+      const months = new Set(item.implantation_months || []);
+      options.querySelectorAll('input[data-month]').forEach((input) => {
+        if (months.has(input.value)) {
+          input.checked = true;
+        }
+      });
+      const selected = Array.from(months);
+      if (selected.length) {
+        const sorted = selected.slice().sort((a, b) => {
+          const [am, ay] = a.split('/').map(Number);
+          const [bm, by] = b.split('/').map(Number);
+          return ay === by ? am - bm : ay - by;
+        });
+        datesCell.textContent = `${sorted[0]} - ${sorted[sorted.length - 1]}`;
+        table.style.display = 'block';
+      }
+      const status = item.status || {};
+      whenBox.querySelectorAll('input[data-status]').forEach((input) => {
+        const key = input.getAttribute('data-status');
+        if (key in status) input.checked = !!status[key];
+      });
+      const concludedInput = whenBox.querySelector('.when-concluded');
+      if (concludedInput) concludedInput.value = item.concluded_on || '';
+    });
+  })();
+</script>
+{% endblock %}

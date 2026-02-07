@@ -1,0 +1,157 @@
+"""
+URL configuration for ciss_gestao project.
+
+The `urlpatterns` list routes URLs to views. For more information please see:
+    https://docs.djangoproject.com/en/6.0/topics/http/urls/
+Examples:
+Function views
+    1. Add an import:  from my_app import views
+    2. Add a URL to urlpatterns:  path('', views.home, name='home')
+Class-based views
+    1. Add an import:  from other_app.views import Home
+    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
+Including another URLconf
+    1. Import the include() function: from django.urls import include, path
+    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
+"""
+from django.contrib import admin
+from django.contrib.auth.views import LogoutView
+from django.urls import path, include
+from django.conf import settings
+
+from .views import (
+    AlertRecipientCreateView,
+    AlertRecipientDeleteView,
+    AlertRecipientUpdateView,
+    AlertSettingsUpdateView,
+    AlertSettingsView,
+    CompanyCreateView,
+    CompanyDeleteView,
+    CompanyListView,
+    CompanySelectView,
+    CompanyUpdateView,
+    CampaignCreateView,
+    CampaignDeleteView,
+    CampaignListView,
+    CampaignUpdateView,
+    CampaignAccessView,
+    CampaignReportView,
+    CampaignReportPdfView,
+    CampaignReportSaveView,
+    GHECreateView,
+    GHEDeleteView,
+    GHEListView,
+    GHEUpdateView,
+    MasterDashboardView,
+    DashboardView,
+    ComplaintTypeCreateView,
+    ComplaintTypeDeleteView,
+    ComplaintTypeListView,
+    ComplaintTypeUpdateView,
+    ReportDetailView,
+    ReportListView,
+    ComplaintHistoryView,
+    ComplaintListView,
+    ComplaintUpdateView,
+    DepartmentCreateView,
+    DepartmentDeleteView,
+    DepartmentListView,
+    DepartmentUpdateView,
+    HelpRequestDeleteView,
+    HelpRequestHistoryView,
+    HelpRequestListView,
+    HelpRequestUpdateView,
+    InternalUserCreateView,
+    InternalUserDeleteView,
+    InternalUserListView,
+    InternalUserUpdateView,
+    TenantLoginView,
+    MoodTypeCreateView,
+    MoodTypeDeleteView,
+    MoodTypeListView,
+    MoodTypeUpdateView,
+    TotemCreateView,
+    TotemDeleteView,
+    TotemComplaintSubmitView,
+    TotemHelpRequestSubmitView,
+    TotemListView,
+    TotemMoodSubmitView,
+    TotemUpdateView,
+    TotemView,
+    campaign_qr,
+    healthz,
+    home,
+)
+
+urlpatterns = [
+    path('', home, name='home'),
+    path('dashboard/', DashboardView.as_view(), name='dashboard'),
+    path('admin/', admin.site.urls),
+    path('auth/login/', TenantLoginView.as_view(), name='login'),
+    path('auth/logout/', LogoutView.as_view(), name='logout'),
+    path('auth/select-company/', CompanySelectView.as_view(), name='company-select'),
+    path('master/', MasterDashboardView.as_view(), name='master-dashboard'),
+    path('campaigns/', CampaignListView.as_view(), name='campaigns-list'),
+    path('campaigns/new/', CampaignCreateView.as_view(), name='campaigns-create'),
+    path('campaigns/<int:campaign_id>/edit/', CampaignUpdateView.as_view(), name='campaigns-update'),
+    path('campaigns/<int:campaign_id>/delete/', CampaignDeleteView.as_view(), name='campaigns-delete'),
+    path('campaigns/<uuid:campaign_uuid>/', CampaignAccessView.as_view(), name='campaigns-access'),
+    path('campaigns/<uuid:campaign_uuid>/report/', CampaignReportView.as_view(), name='campaigns-report'),
+    path('campaigns/<uuid:campaign_uuid>/report/pdf/', CampaignReportPdfView.as_view(), name='campaigns-report-pdf'),
+    path('campaigns/<uuid:campaign_uuid>/report/save/', CampaignReportSaveView.as_view(), name='campaigns-report-save'),
+    path('campaigns/<uuid:campaign_uuid>/qr/', campaign_qr, name='campaigns-qr'),
+    path('master/companies/', CompanyListView.as_view(), name='companies-list'),
+    path('master/companies/new/', CompanyCreateView.as_view(), name='companies-create'),
+    path('master/companies/<int:company_id>/edit/', CompanyUpdateView.as_view(), name='companies-update'),
+    path('master/companies/<int:company_id>/delete/', CompanyDeleteView.as_view(), name='companies-delete'),
+    path('users/', InternalUserListView.as_view(), name='users-list'),
+    path('users/new/', InternalUserCreateView.as_view(), name='users-create'),
+    path('users/<int:membership_id>/edit/', InternalUserUpdateView.as_view(), name='users-update'),
+    path('users/<int:membership_id>/delete/', InternalUserDeleteView.as_view(), name='users-delete'),
+    path('departments/', DepartmentListView.as_view(), name='departments-list'),
+    path('departments/new/', DepartmentCreateView.as_view(), name='departments-create'),
+    path('departments/<int:department_id>/edit/', DepartmentUpdateView.as_view(), name='departments-update'),
+    path('departments/<int:department_id>/delete/', DepartmentDeleteView.as_view(), name='departments-delete'),
+    path('ghes/', GHEListView.as_view(), name='ghes-list'),
+    path('ghes/new/', GHECreateView.as_view(), name='ghes-create'),
+    path('ghes/<int:ghe_id>/edit/', GHEUpdateView.as_view(), name='ghes-update'),
+    path('ghes/<int:ghe_id>/delete/', GHEDeleteView.as_view(), name='ghes-delete'),
+    path('help-requests/', HelpRequestListView.as_view(), name='help-requests-list'),
+    path('help-requests/<int:help_request_id>/edit/', HelpRequestUpdateView.as_view(), name='help-requests-update'),
+    path('help-requests/<int:help_request_id>/history/', HelpRequestHistoryView.as_view(), name='help-requests-history'),
+    path('help-requests/<int:help_request_id>/delete/', HelpRequestDeleteView.as_view(), name='help-requests-delete'),
+    path('settings/alerts/', AlertSettingsView.as_view(), name='settings-alerts'),
+    path('settings/alerts/update/', AlertSettingsUpdateView.as_view(), name='settings-alerts-update'),
+    path('settings/alerts/recipients/new/', AlertRecipientCreateView.as_view(), name='settings-alerts-recipients-create'),
+    path('settings/alerts/recipients/<int:recipient_id>/edit/', AlertRecipientUpdateView.as_view(), name='settings-alerts-recipients-update'),
+    path('settings/alerts/recipients/<int:recipient_id>/delete/', AlertRecipientDeleteView.as_view(), name='settings-alerts-recipients-delete'),
+    path('totems/', TotemListView.as_view(), name='totems-list'),
+    path('totems/new/', TotemCreateView.as_view(), name='totems-create'),
+    path('totems/<int:totem_id>/edit/', TotemUpdateView.as_view(), name='totems-update'),
+    path('totems/<int:totem_id>/delete/', TotemDeleteView.as_view(), name='totems-delete'),
+    path('totems/mood-types/', MoodTypeListView.as_view(), name='mood-types-list'),
+    path('totems/mood-types/new/', MoodTypeCreateView.as_view(), name='mood-types-create'),
+    path('totems/mood-types/<int:mood_type_id>/edit/', MoodTypeUpdateView.as_view(), name='mood-types-update'),
+    path('totems/mood-types/<int:mood_type_id>/delete/', MoodTypeDeleteView.as_view(), name='mood-types-delete'),
+    path('totems/complaint-types/', ComplaintTypeListView.as_view(), name='complaint-types-list'),
+    path('totems/complaint-types/new/', ComplaintTypeCreateView.as_view(), name='complaint-types-create'),
+    path('totems/complaint-types/<int:complaint_type_id>/edit/', ComplaintTypeUpdateView.as_view(), name='complaint-types-update'),
+    path('totems/complaint-types/<int:complaint_type_id>/delete/', ComplaintTypeDeleteView.as_view(), name='complaint-types-delete'),
+    path('complaints/', ComplaintListView.as_view(), name='complaints-list'),
+    path('complaints/<int:complaint_id>/edit/', ComplaintUpdateView.as_view(), name='complaints-update'),
+    path('complaints/<int:complaint_id>/history/', ComplaintHistoryView.as_view(), name='complaints-history'),
+    path('relatorios/', ReportListView.as_view(), name='reports-list'),
+    path('relatorios/<int:report_id>/', ReportDetailView.as_view(), name='reports-detail'),
+    path('totem/<slug:company_slug>/<slug:totem_slug>/', TotemView.as_view(), name='totem-home'),
+    path('totem/<slug:company_slug>/<slug:totem_slug>/mood/', TotemMoodSubmitView.as_view(), name='totem-mood'),
+    path('totem/<slug:company_slug>/<slug:totem_slug>/complaint/', TotemComplaintSubmitView.as_view(), name='totem-complaint'),
+    path('totem/<slug:company_slug>/<slug:totem_slug>/help/', TotemHelpRequestSubmitView.as_view(), name='totem-help'),
+    path('healthz/', healthz, name='healthz'),
+]
+
+if settings.DEBUG:
+    urlpatterns += [
+        path('__debug__/', include('debug_toolbar.urls')),
+    ]
+
+handler403 = 'ciss_gestao.views.inactive_company'

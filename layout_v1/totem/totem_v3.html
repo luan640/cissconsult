@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CISS • Totem</title>
+
+  <!-- Fonte -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'ui-sans-serif', 'system-ui'] },
+          colors: {
+            brand: {
+              primary: '#084B47',
+              secondary: '#00B0A0',
+              page: '#F3F4F6'
+            }
+          },
+          boxShadow: { soft: '0 10px 30px rgba(0,0,0,0.18)' }
+        }
+      }
+    }
+  </script>
+</head>
+
+<body class="font-sans">
+
+  <!-- Fullscreen Totem -->
+  <div class="min-h-screen bg-brand-primary flex flex-col">
+
+    <!-- Header -->
+    <header class="px-8 py-6 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="h-12 w-12 rounded-xl bg-white/10 flex items-center justify-center">
+          <span class="text-brand-secondary text-xl font-bold">CISS</span>
+        </div>
+        <p class="text-white/70 text-sm">Registro Anônimo de Bem-Estar</p>
+      </div>
+
+      <span class="hidden md:inline-flex px-4 py-2 rounded-full bg-white/10 text-white/70 text-sm border border-white/10">
+        Toque na opção desejada
+      </span>
+    </header>
+
+    <!-- Conteúdo Central -->
+    <main class="flex-1 flex items-center justify-center px-10">
+      <div class="w-full max-w-5xl text-center">
+
+        <h1 class="text-white text-4xl md:text-5xl font-bold mb-4">
+          Como você está se sentindo hoje?
+        </h1>
+
+        <p class="text-white/70 text-lg mb-10">
+          Sua resposta é confidencial e nos ajuda a melhorar o ambiente de trabalho.
+        </p>
+
+        <!-- Opções (Corporate Memphis) -->
+        <div class="grid grid-cols-2 gap-7">
+
+          <!-- Bem -->
+          <button class="group bg-white rounded-3xl overflow-hidden shadow-soft active:scale-[0.98] transition border border-white/10">
+            <!-- Memphis header -->
+            <div class="relative h-28 bg-emerald-50">
+              <!-- blobs / shapes -->
+              <div class="absolute -top-6 -left-6 h-24 w-24 rounded-full bg-emerald-200/70"></div>
+              <div class="absolute top-5 right-6 h-10 w-10 rounded-xl bg-white/60 rotate-12"></div>
+              <div class="absolute bottom-4 left-16 h-3 w-20 bg-emerald-500/60 rounded-full"></div>
+              <!-- dots -->
+              <div class="absolute top-6 left-24 grid grid-cols-4 gap-1">
+                <span class="h-1.5 w-1.5 rounded-full bg-emerald-600/70"></span>
+                <span class="h-1.5 w-1.5 rounded-full bg-emerald-600/70"></span>
+                <span class="h-1.5 w-1.5 rounded-full bg-emerald-600/70"></span>
+                <span class="h-1.5 w-1.5 rounded-full bg-emerald-600/70"></span>
+                <span class="h-1.5 w-1.5 rounded-full bg-emerald-600/70"></span>
+                <span class="h-1.5 w-1.5 rounded-full bg-emerald-600/70"></span>
+                <span class="h-1.5 w-1.5 rounded-full bg-emerald-600/70"></span>
+                <span class="h-1.5 w-1.5 rounded-full bg-emerald-600/70"></span>
+              </div>
+
+              <!-- pill label -->
+              <div class="absolute bottom-4 right-4">
+                <span class="px-3 py-1.5 rounded-full text-sm font-semibold bg-white/80 text-emerald-800 border border-emerald-100">
+                  Bem
+                </span>
+              </div>
+            </div>
+
+            <div class="p-8 text-left">
+              <p class="text-2xl font-bold text-slate-900">Energia boa</p>
+              <p class="mt-2 text-slate-500 text-base">Estou leve e produtivo</p>
+              <div class="mt-6 h-2 rounded-full bg-slate-100 overflow-hidden">
+                <div class="h-full w-[78%] bg-emerald-500 group-hover:w-[86%] transition-all"></div>
+              </div>
+            </div>
+          </button>
+
+          <!-- Ok -->
+          <button class="group bg-white rounded-3xl overflow-hidden shadow-soft active:scale-[0.98] transition border border-white/10">
+            <div class="relative h-28 bg-slate-100">
+              <div class="absolute -top-8 right-2 h-28 w-28 rounded-full bg-slate-300/60"></div>
+              <div class="absolute top-6 left-6 h-12 w-12 rounded-2xl bg-white/70 -rotate-6"></div>
+              <div class="absolute bottom-5 left-24 h-4 w-4 rounded-full bg-slate-500/70"></div>
+              <div class="absolute bottom-4 right-4">
+                <span class="px-3 py-1.5 rounded-full text-sm font-semibold bg-white/80 text-slate-700 border border-slate-200">
+                  Ok
+                </span>
+              </div>
+              <div class="absolute top-6 right-24 h-1 w-20 bg-slate-500/50 rounded-full"></div>
+              <div class="absolute top-10 right-20 h-1 w-12 bg-slate-500/35 rounded-full"></div>
+            </div>
+
+            <div class="p-8 text-left">
+              <p class="text-2xl font-bold text-slate-900">Tudo certo</p>
+              <p class="mt-2 text-slate-500 text-base">Dia normal, sem pressão</p>
+              <div class="mt-6 h-2 rounded-full bg-slate-100 overflow-hidden">
+                <div class="h-full w-[56%] bg-slate-400 group-hover:w-[62%] transition-all"></div>
+              </div>
+            </div>
+          </button>
+
+          <!-- Baixo -->
+          <button class="group bg-white rounded-3xl overflow-hidden shadow-soft active:scale-[0.98] transition border border-white/10">
+            <div class="relative h-28 bg-sky-50">
+              <div class="absolute -left-10 top-2 h-28 w-28 rounded-full bg-sky-200/70"></div>
+              <div class="absolute top-6 right-8 h-10 w-16 rounded-2xl bg-white/70 rotate-6"></div>
+              <div class="absolute bottom-5 left-20 h-2 w-24 bg-sky-600/45 rounded-full"></div>
+
+              <!-- dotted grid -->
+              <div class="absolute top-6 right-28 grid grid-cols-5 gap-1">
+                <span class="h-1.5 w-1.5 rounded-full bg-sky-700/65"></span>
+                <span class="h-1.5 w-1.5 rounded-full bg-sky-700/65"></span>
+                <span class="h-1.5 w-1.5 rounded-full bg-sky-700/65"></span>
+                <span class="h-1.5 w-1.5 rounded-full bg-sky-700/65"></span>
+                <span class="h-1.5 w-1.5 rounded-full bg-sky-700/65"></span>
+                <span class="h-1.5 w-1.5 rounded-full bg-sky-700/65"></span>
+                <span class="h-1.5 w-1.5 rounded-full bg-sky-700/65"></span>
+                <span class="h-1.5 w-1.5 rounded-full bg-sky-700/65"></span>
+                <span class="h-1.5 w-1.5 rounded-full bg-sky-700/65"></span>
+                <span class="h-1.5 w-1.5 rounded-full bg-sky-700/65"></span>
+              </div>
+
+              <div class="absolute bottom-4 right-4">
+                <span class="px-3 py-1.5 rounded-full text-sm font-semibold bg-white/80 text-sky-900 border border-sky-100">
+                  Baixo
+                </span>
+              </div>
+            </div>
+
+            <div class="p-8 text-left">
+              <p class="text-2xl font-bold text-slate-900">Não muito bem</p>
+              <p class="mt-2 text-slate-500 text-base">Estou mais sensível hoje</p>
+              <div class="mt-6 h-2 rounded-full bg-slate-100 overflow-hidden">
+                <div class="h-full w-[40%] bg-sky-500 group-hover:w-[46%] transition-all"></div>
+              </div>
+            </div>
+          </button>
+
+          <!-- Sob Pressão -->
+          <button class="group bg-white rounded-3xl overflow-hidden shadow-soft active:scale-[0.98] transition border border-white/10">
+            <div class="relative h-28 bg-amber-50">
+              <div class="absolute -top-8 -right-8 h-28 w-28 rounded-full bg-amber-200/75"></div>
+              <div class="absolute top-7 left-6 h-10 w-10 bg-white/70 rotate-12"></div>
+              <div class="absolute bottom-5 left-20 h-3 w-28 bg-amber-600/45 rounded-full"></div>
+
+              <!-- zigzag -->
+              <svg class="absolute top-6 right-28" width="64" height="22" viewBox="0 0 64 22" fill="none">
+                <path d="M2 18 L14 6 L26 18 L38 6 L50 18 L62 6" stroke="rgba(180,83,9,0.55)" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+
+              <div class="absolute bottom-4 right-4">
+                <span class="px-3 py-1.5 rounded-full text-sm font-semibold bg-white/80 text-amber-900 border border-amber-100">
+                  Sob Pressão
+                </span>
+              </div>
+            </div>
+
+            <div class="p-8 text-left">
+              <p class="text-2xl font-bold text-slate-900">Estresse alto</p>
+              <p class="mt-2 text-slate-500 text-base">Preciso de uma pausa / apoio</p>
+              <div class="mt-6 h-2 rounded-full bg-slate-100 overflow-hidden">
+                <div class="h-full w-[34%] bg-amber-500 group-hover:w-[42%] transition-all"></div>
+              </div>
+            </div>
+          </button>
+
+        </div>
+
+        <p class="mt-8 text-white/60 text-sm">
+          Leva menos de 3 segundos. Obrigado por responder.
+        </p>
+      </div>
+    </main>
+
+    <!-- Rodapé / Ajuda -->
+    <footer class="px-8 pb-8 pt-2 flex items-center justify-center">
+    </footer>
+
+  </div>
+
+</body>
+</html>

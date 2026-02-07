@@ -1,0 +1,93 @@
+<div id="companies-table-container" data-table-container>
+  {% if messages %}
+    <section class="stack-gap">
+      {% for message in messages %}
+        <div class="notice{% if message.tags %} notice--{{ message.tags }}{% endif %}">{{ message }}</div>
+      {% endfor %}
+    </section>
+  {% endif %}
+
+  <section class="card card--table">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Logo</th>
+          <th>Empresa</th>
+          <th>CNPJ</th>
+          <th>Cidade/UF</th>
+          <th>Funcionarios</th>
+          <th>Status</th>
+          <th>Acoes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for company in companies %}
+          <tr>
+            <td>
+              {% if company.logo %}
+                <img src="{{ company.logo.url }}" alt="Logo da empresa" style="width: 40px; height: 40px; object-fit: contain;" />
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td>
+              <strong>{{ company.name }}</strong><br />
+              <small>{{ company.legal_name|default:"-" }}</small>
+            </td>
+            <td>{{ company.cnpj|default:"-" }}</td>
+            <td>
+              {% if company.address_city %}
+                {{ company.address_city }}{% if company.address_state %}/{{ company.address_state }}{% endif %}
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td>{{ company.employee_count|default:"0" }}</td>
+            <td>{% if company.is_active %}Ativa{% else %}Inativa{% endif %}</td>
+            <td class="table__actions">
+              <form method="post" action="{% url 'company-select' %}">
+                {% csrf_token %}
+                <input type="hidden" name="company_id" value="{{ company.id }}" />
+                <input type="hidden" name="next_url" value="{% url 'dashboard' %}" />
+                <button class="btn btn--light btn--sm" type="submit">Acessar</button>
+              </form>
+              <button
+                class="btn btn--light btn--sm"
+                type="button"
+                data-open-edit-company
+                data-update-url="{% url 'companies-update' company.id %}"
+                data-name="{{ company.name }}"
+                data-legal-name="{{ company.legal_name }}"
+                data-cnpj="{{ company.cnpj }}"
+                data-employee-count="{{ company.employee_count }}"
+                data-max-users="{{ company.max_users }}"
+                data-max-totems="{{ company.max_totems }}"
+                data-address-street="{{ company.address_street }}"
+                data-address-number="{{ company.address_number }}"
+                data-address-complement="{{ company.address_complement }}"
+                data-address-neighborhood="{{ company.address_neighborhood }}"
+                data-address-city="{{ company.address_city }}"
+                data-address-state="{{ company.address_state }}"
+                data-address-zipcode="{{ company.address_zipcode }}"
+                data-is-active="{% if company.is_active %}1{% else %}0{% endif %}"
+              >
+                Editar
+              </button>
+              <form method="post" action="{% url 'companies-delete' company.id %}" onsubmit="return confirm('{% if company.is_active %}Desativar{% else %}Ativar{% endif %} esta empresa?');">
+                {% csrf_token %}
+                <button class="btn {% if company.is_active %}btn--danger{% else %}btn--primary{% endif %} btn--sm" type="submit">
+                  {% if company.is_active %}Desativar{% else %}Ativar{% endif %}
+                </button>
+              </form>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="7">Nenhuma empresa cadastrada.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% include "partials/_table_pagination.html" %}
+</div>
