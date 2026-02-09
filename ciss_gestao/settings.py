@@ -38,14 +38,26 @@ SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'change-this-before-production')
 # SECURITY WARNING: do not enable debug mode in production.
 DEBUG = get_bool('DJANGO_DEBUG', True)
 
+def _get_csv_env(name: str) -> list[str]:
+    raw = (os.getenv(name) or '').strip()
+    if not raw:
+        return []
+    return [item.strip() for item in raw.split(',') if item.strip()]
+
+
 ALLOWED_HOSTS = [
     '127.0.0.1',
     ".trycloudflare.com",
-    
 ]
+ALLOWED_HOSTS += _get_csv_env('DJANGO_ALLOWED_HOSTS')
 
 CSRF_TRUSTED_ORIGINS = [
     "https://*.trycloudflare.com",
+]
+CSRF_TRUSTED_ORIGINS += [
+    f"https://{host}"
+    for host in _get_csv_env('DJANGO_ALLOWED_HOSTS')
+    if host and not host.startswith('.')
 ]
 
 # Application definition
