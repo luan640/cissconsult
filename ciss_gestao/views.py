@@ -1003,20 +1003,11 @@ class MasterTechnicalSettingsView(MasterRequiredMixin, View):
     @method_decorator(cache_page(30))
     def get(self, request):
         report_settings = ensure_master_report_settings()
-        responsibles_qs = []
+        responsibles_qs = TechnicalResponsible.objects.filter(
+            is_active=True
+        ).order_by('sort_order', 'name')
         page_obj = paginate_queryset(request, responsibles_qs, per_page=15)
         company = None
-        company_id = request.session.get('company_id')
-        if company_id:
-            try:
-                request.current_company_id = int(company_id)
-            except (TypeError, ValueError) as exc:
-                raise PermissionDenied('Empresa de sessao invalida.') from exc
-            company = get_object_or_404(Company, pk=request.current_company_id)
-            responsibles_qs = TechnicalResponsible.all_objects.filter(
-                company_id=request.current_company_id
-            ).order_by('sort_order', 'name')
-            page_obj = paginate_queryset(request, responsibles_qs, per_page=15)
         context = {
             'technical_responsibles': page_obj.object_list,
             'page_obj': page_obj,
@@ -1033,14 +1024,6 @@ class MasterTechnicalSettingsView(MasterRequiredMixin, View):
 
 class TechnicalResponsibleCreateView(MasterRequiredMixin, View):
     def post(self, request):
-        if not request.session.get('company_id'):
-            messages.error(request, 'Selecione uma empresa antes de acessar as configuracoes.')
-            return redirect('company-select')
-        try:
-            request.current_company_id = int(request.session.get('company_id'))
-        except (TypeError, ValueError) as exc:
-            raise PermissionDenied('Empresa de sessao invalida.') from exc
-
         form = TechnicalResponsibleForm(request.POST)
         if not form.is_valid():
             messages.error(request, collect_form_errors(form))
@@ -1058,8 +1041,7 @@ class TechnicalResponsibleCreateView(MasterRequiredMixin, View):
                 return render_technical_responsibles_table(request)
             return redirect('master-settings')
 
-        TechnicalResponsible.all_objects.create(
-            company_id=request.current_company_id,
+        TechnicalResponsible.objects.create(
             name=name,
             education=education,
             registration=registration,
@@ -1075,18 +1057,9 @@ class TechnicalResponsibleCreateView(MasterRequiredMixin, View):
 
 class TechnicalResponsibleUpdateView(MasterRequiredMixin, View):
     def post(self, request, responsible_id):
-        if not request.session.get('company_id'):
-            messages.error(request, 'Selecione uma empresa antes de acessar as configuracoes.')
-            return redirect('company-select')
-        try:
-            request.current_company_id = int(request.session.get('company_id'))
-        except (TypeError, ValueError) as exc:
-            raise PermissionDenied('Empresa de sessao invalida.') from exc
-
         responsible = get_object_or_404(
-            TechnicalResponsible.all_objects,
+            TechnicalResponsible,
             pk=responsible_id,
-            company_id=request.current_company_id,
         )
         form = TechnicalResponsibleForm(request.POST)
         if not form.is_valid():
@@ -1120,18 +1093,9 @@ class TechnicalResponsibleUpdateView(MasterRequiredMixin, View):
 
 class TechnicalResponsibleDeleteView(MasterRequiredMixin, View):
     def post(self, request, responsible_id):
-        if not request.session.get('company_id'):
-            messages.error(request, 'Selecione uma empresa antes de acessar as configuracoes.')
-            return redirect('company-select')
-        try:
-            request.current_company_id = int(request.session.get('company_id'))
-        except (TypeError, ValueError) as exc:
-            raise PermissionDenied('Empresa de sessao invalida.') from exc
-
         responsible = get_object_or_404(
-            TechnicalResponsible.all_objects,
+            TechnicalResponsible,
             pk=responsible_id,
-            company_id=request.current_company_id,
         )
         responsible.is_active = not responsible.is_active
         responsible.save(update_fields=['is_active', 'updated_at'])
@@ -1147,18 +1111,9 @@ class TechnicalResponsibleDeleteView(MasterRequiredMixin, View):
 
 class TechnicalResponsibleRemoveView(MasterRequiredMixin, View):
     def post(self, request, responsible_id):
-        if not request.session.get('company_id'):
-            messages.error(request, 'Selecione uma empresa antes de acessar as configuracoes.')
-            return redirect('company-select')
-        try:
-            request.current_company_id = int(request.session.get('company_id'))
-        except (TypeError, ValueError) as exc:
-            raise PermissionDenied('Empresa de sessao invalida.') from exc
-
         responsible = get_object_or_404(
-            TechnicalResponsible.all_objects,
+            TechnicalResponsible,
             pk=responsible_id,
-            company_id=request.current_company_id,
         )
         responsible.delete()
         cache.clear()
@@ -2047,14 +2002,9 @@ class CampaignReportPdfView(MasterRequiredMixin, View):
         response_label = CampaignReportView._response_rate_label(response_rate, total_workers)
         ghe_map = {ghe.id: ghe.name for ghe in ghes}
         results = CampaignReportView()._build_results(responses_qs, ghe_map)
-        technical_responsibles_qs = TechnicalResponsible.all_objects.filter(
-            company_id=campaign.company_id,
+        technical_responsibles_qs = TechnicalResponsible.objects.filter(
             is_active=True,
         ).order_by('sort_order', 'name')
-        if not technical_responsibles_qs.exists():
-            technical_responsibles_qs = TechnicalResponsible.all_objects.filter(
-                is_active=True,
-            ).order_by('sort_order', 'name')
 
         report_context = {
             'company_name': company.name or '-',
@@ -3114,8 +3064,8 @@ def render_campaigns_table(request):
 
 
 def render_technical_responsibles_table(request):
-    responsibles_qs = TechnicalResponsible.all_objects.filter(
-        company_id=request.current_company_id
+    responsibles_qs = TechnicalResponsible.objects.filter(
+        is_active=True
     ).order_by('sort_order', 'name')
     page_obj = paginate_queryset(request, responsibles_qs, per_page=15)
     return render(

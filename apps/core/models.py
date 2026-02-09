@@ -167,12 +167,14 @@ class CampaignReportSettings(TenantModel):
 
 
 
-class TechnicalResponsible(TenantModel):
+class TechnicalResponsible(models.Model):
     name = models.CharField(max_length=150)
     education = models.CharField(max_length=255)
     registration = models.CharField(max_length=80)
     sort_order = models.PositiveSmallIntegerField(default=0)
     is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = 'technical_responsibles'

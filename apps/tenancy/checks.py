@@ -14,6 +14,8 @@ def validate_company_field(app_configs=None, **kwargs):
             continue
         if model._meta.app_label == 'tenancy' and model.__name__ == 'Company':
             continue
+        if model._meta.app_label == 'core' and model.__name__ == 'TechnicalResponsible':
+            continue
         if not any(field.name == 'company' for field in model._meta.fields):
             errors.append(
                 Error(

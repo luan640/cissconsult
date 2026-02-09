@@ -1,4 +1,5 @@
 from io import BytesIO
+from datetime import date
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -1290,7 +1291,24 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
     # 8. RESPONSABILIDADES
     story.append(PageBreak())
     add_section_header(8, "RESPONSABILIDADES")
-    story.append(Paragraph("Teresina - PI, 05 de fevereiro de 2026", body_style))
+    today = date.today()
+    month_names = [
+        'janeiro',
+        'fevereiro',
+        'marco',
+        'abril',
+        'maio',
+        'junho',
+        'julho',
+        'agosto',
+        'setembro',
+        'outubro',
+        'novembro',
+        'dezembro',
+    ]
+    month_label = month_names[today.month - 1]
+    date_label = f"{today.day:02d} de {month_label} de {today.year}"
+    story.append(Paragraph(date_label, body_style))
     story.append(Spacer(1, 18))
 
     signature_name_style = ParagraphStyle(

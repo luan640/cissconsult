@@ -78,6 +78,10 @@
             loadScriptOnce("{% static 'js/alert_settings_modals.js' %}");
             loadScriptOnce("{% static 'js/table_async.js' %}");
           }
+          if (page.includes('master-settings')) {
+            loadScriptOnce("{% static 'js/master_technical_modals.js' %}");
+            loadScriptOnce("{% static 'js/table_async.js' %}");
+          }
           if (page.includes('dashboard')) {
             loadScriptOnce("{% static 'js/dashboard_sidebar.js' %}");
             loadScriptOnce("{% static 'js/dashboard_charts.js' %}");
