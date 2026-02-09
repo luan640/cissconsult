@@ -48,10 +48,9 @@ def _get_csv_env(name: str) -> list[str]:
 ALLOWED_HOSTS = [
     '127.0.0.1',
     ".trycloudflare.com",
+    ".onrender.com",
 ]
 ALLOWED_HOSTS += _get_csv_env('DJANGO_ALLOWED_HOSTS')
-if not any(host for host in ALLOWED_HOSTS if host and host != '127.0.0.1'):
-    ALLOWED_HOSTS += ['.onrender.com']
 
 CSRF_TRUSTED_ORIGINS = [
     "https://*.trycloudflare.com",
@@ -84,6 +83,8 @@ if DEBUG:
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -92,6 +93,8 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 if DEBUG:
     MIDDLEWARE.insert(0, 'debug_toolbar.middleware.DebugToolbarMiddleware')
@@ -201,7 +204,7 @@ if USE_S3:
             'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
         },
         'staticfiles': {
-            'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage',
+            'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
         },
     }
 

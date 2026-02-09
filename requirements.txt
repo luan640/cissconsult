@@ -8,3 +8,4 @@ django-storages==1.14.4
 boto3==1.34.162
 gunicorn
 django-debug-toolbar==4.4.6
+whitenoise
