@@ -50,6 +50,8 @@ ALLOWED_HOSTS = [
     ".trycloudflare.com",
 ]
 ALLOWED_HOSTS += _get_csv_env('DJANGO_ALLOWED_HOSTS')
+if not any(host for host in ALLOWED_HOSTS if host and host != '127.0.0.1'):
+    ALLOWED_HOSTS += ['.onrender.com']
 
 CSRF_TRUSTED_ORIGINS = [
     "https://*.trycloudflare.com",
@@ -59,6 +61,7 @@ CSRF_TRUSTED_ORIGINS += [
     for host in _get_csv_env('DJANGO_ALLOWED_HOSTS')
     if host and not host.startswith('.')
 ]
+CSRF_TRUSTED_ORIGINS += ["https://*.onrender.com"]
 
 # Application definition
 
