@@ -1,4 +1,8 @@
 (function () {
+  if (window.__ghesModalsBound) {
+    return;
+  }
+  window.__ghesModalsBound = true;
   const containerId = 'ghes-table-container';
   const toastStackId = 'floating-toast-stack';
 
@@ -133,5 +137,10 @@
     }
   });
 
-  consumeInlineNotices();
+  const runPageHooks = () => {
+    consumeInlineNotices();
+  };
+
+  window.addEventListener('page:load', runPageHooks);
+  runPageHooks();
 })();

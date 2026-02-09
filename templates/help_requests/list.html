@@ -14,7 +14,7 @@
 <div class="app-layout">
   {% include "partials/sidebar.html" with active_menu="help_requests" can_manage_access=True %}
 
-  <main class="content">
+  <main class="content" data-page="help-requests">
     <header class="content__header">
       <div>
         <h1 class="content__title">Pedidos de ajuda</h1>
@@ -24,7 +24,7 @@
 
     <section class="card card--full table-filters-card">
       <p class="card__label">Filtros</p>
-      <form method="get" action="{% url 'help-requests-list' %}" class="period-filter table-filters-form" data-help-requests-filter-form>
+      <form method="get" action="{% url 'help-requests-list' %}" class="period-filter table-filters-form" data-help-requests-filter-form data-ajax-table-form data-table-container-id="help-requests-table-container">
         <div class="filter-field">
           <label for="help_requests_status">Status</label>
           <select id="help_requests_status" name="status">
@@ -58,47 +58,47 @@
     </section>
 
     {% include "help_requests/_table_container.html" %}
+
+    <div class="modal-backdrop" data-modal="edit-help-request-modal" aria-hidden="true">
+      <div class="modal-card">
+        <div class="modal-card__header">
+          <h2>Atualizar pedido de ajuda</h2>
+          <button type="button" class="modal-close" data-close-modal>&times;</button>
+        </div>
+        <form method="post" action="" class="form-grid modal-form help-request-edit-form" data-edit-help-request-form>
+          {% csrf_token %}
+          <div class="form-field">
+            <label for="edit_help_request_status">Status</label>
+            <select id="edit_help_request_status" name="status" required>
+              {% for value, label in status_choices %}
+                <option value="{{ value }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-field form-field--full">
+            <label for="edit_help_request_notes">Observacoes internas</label>
+            <textarea id="edit_help_request_notes" name="admin_notes" rows="4"></textarea>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn--primary" type="submit">Salvar</button>
+            <button class="btn btn--light" type="button" data-close-modal>Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" data-modal="help-request-history-modal" aria-hidden="true">
+      <div class="modal-card">
+        <div class="modal-card__header">
+          <h2>Historico do pedido de ajuda</h2>
+          <button type="button" class="modal-close" data-close-modal>&times;</button>
+        </div>
+        <div class="form-grid modal-form modal-history-scroll" id="help-request-history-container" style="display:block;">
+          <p style="margin:0; color:#475569;">Selecione um pedido para visualizar o historico.</p>
+        </div>
+      </div>
+    </div>
   </main>
-</div>
-
-<div class="modal-backdrop" data-modal="edit-help-request-modal" aria-hidden="true">
-  <div class="modal-card">
-    <div class="modal-card__header">
-      <h2>Atualizar pedido de ajuda</h2>
-      <button type="button" class="modal-close" data-close-modal>&times;</button>
-    </div>
-    <form method="post" action="" class="form-grid modal-form help-request-edit-form" data-edit-help-request-form>
-      {% csrf_token %}
-      <div class="form-field">
-        <label for="edit_help_request_status">Status</label>
-        <select id="edit_help_request_status" name="status" required>
-          {% for value, label in status_choices %}
-            <option value="{{ value }}">{{ label }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="form-field form-field--full">
-        <label for="edit_help_request_notes">Observações internas</label>
-        <textarea id="edit_help_request_notes" name="admin_notes" rows="4"></textarea>
-      </div>
-      <div class="form-actions">
-        <button class="btn btn--primary" type="submit">Salvar</button>
-        <button class="btn btn--light" type="button" data-close-modal>Cancelar</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<div class="modal-backdrop" data-modal="help-request-history-modal" aria-hidden="true">
-  <div class="modal-card">
-    <div class="modal-card__header">
-      <h2>Historico do pedido de ajuda</h2>
-      <button type="button" class="modal-close" data-close-modal>&times;</button>
-    </div>
-    <div class="form-grid modal-form modal-history-scroll" id="help-request-history-container" style="display:block;">
-      <p style="margin:0; color:#475569;">Selecione um pedido para visualizar o historico.</p>
-    </div>
-  </div>
 </div>
 {% endblock %}
 

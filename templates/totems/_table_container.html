@@ -36,7 +36,7 @@
               >
                 Editar
               </button>
-              <form method="post" action="{% url 'totems-delete' totem.id %}" onsubmit="return confirm('{% if totem.is_active %}Desativar{% else %}Ativar{% endif %} este totem?');">
+              <form method="post" action="{% url 'totems-delete' totem.id %}" data-totem-delete-form onsubmit="return confirm('{% if totem.is_active %}Desativar{% else %}Ativar{% endif %} este totem?');">
                 {% csrf_token %}
                 <button class="btn {% if totem.is_active %}btn--danger{% else %}btn--primary{% endif %} btn--sm" type="submit">
                   {% if totem.is_active %}Desativar{% else %}Ativar{% endif %}

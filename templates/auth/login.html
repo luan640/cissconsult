@@ -12,42 +12,35 @@
 
 {% block content %}
 <main class="auth-page">
-  <section class="auth-shell">
-    <aside class="auth-hero">
-      <div class="auth-brand">
+  <section class="auth-card auth-card--center">
+    <header class="auth-card__header">
+      <div class="auth-brand auth-brand--center">
         <img src="{% static 'img/logo.jpg' %}" alt="Logo" class="auth-brand__logo" />
         <p class="auth-brand__name">PLATAFORMA NR-1</p>
       </div>
-      <h1 class="auth-hero__title">Monitoramento de riscos psicossociais</h1>
-      <p class="auth-hero__text">Acesse sua conta para acompanhar indicadores, denuncias e pedidos de ajuda.</p>
-    </aside>
+      <h1 class="auth-title">Entrar</h1>
+      <p>Use seu usuario interno para acessar o painel.</p>
+    </header>
 
-    <section class="auth-card">
-      <header class="auth-card__header">
-        <h2>Entrar</h2>
-        <p>Use seu usuario interno para acessar o painel.</p>
-      </header>
+    {% if form.errors %}
+      <div class="auth-alert">E-mail ou senha invalidos.</div>
+    {% endif %}
 
-      {% if form.errors %}
-        <div class="auth-alert">E-mail ou senha invalidos.</div>
+    <form method="post" class="auth-form">
+      {% csrf_token %}
+      <div class="auth-field">
+        <label for="id_username">E-mail</label>
+        {{ form.username }}
+      </div>
+      <div class="auth-field">
+        <label for="id_password">Senha</label>
+        {{ form.password }}
+      </div>
+      <button type="submit" class="auth-submit" data-loading-text="Acessando...">Acessar</button>
+      {% if next %}
+        <input type="hidden" name="next" value="{{ next }}" />
       {% endif %}
-
-      <form method="post" class="auth-form">
-        {% csrf_token %}
-        <div class="auth-field">
-          <label for="id_username">E-mail</label>
-          {{ form.username }}
-        </div>
-        <div class="auth-field">
-          <label for="id_password">Senha</label>
-          {{ form.password }}
-        </div>
-        <button type="submit" class="auth-submit">Acessar</button>
-        {% if next %}
-          <input type="hidden" name="next" value="{{ next }}" />
-        {% endif %}
-      </form>
-    </section>
+    </form>
   </section>
 </main>
 {% endblock %}

@@ -27,6 +27,24 @@
   const inlineMessagesContainer = document.querySelector('.totem-messages');
   const toastStackId = 'totem-toast-stack';
 
+  const setButtonLoading = (button, isLoading, loadingText) => {
+    if (!button) return;
+    if (isLoading) {
+      if (!button.dataset.originalText) {
+        button.dataset.originalText = button.textContent || '';
+      }
+      button.textContent = loadingText || 'Registrando...';
+      button.disabled = true;
+      button.setAttribute('aria-busy', 'true');
+      return;
+    }
+    if (button.dataset.originalText) {
+      button.textContent = button.dataset.originalText;
+    }
+    button.disabled = false;
+    button.removeAttribute('aria-busy');
+  };
+
   const showStep = (name) => {
     panels.forEach((panel) => {
       const shouldShow = panel.getAttribute('data-step') === name;
@@ -160,6 +178,9 @@
 
   if (closeComplaintModalButton) {
     closeComplaintModalButton.addEventListener('click', () => {
+      if (confirmComplaintSubmitButton && confirmComplaintSubmitButton.getAttribute('aria-busy') === 'true') {
+        return;
+      }
       closeComplaintModal();
     });
   }
@@ -182,7 +203,7 @@
       if (complaintExtraHiddenInput) {
         complaintExtraHiddenInput.value = extraValue;
       }
-      closeComplaintModal();
+      setButtonLoading(confirmComplaintSubmitButton, true, 'Enviando...');
       if (complaintForm) {
         complaintForm.submit();
       }
@@ -242,6 +263,7 @@
       }
       if (moodForm) {
         try {
+          setButtonLoading(confirmMoodSubmitButton, true, 'Registrando...');
           const response = await fetch(moodForm.action, {
             method: 'POST',
             body: new FormData(moodForm),
@@ -266,6 +288,8 @@
           showStep('intro');
         } catch (error) {
           window.alert(error.message || 'Nao foi possivel registrar o humor.');
+        } finally {
+          setButtonLoading(confirmMoodSubmitButton, false);
         }
       }
     });
@@ -282,6 +306,9 @@
   if (complaintModal) {
     complaintModal.addEventListener('click', (event) => {
       if (event.target === complaintModal) {
+        if (confirmComplaintSubmitButton && confirmComplaintSubmitButton.getAttribute('aria-busy') === 'true') {
+          return;
+        }
         closeComplaintModal();
       }
     });

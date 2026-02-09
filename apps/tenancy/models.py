@@ -20,6 +20,7 @@ def company_logo_upload_to(instance, filename):
 class Company(models.Model):
     name = models.CharField(max_length=255)
     legal_name = models.CharField(max_length=255, blank=True)
+    legal_representative_name = models.CharField(max_length=255, blank=True)
     cnpj = models.CharField(
         max_length=14,
         unique=True,

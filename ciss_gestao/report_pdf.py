@@ -4,8 +4,10 @@ from reportlab.lib.units import mm
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image
 from reportlab.lib import colors
+from reportlab.lib.utils import ImageReader
 from reportlab.graphics.shapes import Drawing, Rect, String, Path, Circle
 import os
+from django.core.files.storage import default_storage
 
 def build_campaign_report_pdf(report_context: dict) -> bytes:
     """
@@ -193,10 +195,10 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
 
     story = []
 
-    story.append(Paragraph("RELATORIO DE SAUDE ORGANIZACIONAL", title_style))
+    story.append(Paragraph("RELATÓRIO DE SAÚDE ORGANIZACIONAL", title_style))
     story.append(
         Paragraph(
-            "Avaliacao ergonomica preliminar dos fatores riscos psicossociais relacionados ao ambiente de trabalho",
+            "Avaliação ergonômica preliminar dos fatores riscos psicossociais relacionados ao ambiente de trabalho",
             subtitle_style,
         )
     )
@@ -212,21 +214,21 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
     responses_count = report_context.get("responses_count", "-")
     evaluation_date = report_context.get("evaluation_date", "-")
 
-    story.append(Paragraph("RELATORIO DE FATORES RISCOS PSICOSSOCIAIS RELACIONADOS AO TRABALHO (FRPRT)", section_style))
-    story.append(Paragraph("AVALIACAO ERGONOMICA PRELIMINAR (AEP)", section_style))
+    story.append(Paragraph("RELATÓRIO DE FATORES RISCOS PSICOSSOCIAIS RELACIONADOS AO TRABALHO (FRPRT)", section_style))
+    story.append(Paragraph("AVALIAÇÃO ERGONÔMICA PRELIMINAR (AEP)", section_style))
     story.append(Paragraph("NR-1. NR-17, GUIA DE FATORES PSICOSSOCIAIS HSE-SIT-UK", body_style))
     story.append(Spacer(1, 6))
 
     story.append(PageBreak())
     story.append(Paragraph("SUMARIO", section_style))
     summary_items = [
-        (1, "IDENTIFICACAO"),
+        (1, "IDENTIFICAÇÃO"),
         (2, "OBJETIVO"),
         (3, "METODOLOGIA"),
-        (4, "IMPORTANCIA DA PARTICIPACAO DOS TRABALHADORES"),
+        (4, "IMPORTÂNCIA DA PARTICIPAÇÃO DOS TRABALHADORES"),
         (5, "RESULTADOS GERAIS"),
-        (6, "CONCLUSOES E RECOMENDACOES PRELIMINARES"),
-        (7, "LIMITACOES"),
+        (6, "CONCLUSÕES E RECOMENDAÇÕES PRELIMINARES"),
+        (7, "LIMITAÇÕES"),
         (8, "RESPONSABILIDADES"),
         (9, "ANEXOS"),
     ]
@@ -254,21 +256,21 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
     story.append(Spacer(1, 6))
     story.append(PageBreak())
 
-    add_section_header(1, "IDENTIFICACAO")
+    add_section_header(1, "IDENTIFICAÇÃO")
     story.append(Paragraph(f"<b>Empresa:</b> {company_name}", body_style))
     story.append(Paragraph(f"<b>CNPJ:</b> {company_cnpj}", body_style))
-    story.append(Paragraph(f"<b>Endereco:</b> {company_address}", body_style))
+    story.append(Paragraph(f"<b>Endereço:</b> {company_address}", body_style))
     story.append(Paragraph(f"<b>CNAE:</b> {company_cnae}", body_style))
     story.append(Paragraph(f"<b>Classe de risco:</b> {company_risk}", body_style))
     story.append(Paragraph(f"<b>GHEs avaliados:</b> {ghes}", body_style))
-    story.append(Paragraph(f"<b>Numero de trabalhadores avaliados:</b> {responses_count}", body_style))
-    story.append(Paragraph(f"<b>Data da avaliacao:</b> {evaluation_date}", body_style))
-    story.append(Paragraph("<b>Reavaliacao recomendada:</b> 3 meses", body_style))
+    story.append(Paragraph(f"<b>Número de trabalhadores avaliados:</b> {responses_count}", body_style))
+    story.append(Paragraph(f"<b>Data da avaliação:</b> {evaluation_date}", body_style))
+    story.append(Paragraph("<b>Reavaliação recomendada:</b> 3 meses", body_style))
     story.append(Spacer(1, 6))
 
     story.append(
         Paragraph(
-            "1.1 Responsaveis tecnicos pela ferramenta de avaliacao FRPRT",
+            "1.1 Responsáveis técnicos pela ferramenta de avaliação FRPRT",
             ParagraphStyle(
                 "SectionSubBlue",
                 parent=section_style,
@@ -276,16 +278,25 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
             ),
         )
     )
+    tech_rows = [["Nome", "Formação", "Registro"]]
+    tech_entries = report_context.get("technical_responsibles") or []
+    if tech_entries:
+        for item in tech_entries:
+            tech_rows.append(
+                [
+                    item.get("name") or "-",
+                    item.get("education") or "-",
+                    item.get("registration") or "-",
+                ]
+            )
+    else:
+        tech_rows.append(["Nenhum responsavel tecnico informado.", "", ""])
     tech_table = Table(
-        [
-            ["Nome", "Formacao", "Registro"],
-            ["Eng. Carlos Almeida", "Engenharia de Seguranca do Trabalho", "CREA 123456/D"],
-            ["Psic. Fernanda Rocha", "Psicologia Organizacional", "CRP 06/78910"],
-            ["Dr. Marcelo Lima", "Medicina do Trabalho", "CRM 12345"],
-        ],
+        tech_rows,
         colWidths=[doc.width * 0.36, doc.width * 0.44, doc.width * 0.20],
         hAlign="LEFT",
     )
+
     tech_table.setStyle(
         TableStyle(
             [
@@ -322,48 +333,48 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
     add_section_header(3, "METODOLOGIA")
     story.append(
         Paragraph(
-            "Para a realizacao desta Avaliacao Ergonomica Preliminar (AEP), foi utilizado o Stress Indicator Tool "
-            "(SIT), instrumento de avaliacao psicossocial internacionalmente validado pelo Health and Safety "
+            "Para a realização desta Avaliação Ergonômica Preliminar (AEP), foi utilizado o Stress Indicator Tool "
+            "(SIT), instrumento de avaliação psicossocial internacionalmente validado pelo Health and Safety "
             "Executive (HSE) do Reino Unido (UK) e devidamente adaptado ao contexto organizacional brasileiro, em "
-            "consonancia com as exigencias da NR-01, da NR-07 e do Guia de Fatores Psicossociais Relacionados ao "
-            "Trabalho, elaborado pelo Ministerio do Trabalho e Emprego (MTE).",
+            "consonância com as exigências da NR-01, da NR-07 e do Guia de Fatores Psicossociais Relacionados ao "
+            "Trabalho, elaborado pelo Ministério do Trabalho e Emprego (MTE).",
             body_style,
         )
     )
     story.append(
         Paragraph(
             "O instrumento e composto por 35 perguntas estruturadas, distribuidas nos dominios Demandas, Controle, "
-            "Apoio, Relacionamentos, Papel e Mudancas, reconhecidos pela literatura cientifica e pelas normas "
+            "Apoio, Relacionamentos, Papel e Mudanças, reconhecidos pela literatura cientifica e pelas normas "
             "tecnicas como determinantes relevantes para a saude mental e o bem-estar dos trabalhadores.",
             body_style,
         )
     )
     story.append(
         Paragraph(
-            "A aplicacao do metodo possibilita uma analise tecnica aprofundada dos fatores criticos do ambiente de "
+            "A aplicação do método possibilita uma análise técnica aprofundada dos fatores críticos do ambiente de "
             "trabalho, contemplando as seguintes etapas:",
             body_style,
         )
     )
-    story.append(Paragraph("- Coleta sistematica e anonima das percepcoes dos trabalhadores, assegurando a confidencialidade e a fidedignidade das respostas;", body_style))
-    story.append(Paragraph("- Categorizacao, tabulacao e analise estatistica dos dados coletados, permitindo a identificacao de areas criticas e pontos prioritarios de atenção;", body_style))
-    story.append(Paragraph("- Interpretacao tecnica dos resultados, alinhada aos dispositivos legais vigentes e as boas praticas nacionais e internacionais de Saude e Seguranca do Trabalho, garantindo rastreabilidade das informacoes e subsidiando o planejamento de acoes integradas ao GRO e ao PGR.", body_style))
+    story.append(Paragraph("- Coleta sistemática e anônima das percepções dos trabalhadores, assegurando a confidencialidade e a fidedignidade das respostas;", body_style))
+    story.append(Paragraph("- Categorização, tabulação e análise estatística dos dados coletados, permitindo a identificação de áreas críticas e pontos prioritários de atenção;", body_style))
+    story.append(Paragraph("- Interpretação técnica dos resultados, alinhada aos dispositivos legais vigentes e as boas práticas nacionais e internacionais de Saúde e Segurança do Trabalho, garantindo rastreabilidade das informações e subsidiando o planejamento de ações integradas ao GRO e ao PGR.", body_style))
 
     story.append(
         Paragraph(
             "O uso do Stress Indicator Tool (SIT) neste processo possibilita a identificacao consistente dos riscos "
             "psicossociais presentes no ambiente de trabalho, constituindo-se como ponto de partida para a "
             "priorizacao de medidas corretivas e preventivas, alem de viabilizar o monitoramento continuo da "
-            "evolucao das condicoes psicossociais ao longo do tempo.",
+            "evolução das condições psicossociais ao longo do tempo.",
             body_style,
         )
     )
     story.append(
         Paragraph(
-            "Destaca-se que o SIT e uma das ferramentas recomendadas pelo Health and Safety Executive (HSE-UK) em "
-            "razao de sua eficacia na coleta estruturada e pratica das percepcoes dos trabalhadores, sendo relevante "
-            "ressaltar que os resultados obtidos representam a percepcao dos colaboradores em um determinado "
-            "contexto e periodo, o que reforca a necessidade de reavaliacoes periodicas, em consonancia com o ciclo "
+            "Destaca-se que o SIT é uma das ferramentas recomendadas pelo Health and Safety Executive (HSE-UK) em "
+            "razão de sua eficácia na coleta estruturada e prática das percepções dos trabalhadores, sendo relevante "
+            "ressaltar que os resultados obtidos representam a percepção dos colaboradores em um determinado "
+            "contexto e período, o que reforça a necessidade de reavaliações periódicas, em consonância com o ciclo "
             "de monitoramento do GRO e do PGR.",
             body_style,
         )
@@ -379,10 +390,10 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
     )
     story.append(
         Paragraph(
-            "Adicionalmente, a metodologia adotada contribui para a promocao de ambientes de trabalho mais saudaveis "
-            "e produtivos, possibilitando que a organizacao atue de maneira preventiva, estruturada e sistematica no "
-            "gerenciamento dos fatores psicossociais relacionados ao trabalho, em conformidade com a legislacao "
-            "brasileira vigente e com os principios internacionais de gestao em saude e seguranca ocupacional.",
+            "Adicionalmente, a metodologia adotada contribui para a promoção de ambientes de trabalho mais saudáveis "
+            "e produtivos, possibilitando que a organização atue de maneira preventiva, estruturada e sistemática no "
+            "gerenciamento dos fatores psicossociais relacionados ao trabalho, em conformidade com a legislação "
+            "brasileira vigente e com os princípios internacionais de gestão em saúde e segurança ocupacional.",
             body_style,
         )
     )
@@ -390,56 +401,56 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
     story.append(Paragraph("Selecionando uma amostra", sub_section_style))
     story.append(
         Paragraph(
-            "Ha varias questoes a serem consideradas na selecao de uma populacao de pesquisa:",
+            "Há várias questões a serem consideradas na seleção de uma população de pesquisa:",
             body_style,
         )
     )
     story.append(Paragraph("- Quais listas de trabalhadores podem ser usadas;", body_style))
-    story.append(Paragraph("- Quantos trabalhadores voce precisa amostrar; e", body_style))
+    story.append(Paragraph("- Quantos trabalhadores você precisa amostrar; e", body_style))
     story.append(Paragraph("- Como selecionar uma amostra de trabalhadores.", body_style))
 
     story.append(Paragraph("Lista de trabalhadores", sub_section_style))
     story.append(
         Paragraph(
-            "Se voce estiver selecionando uma amostra de trabalhadores ou todos os trabalhadores da sua organizacao, "
-            "precisara garantir que tenha uma lista atualizada dos trabalhadores selecionados para a pesquisa. A lista "
-            "pode ser a folha de pagamento, registros de funcionarios, registros de seguranca do local ou fonte "
-            "similar. E importante que a lista de trabalhadores utilizada esteja atualizada e precisa para garantir "
-            "que todos os participantes da sua amostra recebam seus questionarios. Isso ajudara a maximizar sua taxa "
-            "de resposta, tornando a pesquisa o mais confiavel possivel.",
+            "Se você estiver selecionando uma amostra de trabalhadores ou todos os trabalhadores da sua organização, "
+            "precisará garantir que tenha uma lista atualizada dos trabalhadores selecionados para a pesquisa. A lista "
+            "pode ser a folha de pagamento, registros de funcionários, registros de segurança do local ou fonte "
+            "similar. É importante que a lista de trabalhadores utilizada esteja atualizada e precisa para garantir "
+            "que todos os participantes da sua amostra recebam seus questionários. Isso ajudará a maximizar sua taxa "
+            "de resposta, tornando a pesquisa o mais confiável possível.",
             body_style,
         )
     )
 
-    story.append(Paragraph("Tamanho minimo de amostra recomendado", sub_section_style))
+    story.append(Paragraph("Tamanho mínimo de amostra recomendado", sub_section_style))
     story.append(
         Paragraph(
-            "Uma pesquisa com todos os seus funcionarios sempre fornecera uma imagem mais precisa do que uma amostra. "
-            "As vantagens de realizar uma pesquisa com o menor tamanho de amostra recomendado sao que ela mantem os "
-            "custos no minimo e tambem limita o tempo necessario para a equipe. Os tamanhos minimos de amostra foram "
-            "calculados para garantir que os resultados da pesquisa fornecam uma imagem estatisticamente "
-            "representativa das opinioes de todos os funcionarios da sua organizacao.",
+            "Uma pesquisa com todos os seus funcionários sempre fornecerá uma imagem mais precisa do que uma amostra. "
+            "As vantagens de realizar uma pesquisa com o menor tamanho de amostra recomendado são que ela mantém os "
+            "custos no mínimo e também limita o tempo necessário para a equipe. Os tamanhos mínimos de amostra foram "
+            "calculados para garantir que os resultados da pesquisa forneçam uma imagem estatisticamente "
+            "representativa das opiniões de todos os funcionários da sua organização.",
             body_style,
         )
     )
     story.append(
         Paragraph(
-            "As vantagens de utilizar uma amostra maior incluem a possibilidade de uma analise mais detalhada de "
-            "subgrupos (por exemplo, por grupo ocupacional) e a oportunidade de mais funcionarios expressarem suas "
-            "opinioes. As desvantagens sao os custos mais elevados em termos de recursos e tempo.",
+            "As vantagens de utilizar uma amostra maior incluem a possibilidade de uma análise mais detalhada de "
+            "subgrupos (por exemplo, por grupo ocupacional) e a oportunidade de mais funcionários expressarem suas "
+            "opiniões. As desvantagens são os custos mais elevados em termos de recursos e tempo.",
             body_style,
         )
     )
     story.append(
         Paragraph(
-            "Os tamanhos de amostra recomendados sao fornecidos na tabela abaixo:",
+            "Os tamanhos de amostra recomendados são fornecidos na tabela abaixo:",
             body_style,
         )
     )
     sample_table = Table(
         [
-            ["Numero total de trabalhadores", "Tamanho de amostra recomendado"],
-            ["<= 500", "Todos os funcionarios"],
+            ["Número total de trabalhadores", "Tamanho de amostra recomendado"],
+            ["<= 500", "Todos os funcionários"],
             ["501 - 1.000", "500 respostas"],
             ["1.001 - 2.000", "650 respostas"],
             ["2.001 - 3.000", "700 respostas"],
@@ -462,39 +473,39 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
     story.append(sample_table)
     story.append(
         Paragraph(
-            "Referencia: Northumberland, Tyne and Wear NHS Foundation Trust SeW-PGN-1 - Apendice 7 - Manual do "
-            "Usuario da Ferramenta Indicadora HSE - V03. Edicao 1 - Emitido em setembro de 2014. Parte da NTW(HR) 12 - "
-            "Politica de Estresse no Trabalho.",
+            "Referência: Northumberland, Tyne and Wear NHS Foundation Trust SeW-PGN-1 - Apêndice 7 - Manual do "
+            "Usuário da Ferramenta Indicadora HSE - V03. Edição 1 - Emitido em setembro de 2014. Parte da NTW(HR) 12 - "
+            "Política de Estresse no Trabalho.",
             small_style,
         )
     )
 
     story.append(PageBreak())
-    add_section_header(4, "IMPORTANCIA DA PARTICIPACAO DOS TRABALHADORES")
+    add_section_header(4, "IMPORTÂNCIA DA PARTICIPAÇÃO DOS TRABALHADORES")
     story.append(
         Paragraph(
-            "A participacao ativa, genuina e informada dos trabalhadores e um pilar essencial para a efetividade desta "
-            "Avaliacao Ergonomica Preliminar (AEP), estando em conformidade com os principios de participacao "
-            "previstos na NR-1 (item 1.5.3.1) e NR-17, que destacam a importancia do envolvimento dos trabalhadores na "
-            "identificacao e gestao dos riscos ocupacionais, incluindo fatores psicossociais relacionados ao trabalho.",
+            "A participação ativa, genuína e informada dos trabalhadores é um pilar essencial para a efetividade desta "
+            "Avaliação Ergonômica Preliminar (AEP), estando em conformidade com os princípios de participação "
+            "previstos na NR-1 (item 1.5.3.1) e NR-17, que destacam a importância do envolvimento dos trabalhadores na "
+            "identificação e gestão dos riscos ocupacionais, incluindo fatores psicossociais relacionados ao trabalho.",
             body_style,
         )
     )
     story.append(
         Paragraph(
-            "Os trabalhadores sao os que vivenciam diariamente os processos, as demandas e os desafios do ambiente "
-            "laboral, possuindo conhecimento pratico e percepcoes realistas sobre os fatores que impactam sua saude, "
-            "bem-estar, seguranca e desempenho. Este conhecimento pratico e insubstituivel e complementa as "
-            "observacoes tecnicas realizadas durante a avaliacao.",
+            "Os trabalhadores são os que vivenciam diariamente os processos, as demandas e os desafios do ambiente "
+            "laboral, possuindo conhecimento prático e percepções realistas sobre os fatores que impactam sua saúde, "
+            "bem-estar, segurança e desempenho. Este conhecimento prático e insubstituível e complementa as "
+            "observações técnicas realizadas durante a avaliação.",
             body_style,
         )
     )
     story.append(
         Paragraph(
-            "A coleta de percepcoes diretamente com os trabalhadores, de forma anonima e confidencial, reduz vieses "
-            "de avaliacao e possibilita a identificacao de fatores subjetivos que nao seriam captados apenas por "
-            "metodos observacionais ou de analise documental. Alem disso, a participacao efetiva dos colaboradores "
-            "reforca o compromisso coletivo com a saude e seguranca, incentivando o engajamento nas acoes de melhoria "
+            "A coleta de percepções diretamente com os trabalhadores, de forma anônima e confidencial, reduz vieses "
+            "de avaliação e possibilita a identificação de fatores subjetivos que não seriam captados apenas por "
+            "métodos observacionais ou de análise documental. Além disso, a participação efetiva dos colaboradores "
+            "reforça o compromisso coletivo com a saúde e segurança, incentivando o engajamento nas ações de melhoria "
             "que venham a ser implementadas posteriormente.",
             body_style,
         )
@@ -502,29 +513,29 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
     story.append(
         Paragraph(
             "Sem o engajamento dos trabalhadores, os dados coletados podem apresentar lacunas significativas, "
-            "tornando o diagnostico impreciso ou incompleto e comprometendo a eficacia das medidas corretivas e "
-            "preventivas propostas. Por este motivo, destaca-se que a qualidade das informacoes obtidas depende "
-            "diretamente de um ambiente de confianca, onde os trabalhadores sintam-se seguros para expressar suas "
+            "tornando o diagnóstico impreciso ou incompleto e comprometendo a eficácia das medidas corretivas e "
+            "preventivas propostas. Por este motivo, destaca-se que a qualidade das informações obtidas depende "
+            "diretamente de um ambiente de confiança, onde os trabalhadores sintam-se seguros para expressar suas "
             "percepcoes de forma honesta, sem receio de represalias ou julgamentos.",
             body_style,
         )
     )
     story.append(
         Paragraph(
-            "A promocao de transparencia, escuta ativa e dialogo constante sao estrategias fundamentais para "
-            "garantir esta participacao, alinhadas ao ciclo de melhoria continua do Gerenciamento de Riscos "
+            "A promoção de transparência, escuta ativa e diálogo constante são estratégias fundamentais para "
+            "garantir esta participação, alinhadas ao ciclo de melhoria contínua do Gerenciamento de Riscos "
             "Ocupacionais (GRO) e ao Programa de Gerenciamento de Riscos (PGR). Esta abordagem participativa "
-            "fortalece a cultura de seguranca e saude dentro da organizacao, contribuindo para um ambiente de "
-            "trabalho mais seguro, saudavel, equilibrado e produtivo.",
+            "fortalece a cultura de segurança e saúde dentro da organização, contribuindo para um ambiente de "
+            "trabalho mais seguro, saudável, equilibrado e produtivo.",
             body_style,
         )
     )
     story.append(
         Paragraph(
-            "Por fim, reforca-se que a inclusao do trabalhador no processo de identificacao e analise de riscos "
-            "psicossociais esta alinhada as melhores praticas internacionais recomendadas pela HSE-UK, sendo um "
-            "diferencial para empresas que buscam excelencia em seus sistemas de gestao de saude e seguranca do "
-            "trabalho, promovendo resultados sustentaveis e respeitando o bem-estar de seus colaboradores.",
+            "Por fim, reforça-se que a inclusão do trabalhador no processo de identificação e análise de riscos "
+            "psicossociais está alinhada às melhores práticas internacionais recomendadas pela HSE-UK, sendo um "
+            "diferencial para empresas que buscam excelência em seus sistemas de gestão de saúde e segurança do "
+            "trabalho, promovendo resultados sustentáveis e respeitando o bem-estar de seus colaboradores.",
             body_style,
         )
     )
@@ -554,7 +565,7 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
         alignment=1,
     )
     overall_base_flow = [
-        Paragraph("Media geral da empresa", overall_label_center),
+        Paragraph("Média geral da empresa", overall_label_center),
         Paragraph(
             f"<font size=18 color='{overall_color.hexval()}'><b>{overall_percent}%</b></font>",
             overall_value_center,
@@ -564,7 +575,7 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
     ]
 
     domain_bar_width = (domain_card_width - 20) * 0.55
-    domain_rows = [[Paragraph("Media por dominio", label_style), "", ""]]
+    domain_rows = [[Paragraph("Média por domínio", label_style), "", ""]]
     if domains:
         for domain in domains:
             label = domain.get("label", "-")
@@ -636,7 +647,7 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
     )
     sample_flow = [
         Paragraph("Amostra de Respostas", sample_label_center),
-        Paragraph(f"{responses_count} de {total_workers} funcionarios responderam", sample_text_center),
+        Paragraph(f"{responses_count} de {total_workers} funcionários responderam", sample_text_center),
         Paragraph(f"<font size=18 color='#ef4444'><b>{response_rate}%</b></font>", sample_value_center),
         Paragraph(f"<b>{response_label}</b>", sample_value_center),
     ]
@@ -702,9 +713,9 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
     zone_legend = Table(
         [
             [
-                Paragraph("<b>Zona Vermelha (0% a 39.99%)</b><br/>Risco elevado: acao corretiva imediata", zone_legend_text),
-                Paragraph("<b>Zona Amarela (40% a 74.99%)</b><br/>Atencao: possivel risco psicossocial; revisar praticas.", zone_legend_text),
-                Paragraph("<b>Zona Verde (75% a 100%)</b><br/>Boa percepcao: manutencao recomendada.", zone_legend_text),
+                Paragraph("<b>Zona Vermelha (0% a 39.99%)</b><br/>Risco elevado: ação corretiva imediata", zone_legend_text),
+                Paragraph("<b>Zona Amarela (40% a 74.99%)</b><br/>Atenção: possível risco psicossocial; revisar práticas.", zone_legend_text),
+                Paragraph("<b>Zona Verde (75% a 100%)</b><br/>Boa percepção: manutenção recomendada.", zone_legend_text),
             ]
         ],
         colWidths=[doc.width / 3] * 3,
@@ -805,7 +816,7 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
                     Drawing(8, 8, Rect(0, 0, 8, 8, fillColor=colors.HexColor("#22c55e"), strokeColor=None)),
                     Paragraph("NUNCA - POSITIVO | BOM", chart_small_left),
                     Drawing(8, 8, Rect(0, 0, 8, 8, fillColor=colors.HexColor("#f59e0b"), strokeColor=None)),
-                    Paragraph("As vezes - ATENCAO", chart_small_left),
+                    Paragraph("Às vezes - ATENÇÃO", chart_small_left),
                     Drawing(8, 8, Rect(0, 0, 8, 8, fillColor=colors.HexColor("#ef4444"), strokeColor=None)),
                     Paragraph("SEMPRE - NEGATIVO | RUIM", chart_small_left),
                 ]
@@ -831,7 +842,7 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
         summary_row = Table(
             [
                 [
-                    Paragraph("Media Geral", chart_text_center),
+                    Paragraph("Média Geral", chart_text_center),
                     make_bar(percent, bar_width, 12, color, show_container=True),
                     Paragraph(f"<b>{percent}%</b> | {avg}", chart_text_center),
                 ]
@@ -858,7 +869,7 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
 
         ghes = domain.get("ghes") or []
         if ghes:
-            right_block.extend([Paragraph("Analise por Setor", chart_text_center), Spacer(1, 2)])
+            right_block.extend([Paragraph("Análise por Setor", chart_text_center), Spacer(1, 2)])
             for ghe in ghes:
                 percent = ghe.get("percent", 0)
                 avg = ghe.get("avg", 0)
@@ -896,7 +907,7 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
 
         questions = domain.get("questions") or []
         if questions:
-            story.append(Paragraph(f"{domain.get('label', '').upper()} (Analise Geral)", chart_title_mid))
+            story.append(Paragraph(f"{domain.get('label', '').upper()} (Análise Geral)", chart_title_mid))
             story.append(legend_row)
             story.append(Spacer(1, 6))
             for chunk in chunk_list(questions, 6):
@@ -979,7 +990,7 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
                 qs = ghe.get("questions", [])
                 for chunk in chunk_list(qs, 6):
                     block = [
-                        Paragraph(f"{domain.get('label', '').upper()} (Analise por Setor)", chart_title_big),
+                        Paragraph(f"{domain.get('label', '').upper()} (Análise por Setor)", chart_title_big),
                         Paragraph(f"SETOR: {ghe.get('name', '-')}", chart_subtitle_big),
                         Spacer(1, 2),
                     ]
@@ -1057,17 +1068,17 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
 
     # 6. CONCLUSOES E RECOMENDACOES PRELIMINARES
     story.append(PageBreak())
-    add_section_header(6, "CONCLUSOES E RECOMENDACOES PRELIMINARES")
+    add_section_header(6, "CONCLUSÕES E RECOMENDAÇÕES PRELIMINARES")
 
     bullet_style = ParagraphStyle("BulletBody", parent=body_style, leftIndent=10, bulletIndent=0)
-    story.append(Paragraph("<bullet>&bull;</bullet> Priorizar dominios com risco elevado.", bullet_style))
+    story.append(Paragraph("<bullet>&bull;</bullet> Priorizar domínios com risco elevado.", bullet_style))
     reeval_value = report_context.get("reevaluate_months", 3) or 3
     story.append(Paragraph(f"<bullet>&bull;</bullet> Reavaliar periodicamente: daqui {reeval_value} meses.", bullet_style))
-    story.append(Paragraph("<bullet>&bull;</bullet> Promover treinamentos sobre saude mental e fatores psicossociais.", bullet_style))
-    story.append(Paragraph("<bullet>&bull;</bullet> Caso necessario, realizar AET aprofundada conforme NR-17.", bullet_style))
+    story.append(Paragraph("<bullet>&bull;</bullet> Promover treinamentos sobre saúde mental e fatores psicossociais.", bullet_style))
+    story.append(Paragraph("<bullet>&bull;</bullet> Caso necessário, realizar AET aprofundada conforme NR-17.", bullet_style))
     story.append(Spacer(1, 8))
 
-    story.append(Paragraph("Plano de Acao Recomendado", ParagraphStyle("PlanTitle", parent=body_style, fontName="Helvetica-Bold", textColor=colors.HexColor("#92400e"))))
+    story.append(Paragraph("Plano de Ação Recomendado", ParagraphStyle("PlanTitle", parent=body_style, fontName="Helvetica-Bold", textColor=colors.HexColor("#92400e"))))
     question_scores = {}
     for domain in (report_context.get("results") or {}).get("domain_details", []):
         for q in domain.get("questions") or []:
@@ -1151,13 +1162,13 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
             status_header = Table(
                 [
                     [
-                        Paragraph("<b>Responsavel</b>", status_header_text),
-                        Paragraph("<b>Data de aplicacao</b>", status_header_text),
+                        Paragraph("<b>Responsável</b>", status_header_text),
+                        Paragraph("<b>Data de aplicação</b>", status_header_text),
                         Paragraph("<b>A fazer</b>", status_header_text),
                         Paragraph("<b>Fazendo</b>", status_header_text),
                         Paragraph("<b>Adiado</b>", status_header_text),
-                        Paragraph("<b>Concluido</b>", status_header_text),
-                        Paragraph("<b>Data de conclusao</b>", status_header_text),
+                        Paragraph("<b>Concluído</b>", status_header_text),
+                        Paragraph("<b>Data de conclusão</b>", status_header_text),
                     ]
                 ],
                 colWidths=status_col_widths,
@@ -1205,9 +1216,9 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
             story.append(action_table)
             story.append(Spacer(1, 6))
 
-    # 7. LIMITACOES
+    # 7. LIMITAÇÕES
     story.append(PageBreak())
-    add_section_header(7, "LIMITACOES")
+    add_section_header(7, "LIMITAÇÕES")
     story.append(
         Paragraph(
             "Esta Avaliação Ergonômica Preliminar (AEP) possui caráter preliminar, sendo realizada em "
@@ -1255,7 +1266,7 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
     story.append(Spacer(1, 6))
     story.append(
         Paragraph(
-            "Além disso, os resultados obtidos por meio do AVALIA NR01 representam a percepção dos trabalhadores "
+            "Além disso, os resultados obtidos por meio desta plataforma representam a percepção dos trabalhadores "
             "sobre o ambiente de trabalho em um período específico, podendo sofrer alterações em virtude de "
             "mudanças organizacionais, tecnológicas ou de processos de trabalho. Portanto, os dados devem ser "
             "utilizados de forma crítica, sendo recomendada sua atualização periódica para manter a "
@@ -1299,12 +1310,17 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
         fontName="Helvetica-Bold",
     )
 
+    evaluator_name = report_context.get("evaluation_representative_name") or "-"
+    evaluator_company = report_context.get("evaluation_company_name") or "CISS CONSULTORIA"
+    approver_name = report_context.get("company_legal_representative_name") or "-"
+    approver_company = report_context.get("company_legal_representative_company") or "-"
+
     left_signature = Table(
         [
             [Paragraph(" ", body_style)],
-            [Paragraph("<b>José Antônio Pereira</b>", signature_name_style)],
+            [Paragraph(f"<b>{evaluator_name}</b>", signature_name_style)],
             [Paragraph("Representante Legal", signature_role_style)],
-            [Paragraph("Medseg Prestação de Serviços SST", signature_role_style)],
+            [Paragraph(evaluator_company, signature_role_style)],
             [Paragraph("Responsável pela avaliação", signature_bold_style)],
         ],
         colWidths=[doc.width * 0.45],
@@ -1322,9 +1338,9 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
     right_signature = Table(
         [
             [Paragraph(" ", body_style)],
-            [Paragraph("<b>Priscila Helena Aragão</b>", signature_name_style)],
+            [Paragraph(f"<b>{approver_name}</b>", signature_name_style)],
             [Paragraph("Representante Legal", signature_role_style)],
-            [Paragraph("Ana e Jennifer Ferragens ME", signature_role_style)],
+            [Paragraph(approver_company, signature_role_style)],
             [Paragraph("Responsável pela aprovação", signature_bold_style)],
         ],
         colWidths=[doc.width * 0.45],
@@ -1400,7 +1416,11 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
                 _, ext = os.path.splitext(stored_path.lower())
                 if ext in image_exts:
                     try:
-                        img = Image(stored_path)
+                        if os.path.exists(stored_path):
+                            img = Image(stored_path)
+                        else:
+                            with default_storage.open(stored_path, 'rb') as handle:
+                                img = Image(ImageReader(handle))
                         max_width = doc.width
                         max_height = doc.height * 0.45
                         img_width, img_height = img.imageWidth, img.imageHeight

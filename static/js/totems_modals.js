@@ -1,10 +1,10 @@
 (function () {
+  if (window.__totemsModalsBound) {
+    return;
+  }
+  window.__totemsModalsBound = true;
   const containerId = 'totems-table-container';
   const toastStackId = 'floating-toast-stack';
-  const openButtons = document.querySelectorAll('[data-open-modal]');
-  const editButtons = document.querySelectorAll('[data-open-edit-totem]');
-  const closeButtons = document.querySelectorAll('[data-close-modal]');
-  const editForm = document.querySelector('[data-edit-totem-form]');
 
   const getToastStack = () => {
     let stack = document.getElementById(toastStackId);
@@ -69,40 +69,116 @@
     }
   };
 
-  openButtons.forEach((button) => {
-    button.addEventListener('click', () => {
-      openModal(button.getAttribute('data-open-modal'));
-    });
-  });
-
-  editButtons.forEach((button) => {
-    button.addEventListener('click', () => {
-      if (!editForm) {
-        return;
+  const setLoadingState = (form, isLoading) => {
+    if (!form) return;
+    const button = form.querySelector('button[type="submit"]');
+    if (!button) return;
+    if (isLoading) {
+      const loadingText = button.getAttribute('data-loading-text') || 'Salvando...';
+      if (!button.dataset.originalText) {
+        button.dataset.originalText = button.textContent || '';
       }
-      editForm.action = button.dataset.updateUrl || '';
-      editForm.querySelector('#edit_totem_name').value = button.dataset.name || '';
-      editForm.querySelector('#edit_totem_location').value = button.dataset.location || '';
+      button.textContent = loadingText;
+      button.disabled = true;
+      button.setAttribute('aria-busy', 'true');
+      return;
+    }
+    if (button.dataset.originalText) {
+      button.textContent = button.dataset.originalText;
+    }
+    button.disabled = false;
+    button.removeAttribute('aria-busy');
+  };
+
+  const restoreSubmitButton = (form) => {
+    setLoadingState(form, false);
+  };
+
+  const replaceTable = (html) => {
+    const container = document.getElementById(containerId);
+    if (container) {
+      container.outerHTML = html;
+    }
+    consumeInlineNotices();
+  };
+
+  const submitAjaxForm = async (form) => {
+    const response = await fetch(form.action, {
+      method: form.method || 'POST',
+      body: new FormData(form),
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest',
+      },
+    });
+    if (!response.ok) {
+      throw new Error('Falha ao atualizar totens.');
+    }
+    replaceTable(await response.text());
+  };
+
+  document.addEventListener('click', (event) => {
+    const openButton = event.target.closest('[data-open-modal]');
+    if (openButton) {
+      openModal(openButton.getAttribute('data-open-modal'));
+      return;
+    }
+
+    const editButton = event.target.closest('[data-open-edit-totem]');
+    if (editButton) {
+      const editForm = document.querySelector('[data-edit-totem-form]');
+      if (!editForm) return;
+      editForm.action = editButton.dataset.updateUrl || '';
+      editForm.querySelector('#edit_totem_name').value = editButton.dataset.name || '';
+      editForm.querySelector('#edit_totem_location').value = editButton.dataset.location || '';
+      restoreSubmitButton(editForm);
       openModal('edit-totem-modal');
-    });
-  });
+      return;
+    }
 
-  closeButtons.forEach((button) => {
-    button.addEventListener('click', () => {
-      const modal = button.closest('.modal-backdrop');
+    const closeButton = event.target.closest('[data-close-modal]');
+    if (closeButton) {
+      const modal = closeButton.closest('.modal-backdrop');
       if (modal) {
+        const form = modal.querySelector('form');
+        restoreSubmitButton(form);
         closeModal(modal);
       }
-    });
+      return;
+    }
+
+    const backdrop = event.target.closest('.modal-backdrop');
+    if (backdrop && event.target === backdrop) {
+      const form = backdrop.querySelector('form');
+      restoreSubmitButton(form);
+      closeModal(backdrop);
+    }
   });
 
-  document.querySelectorAll('.modal-backdrop').forEach((modal) => {
-    modal.addEventListener('click', (event) => {
-      if (event.target === modal) {
-        closeModal(modal);
-      }
-    });
+  document.addEventListener('submit', async (event) => {
+    const form = event.target;
+    const shouldHandle =
+      form.matches('[data-totem-create-form]') ||
+      form.matches('[data-edit-totem-form]') ||
+      form.matches('[data-totem-delete-form]');
+    if (!shouldHandle) return;
+    if (event.defaultPrevented) return;
+
+    event.preventDefault();
+    setLoadingState(form, true);
+    try {
+      await submitAjaxForm(form);
+      document.querySelectorAll('.modal-backdrop.is-open').forEach((modal) => closeModal(modal));
+    } catch (error) {
+      form.submit();
+    } finally {
+      restoreSubmitButton(form);
+    }
   });
 
-  consumeInlineNotices();
+  const runPageHooks = () => {
+    consumeInlineNotices();
+  };
+
+  window.addEventListener('page:load', runPageHooks);
+  runPageHooks();
 })();

@@ -14,65 +14,65 @@
 <div class="app-layout">
   {% include "partials/sidebar.html" with active_menu="totems" can_manage_access=True %}
 
-  <main class="content">
+  <main class="content" data-page="totems">
     <header class="content__header">
       <div>
-        <h1 class="content__title">Gestao de totens</h1>
-        <p class="content__subtitle">Controle de pontos de coleta da empresa #{{ company_id }}</p>
+        <h1 class="content__title">Gestão de totens</h1>
+        <p class="content__subtitle">Controle de pontos de coleta da empresa</p>
       </div>
       <button class="btn btn--primary" type="button" data-open-modal="create-totem-modal">Novo totem</button>
     </header>
 
     {% include "totems/_table_container.html" %}
+
+    <div class="modal-backdrop" data-modal="create-totem-modal" aria-hidden="true">
+      <div class="modal-card">
+        <div class="modal-card__header">
+          <h2>Criar totem</h2>
+          <button type="button" class="modal-close" data-close-modal>&times;</button>
+        </div>
+        <form method="post" action="{% url 'totems-create' %}" class="form-grid modal-form" data-totem-create-form>
+          {% csrf_token %}
+          <div class="form-field">
+            <label for="create_totem_name">Nome</label>
+            <input id="create_totem_name" name="name" required maxlength="150" />
+          </div>
+          <div class="form-field">
+            <label for="create_totem_location">Localização</label>
+            <input id="create_totem_location" name="location" maxlength="180" />
+          </div>
+          <div class="form-actions">
+            <button class="btn btn--primary" type="submit">Salvar</button>
+            <button class="btn btn--light" type="button" data-close-modal>Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" data-modal="edit-totem-modal" aria-hidden="true">
+      <div class="modal-card">
+        <div class="modal-card__header">
+          <h2>Editar totem</h2>
+          <button type="button" class="modal-close" data-close-modal>&times;</button>
+        </div>
+        <form method="post" action="" class="form-grid modal-form" data-edit-totem-form>
+          {% csrf_token %}
+          <div class="form-field">
+            <label for="edit_totem_name">Nome</label>
+            <input id="edit_totem_name" name="name" required maxlength="150" />
+          </div>
+          <div class="form-field">
+            <label for="edit_totem_location">Localização</label>
+            <input id="edit_totem_location" name="location" maxlength="180" />
+          </div>
+          <div class="form-actions">
+            <button class="btn btn--primary" type="submit">Salvar</button>
+            <button class="btn btn--light" type="button" data-close-modal>Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </div>
   </main>
-</div>
-
-<div class="modal-backdrop" data-modal="create-totem-modal" aria-hidden="true">
-  <div class="modal-card">
-    <div class="modal-card__header">
-      <h2>Criar totem</h2>
-      <button type="button" class="modal-close" data-close-modal>&times;</button>
-    </div>
-    <form method="post" action="{% url 'totems-create' %}" class="form-grid modal-form">
-      {% csrf_token %}
-      <div class="form-field">
-        <label for="create_totem_name">Nome</label>
-        <input id="create_totem_name" name="name" required maxlength="150" />
-      </div>
-      <div class="form-field">
-        <label for="create_totem_location">Localização</label>
-        <input id="create_totem_location" name="location" maxlength="180" />
-      </div>
-      <div class="form-actions">
-        <button class="btn btn--primary" type="submit">Salvar</button>
-        <button class="btn btn--light" type="button" data-close-modal>Cancelar</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<div class="modal-backdrop" data-modal="edit-totem-modal" aria-hidden="true">
-  <div class="modal-card">
-    <div class="modal-card__header">
-      <h2>Editar totem</h2>
-      <button type="button" class="modal-close" data-close-modal>&times;</button>
-    </div>
-    <form method="post" action="" class="form-grid modal-form" data-edit-totem-form>
-      {% csrf_token %}
-      <div class="form-field">
-        <label for="edit_totem_name">Nome</label>
-        <input id="edit_totem_name" name="name" required maxlength="150" />
-      </div>
-      <div class="form-field">
-        <label for="edit_totem_location">Localização</label>
-        <input id="edit_totem_location" name="location" maxlength="180" />
-      </div>
-      <div class="form-actions">
-        <button class="btn btn--primary" type="submit">Salvar</button>
-        <button class="btn btn--light" type="button" data-close-modal>Cancelar</button>
-      </div>
-    </form>
-  </div>
 </div>
 {% endblock %}
 

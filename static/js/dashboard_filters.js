@@ -77,5 +77,6 @@
     });
   };
 
+  window.addEventListener('page:load', bindDashboardFilter);
   bindDashboardFilter();
 })();

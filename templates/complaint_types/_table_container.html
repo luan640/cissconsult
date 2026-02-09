@@ -21,7 +21,7 @@
                 data-label="{{ complaint_type.label }}">
                 Editar
               </button>
-              <form method="post" action="{% url 'complaint-types-delete' complaint_type.id %}" data-complaint-type-deactivate-form onsubmit="return confirm('{% if complaint_type.is_active %}Desativar{% else %}Ativar{% endif %} este tipo de denuncia?');">
+              <form method="post" action="{% url 'complaint-types-delete' complaint_type.id %}" data-complaint-type-deactivate-form data-table-container-id="complaint-types-table-container" onsubmit="return confirm('{% if complaint_type.is_active %}Desativar{% else %}Ativar{% endif %} este tipo de denúncia?');">
                 {% csrf_token %}
                 <button class="btn {% if complaint_type.is_active %}btn--danger{% else %}btn--primary{% endif %} btn--sm" type="submit">
                   {% if complaint_type.is_active %}Desativar{% else %}Ativar{% endif %}
@@ -30,7 +30,7 @@
             </td>
           </tr>
         {% empty %}
-          <tr><td colspan="3">Nenhum tipo de denuncia cadastrado.</td></tr>
+          <tr><td colspan="3">Nenhum tipo de denúncia cadastrado.</td></tr>
         {% endfor %}
       </tbody>
     </table>

@@ -14,17 +14,17 @@
 <div class="app-layout">
   {% include "partials/sidebar.html" with active_menu="departments" can_manage_access=True %}
 
-  <main class="content">
+  <main class="content" data-page="departments" data-ghe-options-url="{% url 'ghes-options' %}">
     <header class="content__header">
       <div>
         <h1 class="content__title">Gestão de setores</h1>
-        <p class="content__subtitle">Controle de setores da empresa #{{ company_id }}</p>
+        <p class="content__subtitle">Controle de setores da empresa</p>
       </div>
       <button class="btn btn--primary" type="button" data-open-modal="create-department-modal">Novo setor</button>
     </header>
     <section class="card card--full table-filters-card">
       <p class="card__label">Filtros</p>
-      <form method="get" action="{% url 'departments-list' %}" class="period-filter table-filters-form" data-departments-filter-form>
+      <form method="get" action="{% url 'departments-list' %}" class="period-filter table-filters-form" data-departments-filter-form data-ajax-table-form data-table-container-id="departments-table-container">
         <div class="filter-field">
           <label for="departments_name">Nome</label>
           <input id="departments_name" type="text" name="name" value="{{ search_name }}" placeholder="Buscar por nome" />
@@ -42,59 +42,69 @@
       </form>
     </section>
     {% include "departments/_table_container.html" %}
+
+    <div class="modal-backdrop" data-modal="create-department-modal" aria-hidden="true">
+      <div class="modal-card">
+        <div class="modal-card__header">
+          <h2>Criar setor</h2>
+          <button type="button" class="modal-close" data-close-modal>&times;</button>
+        </div>
+        <form method="post" action="{% url 'departments-create' %}" class="form-grid modal-form" data-department-create-form>
+          {% csrf_token %}
+          <div class="form-field">
+            <label for="create_department_name">Nome</label>
+            <input id="create_department_name" name="name" required maxlength="150" />
+          </div>
+          <div class="form-field">
+            <label for="create_department_ghe">GHE</label>
+            <select id="create_department_ghe" name="ghe_id" required>
+              {% for ghe in ghes %}
+                <option value="{{ ghe.id }}">{{ ghe.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn--primary" type="submit">Salvar</button>
+            <button class="btn btn--light" type="button" data-close-modal>Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" data-modal="edit-department-modal" aria-hidden="true">
+      <div class="modal-card">
+        <div class="modal-card__header">
+          <h2>Editar setor</h2>
+          <button type="button" class="modal-close" data-close-modal>&times;</button>
+        </div>
+        <form method="post" action="" class="form-grid modal-form" data-edit-department-form>
+          {% csrf_token %}
+          <div class="form-field">
+            <label for="edit_department_name">Nome</label>
+            <input id="edit_department_name" name="name" required maxlength="150" />
+          </div>
+          <div class="form-field">
+            <label for="edit_department_ghe">GHE</label>
+            <select id="edit_department_ghe" name="ghe_id" required>
+              {% for ghe in ghes %}
+                <option value="{{ ghe.id }}">{{ ghe.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-field form-field--check">
+            <label>
+              <input type="checkbox" name="is_active" value="on" data-edit-department-active />
+              Ativo
+            </label>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn--primary" type="submit">Salvar</button>
+            <button class="btn btn--light" type="button" data-close-modal>Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </div>
   </main>
-</div>
-
-<div class="modal-backdrop" data-modal="create-department-modal" aria-hidden="true">
-  <div class="modal-card">
-    <div class="modal-card__header">
-      <h2>Criar setor</h2>
-      <button type="button" class="modal-close" data-close-modal>&times;</button>
-    </div>
-    <form method="post" action="{% url 'departments-create' %}" class="form-grid modal-form" data-department-create-form>
-      {% csrf_token %}
-      <div class="form-field">
-        <label for="create_department_name">Nome</label>
-        <input id="create_department_name" name="name" required maxlength="150" />
-      </div>
-      <div class="form-field form-field--check">
-        <label>
-          <input type="checkbox" name="is_active" value="on" checked />
-          Ativo
-        </label>
-      </div>
-      <div class="form-actions">
-        <button class="btn btn--primary" type="submit">Salvar</button>
-        <button class="btn btn--light" type="button" data-close-modal>Cancelar</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<div class="modal-backdrop" data-modal="edit-department-modal" aria-hidden="true">
-  <div class="modal-card">
-    <div class="modal-card__header">
-      <h2>Editar setor</h2>
-      <button type="button" class="modal-close" data-close-modal>&times;</button>
-    </div>
-    <form method="post" action="" class="form-grid modal-form" data-edit-department-form>
-      {% csrf_token %}
-      <div class="form-field">
-        <label for="edit_department_name">Nome</label>
-        <input id="edit_department_name" name="name" required maxlength="150" />
-      </div>
-      <div class="form-field form-field--check">
-        <label>
-          <input type="checkbox" name="is_active" value="on" data-edit-department-active />
-          Ativo
-        </label>
-      </div>
-      <div class="form-actions">
-        <button class="btn btn--primary" type="submit">Salvar</button>
-        <button class="btn btn--light" type="button" data-close-modal>Cancelar</button>
-      </div>
-    </form>
-  </div>
 </div>
 {% endblock %}
 

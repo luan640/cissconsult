@@ -1,5 +1,10 @@
 (function () {
-  const containerId = 'mood-types-table-container';
+  if (window.__masterTechnicalModalsBound) {
+    return;
+  }
+  window.__masterTechnicalModalsBound = true;
+
+  const containerId = 'technical-table-container';
   const toastStackId = 'floating-toast-stack';
 
   const openModal = (name) => {
@@ -105,7 +110,7 @@
       },
     });
     if (!response.ok) {
-      throw new Error('Falha ao atualizar tipos de humor.');
+      throw new Error('Falha ao atualizar responsaveis tecnicos.');
     }
     replaceTable(await response.text());
   };
@@ -117,17 +122,21 @@
       return;
     }
 
-    const editButton = event.target.closest('[data-open-edit-mood-type]');
+    const editButton = event.target.closest('[data-open-edit-technical]');
     if (editButton) {
-      const editForm = document.querySelector('[data-edit-mood-type-form]');
+      const editForm = document.querySelector('[data-technical-edit-form]');
       if (!editForm) return;
       editForm.action = editButton.dataset.updateUrl || '';
-      editForm.querySelector('#edit_mood_label').value = editButton.dataset.label || '';
-      editForm.querySelector('#edit_mood_emoji').value = editButton.dataset.emoji || '🙂';
-      editForm.querySelector('#edit_mood_sentiment').value = editButton.dataset.sentiment || 'neutral';
-      editForm.querySelector('#edit_mood_score').value = editButton.dataset.score || '3';
+      editForm.querySelector('#edit_tech_name').value = editButton.dataset.name || '';
+      editForm.querySelector('#edit_tech_education').value = editButton.dataset.education || '';
+      editForm.querySelector('#edit_tech_registration').value = editButton.dataset.registration || '';
+      editForm.querySelector('#edit_tech_order').value = editButton.dataset.order || '0';
+      const activeInput = editForm.querySelector('[data-edit-technical-active]');
+      if (activeInput) {
+        activeInput.checked = (editButton.dataset.active || '').toLowerCase() === 'true';
+      }
       restoreSubmitButton(editForm);
-      openModal('edit-mood-type-modal');
+      openModal('edit-technical-modal');
       return;
     }
 
@@ -153,23 +162,36 @@
   document.addEventListener('submit', async (event) => {
     const form = event.target;
     const shouldHandle =
-      form.matches('[data-mood-type-create-form]') ||
-      form.matches('[data-edit-mood-type-form]') ||
-      form.matches('[data-mood-type-deactivate-form]');
+      form.matches('[data-technical-create-form]') ||
+      form.matches('[data-technical-edit-form]') ||
+      form.matches('[data-technical-toggle-form]') ||
+      form.matches('[data-technical-remove-form]');
     if (!shouldHandle) return;
     if (event.defaultPrevented) return;
 
     event.preventDefault();
-    setLoadingState(form, true);
+    const shouldSetLoading =
+      form.matches('[data-technical-create-form]') ||
+      form.matches('[data-technical-edit-form]');
+    if (shouldSetLoading) {
+      setLoadingState(form, true);
+    }
     try {
       await submitAjaxForm(form);
       document.querySelectorAll('.modal-backdrop.is-open').forEach((modal) => closeModal(modal));
     } catch (error) {
       form.submit();
     } finally {
-      restoreSubmitButton(form);
+      if (shouldSetLoading) {
+        restoreSubmitButton(form);
+      }
     }
   });
 
-  consumeInlineNotices();
+  const runPageHooks = () => {
+    consumeInlineNotices();
+  };
+
+  window.addEventListener('page:load', runPageHooks);
+  runPageHooks();
 })();

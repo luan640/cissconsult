@@ -1,4 +1,8 @@
 (function () {
+  if (window.__complaintsModalsBound) {
+    return;
+  }
+  window.__complaintsModalsBound = true;
   const containerId = 'complaints-table-container';
   const toastStackId = 'floating-toast-stack';
 
@@ -89,6 +93,7 @@
     const container = document.getElementById('complaint-history-container');
     if (!container) return;
     container.innerHTML = '<p style="margin:0; color:#475569;">Carregando historico...</p>';
+    openModal('complaint-history-modal');
     const response = await fetch(url, {
       headers: {
         'X-Requested-With': 'XMLHttpRequest',
@@ -106,7 +111,6 @@
       const historyUrl = historyButton.dataset.historyUrl || '';
       if (!historyUrl) return;
       loadHistory(historyUrl)
-        .then(() => openModal('complaint-history-modal'))
         .catch(() => showToast('Falha ao carregar historico da denuncia.', 'error'));
       return;
     }
@@ -147,5 +151,10 @@
     }
   });
 
-  consumeInlineNotices();
+  const runPageHooks = () => {
+    consumeInlineNotices();
+  };
+
+  window.addEventListener('page:load', runPageHooks);
+  runPageHooks();
 })();

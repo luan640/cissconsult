@@ -1,4 +1,9 @@
 (function () {
+  if (window.__dashboardSidebarBound) {
+    return;
+  }
+  window.__dashboardSidebarBound = true;
+
   const toggleButton = document.querySelector('[data-sidebar-toggle]');
   const layoutRoot = document.documentElement;
   const sidebarStateKey = 'nr1_sidebar_collapsed';

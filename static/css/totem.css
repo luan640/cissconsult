@@ -270,6 +270,7 @@ textarea {
   font-weight: 800;
   cursor: pointer;
   min-width: 210px;
+  position: relative;
 }
 
 .btn--primary {
@@ -286,6 +287,30 @@ textarea {
 .btn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+.btn[aria-busy="true"] {
+  padding-right: 52px;
+}
+
+.btn[aria-busy="true"]::after {
+  content: '';
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  width: 16px;
+  height: 16px;
+  margin-top: -8px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  border-top-color: currentColor;
+  animation: totem-spin 0.85s linear infinite;
+}
+
+@keyframes totem-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .msg {

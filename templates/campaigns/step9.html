@@ -163,11 +163,11 @@
         <path d="M4 21c0-4.2 3.6-7.6 8-7.6s8 3.4 8 7.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
       </svg>
     </div>
-    <h1 class="campaign-step__title">AVALIA NR01 | Ferramenta de Indicador de Estresse</h1>
+    <h1 class="campaign-step__title">Ferramenta de Indicador de Estresse</h1>
     <div class="campaign-step__badge">Etapa 9 de 10</div>
     <p class="campaign-step__lead">
-      Este questionario e totalmente anonimo e contem perguntas sobre suas condicoes de trabalho.
-      Sua opiniao e essencial para melhorar o ambiente de trabalho.
+      Este questionário é totalmente anônimo e contém perguntas sobre suas condições de trabalho.
+      Sua opinião é essencial para melhorar o ambiente de trabalho.
     </p>
     <div class="campaign-step__progress" role="presentation" style="height: 10px; background: #e2e8f0; border: 1px solid #cbd5e1;">
       <span style="display: block; height: 100%; width: 90%; background: #0f172a;"></span>
@@ -182,10 +182,10 @@
 
     <div class="comment-section">
       <h2 class="comment-section__title">
-        <span aria-hidden="true">*</span> {{ section_title|default:"Comentarios Adicionais" }}
+        <span aria-hidden="true">*</span> {{ section_title|default:"Comentários Adicionais" }}
       </h2>
       <p class="comment-section__subtitle">
-        {{ section_description|default:"Gostaria de compartilhar algum comentario adicional sobre sua experiencia de trabalho?" }}
+        {{ section_description|default:"Gostaria de compartilhar algum comentário adicional sobre sua experiência de trabalho?" }}
       </p>
     </div>
 
@@ -193,14 +193,14 @@
       {% csrf_token %}
       <input type="hidden" name="step" value="9" />
       <div class="comment-card">
-        <label for="comments">Seus comentarios (opcional)</label>
-        <textarea id="comments" name="comments" maxlength="1000" placeholder="Compartilhe suas observacoes, sugestoes ou qualquer comentario que considere importante sobre sua experiencia de trabalho...">{{ saved_comment|default:"" }}</textarea>
+        <label for="comments">Seus comentários (opcional)</label>
+        <textarea id="comments" name="comments" maxlength="1000" placeholder="Compartilhe suas observações, sugestões ou qualquer comentário que considere importante sobre sua experiência de trabalho...">{{ saved_comment|default:"" }}</textarea>
         <div class="comment-card__footer">0/1000 caracteres</div>
       </div>
 
       <div class="question-actions">
         <a class="btn btn--ghost" href="{% url 'campaigns-access' campaign.uuid %}?step=8">← Voltar</a>
-        <button class="btn btn--primary" type="submit">Finalizar Avaliacao →</button>
+        <button class="btn btn--primary" type="submit">Finalizar Avaliação →</button>
       </div>
     </form>
   </section>

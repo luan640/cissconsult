@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Tipos de denuncia | PLATAFORMA NR-1{% endblock %}
+{% block title %}Tipos de denúncia | PLATAFORMA NR-1{% endblock %}
 
 {% block extra_head %}
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -13,38 +13,38 @@
 {% block content %}
 <div class="app-layout">
   {% include "partials/sidebar.html" with active_menu="complaint_types" can_manage_access=True %}
-  <main class="content">
+  <main class="content" data-page="complaint-types">
     <header class="content__header">
       <div>
-        <h1 class="content__title">Tipos de denuncia</h1>
-        <p class="content__subtitle">Cadastre ou desative opcoes exibidas no totem.</p>
+        <h1 class="content__title">Tipos de denúncia</h1>
+        <p class="content__subtitle">Cadastre ou desative opções exibidas no totem.</p>
       </div>
       <button class="btn btn--primary" type="button" data-open-modal="create-complaint-type-modal">Novo tipo</button>
     </header>
     {% include "complaint_types/_table_container.html" %}
+
+    <div class="modal-backdrop" data-modal="create-complaint-type-modal" aria-hidden="true">
+      <div class="modal-card">
+        <div class="modal-card__header"><h2>Novo tipo de denúncia</h2><button type="button" class="modal-close" data-close-modal>&times;</button></div>
+        <form method="post" action="{% url 'complaint-types-create' %}" class="form-grid modal-form" data-complaint-type-create-form>
+          {% csrf_token %}
+          <div class="form-field"><label for="create_complaint_label">Label</label><input id="create_complaint_label" name="label" required maxlength="80" /></div>
+          <div class="form-actions"><button class="btn btn--primary" type="submit">Salvar</button><button class="btn btn--light" type="button" data-close-modal>Cancelar</button></div>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" data-modal="edit-complaint-type-modal" aria-hidden="true">
+      <div class="modal-card">
+        <div class="modal-card__header"><h2>Editar tipo de denúncia</h2><button type="button" class="modal-close" data-close-modal>&times;</button></div>
+        <form method="post" action="" class="form-grid modal-form" data-edit-complaint-type-form>
+          {% csrf_token %}
+          <div class="form-field"><label for="edit_complaint_label">Label</label><input id="edit_complaint_label" name="label" required maxlength="80" /></div>
+          <div class="form-actions"><button class="btn btn--primary" type="submit">Salvar</button><button class="btn btn--light" type="button" data-close-modal>Cancelar</button></div>
+        </form>
+      </div>
+    </div>
   </main>
-</div>
-
-<div class="modal-backdrop" data-modal="create-complaint-type-modal" aria-hidden="true">
-  <div class="modal-card">
-    <div class="modal-card__header"><h2>Novo tipo de denuncia</h2><button type="button" class="modal-close" data-close-modal>&times;</button></div>
-    <form method="post" action="{% url 'complaint-types-create' %}" class="form-grid modal-form" data-complaint-type-create-form>
-      {% csrf_token %}
-      <div class="form-field"><label for="create_complaint_label">Label</label><input id="create_complaint_label" name="label" required maxlength="80" /></div>
-      <div class="form-actions"><button class="btn btn--primary" type="submit">Salvar</button><button class="btn btn--light" type="button" data-close-modal>Cancelar</button></div>
-    </form>
-  </div>
-</div>
-
-<div class="modal-backdrop" data-modal="edit-complaint-type-modal" aria-hidden="true">
-  <div class="modal-card">
-    <div class="modal-card__header"><h2>Editar tipo de denuncia</h2><button type="button" class="modal-close" data-close-modal>&times;</button></div>
-    <form method="post" action="" class="form-grid modal-form" data-edit-complaint-type-form>
-      {% csrf_token %}
-      <div class="form-field"><label for="edit_complaint_label">Label</label><input id="edit_complaint_label" name="label" required maxlength="80" /></div>
-      <div class="form-actions"><button class="btn btn--primary" type="submit">Salvar</button><button class="btn btn--light" type="button" data-close-modal>Cancelar</button></div>
-    </form>
-  </div>
 </div>
 {% endblock %}
 

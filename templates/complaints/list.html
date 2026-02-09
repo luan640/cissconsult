@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Registros de denuncias | PLATAFORMA NR-1{% endblock %}
+{% block title %}Registros de denúncias | PLATAFORMA NR-1{% endblock %}
 
 {% block extra_head %}
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -13,11 +13,11 @@
 {% block content %}
 <div class="app-layout">
   {% include "partials/sidebar.html" with active_menu="complaints" can_manage_access=True %}
-  <main class="content">
+  <main class="content" data-page="complaints">
     <header class="content__header">
       <div>
-        <h1 class="content__title">Registros de denuncias</h1>
-        <p class="content__subtitle">Gerencie status e historico de acoes das denuncias.</p>
+        <h1 class="content__title">Registros de denúncias</h1>
+        <p class="content__subtitle">Gerencie status e histórico de ações das denúncias.</p>
       </div>
     </header>
     <section class="card card--full table-filters-card">
@@ -62,47 +62,47 @@
       </form>
     </section>
     {% include "complaints/_table_container.html" %}
+
+    <div class="modal-backdrop" data-modal="edit-complaint-modal" aria-hidden="true">
+      <div class="modal-card">
+        <div class="modal-card__header">
+          <h2>Atualizar denúncia</h2>
+          <button type="button" class="modal-close" data-close-modal>&times;</button>
+        </div>
+        <form method="post" action="" class="form-grid modal-form complaint-edit-form" data-edit-complaint-form>
+          {% csrf_token %}
+          <div class="form-field">
+            <label for="edit_complaint_status">Status</label>
+            <select id="edit_complaint_status" name="complaint_status" required>
+              {% for value, label in status_choices %}
+                <option value="{{ value }}">{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-field" style="grid-column: 1 / -1;">
+            <label for="edit_complaint_action_note">Ação tomada</label>
+            <textarea id="edit_complaint_action_note" name="action_note" rows="4" required></textarea>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn--primary" type="submit">Salvar</button>
+            <button class="btn btn--light" type="button" data-close-modal>Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" data-modal="complaint-history-modal" aria-hidden="true">
+      <div class="modal-card">
+        <div class="modal-card__header">
+          <h2>Histórico da denúncia</h2>
+          <button type="button" class="modal-close" data-close-modal>&times;</button>
+        </div>
+        <div class="form-grid modal-form modal-history-scroll" id="complaint-history-container" style="display:block;">
+          <p style="margin:0; color:#475569;">Selecione uma denúncia para visualizar o histórico.</p>
+        </div>
+      </div>
+    </div>
   </main>
-</div>
-
-<div class="modal-backdrop" data-modal="edit-complaint-modal" aria-hidden="true">
-  <div class="modal-card">
-    <div class="modal-card__header">
-      <h2>Atualizar denúncia</h2>
-      <button type="button" class="modal-close" data-close-modal>&times;</button>
-    </div>
-    <form method="post" action="" class="form-grid modal-form complaint-edit-form" data-edit-complaint-form>
-      {% csrf_token %}
-      <div class="form-field">
-        <label for="edit_complaint_status">Status</label>
-        <select id="edit_complaint_status" name="complaint_status" required>
-          {% for value, label in status_choices %}
-            <option value="{{ value }}">{{ label }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="form-field" style="grid-column: 1 / -1;">
-        <label for="edit_complaint_action_note">Ação tomada</label>
-        <textarea id="edit_complaint_action_note" name="action_note" rows="4" required></textarea>
-      </div>
-      <div class="form-actions">
-        <button class="btn btn--primary" type="submit">Salvar</button>
-        <button class="btn btn--light" type="button" data-close-modal>Cancelar</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<div class="modal-backdrop" data-modal="complaint-history-modal" aria-hidden="true">
-  <div class="modal-card">
-    <div class="modal-card__header">
-      <h2>Historico da denuncia</h2>
-      <button type="button" class="modal-close" data-close-modal>&times;</button>
-    </div>
-    <div class="form-grid modal-form modal-history-scroll" id="complaint-history-container" style="display:block;">
-      <p style="margin:0; color:#475569;">Selecione uma denuncia para visualizar o historico.</p>
-    </div>
-  </div>
 </div>
 {% endblock %}
 

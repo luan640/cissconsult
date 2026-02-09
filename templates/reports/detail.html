@@ -211,34 +211,34 @@
   </section>
 
   <section class="report-section">
-    <h2>5. Recomendacoes Tecnicas</h2>
+    <h2>5. Recomendações Técnicas</h2>
     <ul class="report-list">
       {% for item in recommendations %}
         <li>{{ item }}</li>
       {% empty %}
-        <li>Nenhuma recomendacao preenchida.</li>
+        <li>Nenhuma recomendação preenchida.</li>
       {% endfor %}
     </ul>
   </section>
 
   <section class="report-section">
-    <h2>6. Responsabilidade Tecnica</h2>
-    <p>Relatorio elaborado sob responsabilidade tecnica de:</p>
+    <h2>6. Responsabilidade técnica</h2>
+    <p>Relatório elaborado sob responsabilidade técnica de:</p>
     <p class="signature">
       Luis Taumaturgo de Souza Filho
       <br />
     </p>
-    <p>Psicologo - CRP 11/17405</p>
+    <p>Psicólogo - CRP 11/17405</p>
     <p>Dados apresentados para fins ilustrativos e demonstrativos.</p>
   </section>
 
   <section class="report-edit">
-    <h3>Edicao do conteudo gerado por IA</h3>
+    <h3>Edição do conteúdo gerado por IA</h3>
     <form method="post" action="{% url 'reports-detail' report.id %}">
       {% csrf_token %}
       <div id="report-ai-feedback" class="report-edit__feedback" aria-live="polite"></div>
       <div class="field-header">
-        <label for="edit_mood_analysis">Secao 3 - Humor organizacional</label>
+        <label for="edit_mood_analysis">Seção 3 - Humor organizacional</label>
         <button class="btn btn--light btn--sm" type="button" data-ai-action="generate_mood_analysis" data-target="edit_mood_analysis">Gerar com IA</button>
       </div>
       <textarea id="edit_mood_analysis" name="mood_analysis">{{ report.mood_analysis }}</textarea>

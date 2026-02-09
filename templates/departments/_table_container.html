@@ -12,14 +12,16 @@
       <thead>
         <tr>
           <th>Nome</th>
+          <th>GHE</th>
           <th>Status</th>
-          <th>Acoes</th>
+          <th>Ações</th>
         </tr>
       </thead>
       <tbody>
         {% for department in departments %}
           <tr>
             <td>{{ department.name }}</td>
+            <td>{{ department.ghe.name|default:"-" }}</td>
             <td>{% if department.is_active %}Ativo{% else %}Inativo{% endif %}</td>
             <td class="table__actions">
               <button
@@ -28,6 +30,7 @@
                 data-open-edit-department
                 data-update-url="{% url 'departments-update' department.id %}"
                 data-name="{{ department.name }}"
+                data-ghe-id="{{ department.ghe_id|default:'' }}"
                 data-is-active="{% if department.is_active %}1{% else %}0{% endif %}"
               >
                 Editar
@@ -47,7 +50,7 @@
           </tr>
         {% empty %}
           <tr>
-            <td colspan="3">Nenhum setor cadastrado nesta empresa.</td>
+            <td colspan="4">Nenhum setor cadastrado nesta empresa.</td>
           </tr>
         {% endfor %}
       </tbody>

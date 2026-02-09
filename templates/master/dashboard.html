@@ -9,34 +9,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="{% static 'css/dashboard.css' %}" />
   <style>
-    .master-metrics-grid {
-      grid-template-columns: repeat(4, minmax(0, 1fr));
-    }
-    .master-metrics-grid .card {
-      min-height: 120px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-    }
-    .master-company-form {
-      display: flex;
-      align-items: flex-end;
-      gap: 10px;
-      margin: 0;
-    }
-    .master-company-form .form-field {
-      margin: 0;
-      min-width: 260px;
-    }
-    .master-company-form select {
-      min-width: 260px;
-    }
-    @media (max-width: 980px) {
-      .master-company-form {
-        flex-direction: column;
-        align-items: stretch;
-      }
-    }
     @media (max-width: 1200px) {
       .master-metrics-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -71,7 +43,7 @@
             {% endfor %}
           </select>
         </div>
-          <button class="btn btn--primary" type="submit">Acessar</button>
+          <button class="btn btn--primary" type="submit" data-loading-text="Acessando...">Acessar</button>
       </form>
     </header>
 

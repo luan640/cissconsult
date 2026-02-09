@@ -23,6 +23,13 @@ class StandardPeriodModel(TenantModel):
 
 class Department(TenantModel):
     name = models.CharField(max_length=150)
+    ghe = models.ForeignKey(
+        'GHE',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='departments',
+    )
     is_active = models.BooleanField(default=True)
 
     class Meta:
@@ -157,6 +164,22 @@ class CampaignReportSettings(TenantModel):
                 name='core_campaign_report_settings_unique_campaign',
             ),
         ]
+
+
+
+class TechnicalResponsible(TenantModel):
+    name = models.CharField(max_length=150)
+    education = models.CharField(max_length=255)
+    registration = models.CharField(max_length=80)
+    sort_order = models.PositiveSmallIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = 'technical_responsibles'
+        ordering = ['sort_order', 'name']
+
+    def __str__(self) -> str:
+        return self.name
 
 class MoodType(TenantModel):
     label = models.CharField(max_length=80)

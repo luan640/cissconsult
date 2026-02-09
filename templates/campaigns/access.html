@@ -200,11 +200,11 @@
         <path d="M4 21c0-4.2 3.6-7.6 8-7.6s8 3.4 8 7.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
       </svg>
     </div>
-    <h1 class="campaign-access__title">AVALIA NR01 | Ferramenta de Indicador de Estresse</h1>
+    <h1 class="campaign-access__title">Ferramenta de Indicador de Estresse</h1>
     <div class="campaign-access__step">Etapa 1 de 10</div>
     <p class="campaign-access__lead">
-      Este questionario e totalmente anonimo e contem perguntas sobre suas condicoes de trabalho.
-      Sua opiniao e essencial para melhorar o ambiente de trabalho.
+      Este questionário é totalmente anônimo e contém perguntas sobre suas condições de trabalho.
+      Sua opinião é essencial para melhorar o ambiente de trabalho.
     </p>
     <div class="campaign-access__progress" role="presentation" style="height: 10px; background: #e2e8f0; border: 1px solid #cbd5e1;">
       <span style="display: block; height: 100%; width: 10%; background: #0f172a;"></span>
@@ -220,11 +220,11 @@
     <div class="info-block info-block--success">
       <div class="info-block__icon" aria-hidden="true">✓</div>
       <div>
-        <p class="info-block__title">Avaliacao verificada</p>
+        <p class="info-block__title">Avaliação verificada</p>
         <p class="info-block__text">
-          Esta avaliacao faz parte de uma campanha oficial. Seu CPF sera criptografado e utilizado
-          apenas para validar que voce respondeu apenas uma vez. A empresa nao tera acesso ao seu CPF
-          nem podera identificar suas respostas individuais.
+          Esta avaliação faz parte de uma campanha oficial. Seu CPF será criptografado e utilizado
+          apenas para validar que você respondeu apenas uma vez. A empresa não terá acesso ao seu CPF
+          nem poderá identificar suas respostas individuais.
         </p>
       </div>
     </div>
@@ -234,14 +234,14 @@
       <div>
         <p class="info-block__title">Garantia de anonimato</p>
         <p class="info-block__text">
-          Todas as informacoes coletadas neste formulario sao completamente anonimas. Seus dados pessoais
-          nao serao disponibilizados para a empresa. Utilizamos essas informacoes apenas para analises
-          estatisticas agregadas que ajudarao a melhorar o ambiente de trabalho.
+          Todas as informações coletadas neste formulário são completamente anônimas. Seus dados pessoais
+          não serão disponibilizados para a empresa. Utilizamos essas informações apenas para análises
+          estatísticas agregadas que ajudarão a melhorar o ambiente de trabalho.
         </p>
         <p class="info-block__text">
-          Esta avaliacao tem como objetivo compreender melhor o ambiente de trabalho e identificar
-          fatores de riscos psicossociais que possam impactar a saude dos trabalhadores, contribuindo
-          para a melhoria continua das condicoes de trabalho, conforme determina a NR 01.
+          Esta avaliação tem como objetivo compreender melhor o ambiente de trabalho e identificar
+          fatores de riscos psicossociais que possam impactar a saúde dos trabalhadores, contribuindo
+          para a melhoria contínua das condições de trabalho, conforme determina a NR 01.
         </p>
       </div>
     </div>
@@ -254,12 +254,16 @@
       </section>
     {% endif %}
 
-    <form method="post" class="form-grid campaign-form">
+    <form method="post" class="form-grid campaign-form" data-cpf-check-url="{% url 'campaigns-cpf-check' campaign.uuid %}">
       {% csrf_token %}
       <input type="hidden" name="step" value="1" />
       <div class="form-field">
-        <label for="cpf"><span class="label-required">CPF (Obrigatorio)</span> <span class="label-meta">*</span></label>
+        <label for="cpf">
+          <span class="label-required">CPF (Obrigatório)</span>
+          <span class="label-meta">*</span>
+        </label>
         <input id="cpf" name="cpf" required maxlength="14" placeholder="000.000.000-00" />
+        <small class="field-error" data-cpf-error style="display:none;"></small>
       </div>
       <div class="form-field">
         <label for="first_name">Primeiro Nome <span class="label-meta">Opcional</span></label>
@@ -272,7 +276,7 @@
       <div class="form-field">
         <label for="sex">Sexo</label>
         <select id="sex" name="sex">
-          <option value="">Prefiro nao informar</option>
+          <option value="">Prefiro não informar</option>
           <option value="feminino">Feminino</option>
           <option value="masculino">Masculino</option>
           <option value="outro">Outro</option>
@@ -280,7 +284,7 @@
       </div>
       <div class="form-field">
         <label for="ghe_id"><span class="label-required">GHE</span> <span class="label-meta">*</span></label>
-        <select id="ghe_id" name="ghe_id" required>
+        <select id="ghe_id" name="ghe_id" required data-ghe-select data-departments-url="{% url 'campaigns-departments' campaign.uuid %}">
           <option value="">Selecione</option>
           {% for ghe in ghes %}
             <option value="{{ ghe.id }}">{{ ghe.name }}</option>
@@ -289,29 +293,179 @@
       </div>
       <div class="form-field">
         <label for="department_id"><span class="label-required">Cargo/Funcao</span> <span class="label-meta">*</span></label>
-        <select id="department_id" name="department_id" required>
-          <option value="">Selecione</option>
-          {% for department in departments %}
-            <option value="{{ department.id }}">{{ department.name }}</option>
-          {% endfor %}
+        <select id="department_id" name="department_id" required disabled data-department-select>
+          <option value="">Selecione o GHE primeiro</option>
         </select>
       </div>
       <div class="instructions-card">
-        <strong>Instrucoes:</strong>
+        <strong>Instruções:</strong>
         <ul>
-          <li>O questionario leva cerca de 10 minutinhos</li>
+          <li>O questionário leva cerca de 10 minutinhos</li>
           <li>Marque apenas uma resposta por pergunta</li>
-          <li>Suas respostas sao completamente anonimas</li>
-          <li>Em caso de duvidas, entre em contato com seu supervisor</li>
+          <li>Suas respostas são completamente anônimas</li>
+          <li>Em caso de dúvidas, entre em contato com seu supervisor</li>
         </ul>
       </div>
       <div class="form-actions">
-        <button class="btn btn--primary campaign-access__button" type="submit">
-          Comecar Avaliacao
+        <button class="btn btn--primary campaign-access__button" type="submit" data-start-button disabled>
+          Começar Avaliação
           <span aria-hidden="true">→</span>
         </button>
       </div>
     </form>
   </section>
 </main>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script>
+    (function () {
+      const gheSelect = document.querySelector('[data-ghe-select]');
+      const departmentSelect = document.querySelector('[data-department-select]');
+      const departmentsUrl = gheSelect ? gheSelect.getAttribute('data-departments-url') : '';
+      if (!gheSelect || !departmentSelect || !departmentsUrl) return;
+
+      const setDepartmentState = (state) => {
+        departmentSelect.disabled = Boolean(state.disabled);
+        departmentSelect.innerHTML = `<option value="">${state.label}</option>`;
+      };
+
+      const loadDepartments = async (gheId) => {
+        if (!gheId) {
+          setDepartmentState({ disabled: true, label: 'Selecione o GHE primeiro' });
+          return;
+        }
+        setDepartmentState({ disabled: true, label: 'Carregando...' });
+        let payload = null;
+        try {
+          const response = await fetch(`${departmentsUrl}?ghe_id=${encodeURIComponent(gheId)}`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+          });
+          if (!response.ok) throw new Error('request_failed');
+          payload = await response.json();
+        } catch (err) {
+          setDepartmentState({ disabled: true, label: 'Não foi possível carregar' });
+          return;
+        }
+
+        const departments = Array.isArray(payload.departments) ? payload.departments : [];
+        if (!departments.length) {
+          setDepartmentState({ disabled: true, label: 'Nenhum setor disponível' });
+          return;
+        }
+        departmentSelect.disabled = false;
+        departmentSelect.innerHTML = [
+          '<option value="">Selecione</option>',
+          ...departments.map((dept) => `<option value="${dept.id}">${dept.name}</option>`),
+        ].join('');
+      };
+
+      gheSelect.addEventListener('change', (event) => {
+        loadDepartments(event.target.value);
+      });
+
+      if (gheSelect.value) {
+        loadDepartments(gheSelect.value);
+      } else {
+        setDepartmentState({ disabled: true, label: 'Selecione o GHE primeiro' });
+      }
+    })();
+  </script>
+  <script>
+    (function () {
+      const form = document.querySelector('form.campaign-form');
+      if (!form) return;
+      const cpfInput = form.querySelector('#cpf');
+      const ageInput = form.querySelector('#age');
+      const gheSelect = form.querySelector('#ghe_id');
+      const departmentSelect = form.querySelector('#department_id');
+      const submitButton = form.querySelector('[data-start-button]');
+      const errorEl = form.querySelector('[data-cpf-error]');
+      const checkUrl = form.getAttribute('data-cpf-check-url') || '';
+
+      let cpfIsAvailable = false;
+      let cpfCheckInFlight = false;
+      let lastCpfChecked = '';
+      let debounceId = null;
+
+      const setCpfError = (message) => {
+        if (!errorEl) return;
+        if (message) {
+          errorEl.textContent = message;
+          errorEl.style.display = 'block';
+        } else {
+          errorEl.textContent = '';
+          errorEl.style.display = 'none';
+        }
+      };
+
+      const setButtonState = () => {
+        const cpfDigits = (cpfInput.value || '').replace(/\D/g, '');
+        const ageValue = Number(ageInput.value || 0);
+        const gheValue = gheSelect.value || '';
+        const departmentValue = departmentSelect.value || '';
+        const basicsOk =
+          cpfDigits.length === 11 &&
+          Number.isFinite(ageValue) &&
+          ageValue > 0 &&
+          gheValue &&
+          departmentValue &&
+          !departmentSelect.disabled;
+        const ready = basicsOk && cpfIsAvailable && !cpfCheckInFlight;
+        submitButton.disabled = !ready;
+      };
+
+      const checkCpf = async (cpfDigits) => {
+        if (!checkUrl || cpfDigits.length !== 11) {
+          cpfIsAvailable = false;
+          setButtonState();
+          return;
+        }
+        cpfCheckInFlight = true;
+        setButtonState();
+        try {
+          const response = await fetch(`${checkUrl}?cpf=${encodeURIComponent(cpfDigits)}`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+          });
+          if (!response.ok) throw new Error('request_failed');
+          const payload = await response.json();
+          cpfIsAvailable = Boolean(payload.available);
+          setCpfError(payload.available ? '' : (payload.message || 'CPF já utilizado.'));
+        } catch (err) {
+          cpfIsAvailable = false;
+          setCpfError('Não foi possível validar o CPF agora.');
+        } finally {
+          cpfCheckInFlight = false;
+          setButtonState();
+        }
+      };
+
+      const scheduleCpfCheck = () => {
+        const cpfDigits = (cpfInput.value || '').replace(/\D/g, '');
+        setCpfError('');
+        if (cpfDigits.length !== 11) {
+          cpfIsAvailable = false;
+          lastCpfChecked = '';
+          setButtonState();
+          return;
+        }
+        if (cpfDigits === lastCpfChecked) {
+          setButtonState();
+          return;
+        }
+        if (debounceId) clearTimeout(debounceId);
+        debounceId = setTimeout(() => {
+          lastCpfChecked = cpfDigits;
+          checkCpf(cpfDigits);
+        }, 350);
+      };
+
+      cpfInput.addEventListener('input', scheduleCpfCheck);
+      ageInput.addEventListener('input', setButtonState);
+      gheSelect.addEventListener('change', setButtonState);
+      departmentSelect.addEventListener('change', setButtonState);
+
+      setButtonState();
+    })();
+  </script>
 {% endblock %}

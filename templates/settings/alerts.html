@@ -13,90 +13,89 @@
 {% block content %}
 <div class="app-layout">
   {% include "partials/sidebar.html" with active_menu="settings" can_manage_access=True %}
-  <main class="content">
+  <main class="content" data-page="settings-alerts">
     <header class="content__header">
       <div>
-        <h1 class="content__title">Configuracoes de alertas</h1>
-        <p class="content__subtitle">Defina limites seguros e e-mails que recebem alertas automaticos.</p>
+        <h1 class="content__title">Configurações de alertas</h1>
+        <p class="content__subtitle">Defina limites seguros e e-mails que recebem alertas automáticos.</p>
       </div>
-      <button class="btn btn--primary" type="button" data-open-modal="create-alert-recipient-modal">Novo e-mail</button>
     </header>
     {% include "settings/_alerts_container.html" %}
+
+    <div class="modal-backdrop" data-modal="create-alert-recipient-modal" aria-hidden="true">
+      <div class="modal-card">
+        <div class="modal-card__header">
+          <h2>Novo destinatário</h2>
+          <button type="button" class="modal-close" data-close-modal>&times;</button>
+        </div>
+        <form method="post" action="{% url 'settings-alerts-recipients-create' %}" class="form-grid modal-form" data-alert-recipient-create-form>
+          {% csrf_token %}
+          <div class="form-field">
+            <label for="create_alert_recipient_name" class="field-label-with-tooltip">
+              <span>Nome</span>
+            </label>
+            <input id="create_alert_recipient_name" name="name" maxlength="150" />
+          </div>
+          <div class="form-field">
+            <label for="create_alert_recipient_email" class="field-label-with-tooltip">
+              <span>E-mail</span>
+            </label>
+            <input id="create_alert_recipient_email" name="email" type="email" maxlength="254" required />
+          </div>
+          <div class="form-actions">
+            <button class="btn btn--primary" type="submit">Salvar</button>
+            <button class="btn btn--light" type="button" data-close-modal>Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" data-modal="edit-alert-recipient-modal" aria-hidden="true">
+      <div class="modal-card">
+        <div class="modal-card__header">
+          <h2>Editar destinatário</h2>
+          <button type="button" class="modal-close" data-close-modal>&times;</button>
+        </div>
+        <form method="post" action="" class="form-grid modal-form" data-alert-recipient-edit-form>
+          {% csrf_token %}
+          <div class="form-field">
+            <label for="edit_alert_recipient_name" class="field-label-with-tooltip">
+              <span>Nome</span>
+              <span class="tooltip" tabindex="0" aria-label="Ajuda sobre nome do destinatário">
+                ?
+                <span class="tooltip__text">Campo opcional para facilitar a identificação do contato.</span>
+              </span>
+            </label>
+            <input id="edit_alert_recipient_name" name="name" maxlength="150" />
+          </div>
+          <div class="form-field">
+            <label for="edit_alert_recipient_email" class="field-label-with-tooltip">
+              <span>E-mail</span>
+              <span class="tooltip" tabindex="0" aria-label="Ajuda sobre e-mail do destinatário">
+                ?
+                <span class="tooltip__text">Endereço obrigatório para envio das notificações de alerta.</span>
+              </span>
+            </label>
+            <input id="edit_alert_recipient_email" name="email" type="email" maxlength="254" required />
+          </div>
+          <div class="form-field form-field--check">
+            <label>
+              <input type="checkbox" name="is_active" value="on" data-edit-alert-recipient-active />
+              <span>Ativo</span>
+              <span class="tooltip" tabindex="0" aria-label="Ajuda sobre status ativo">
+                ?
+                <span class="tooltip__text">Quando marcado, o destinatário recebe alertas automaticamente.</span>
+              </span>
+            </label>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn--primary" type="submit">Salvar</button>
+            <button class="btn btn--light" type="button" data-close-modal>Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </div>
   </main>
-</div>
-
-<div class="modal-backdrop" data-modal="create-alert-recipient-modal" aria-hidden="true">
-  <div class="modal-card">
-    <div class="modal-card__header">
-      <h2>Novo destinatario</h2>
-      <button type="button" class="modal-close" data-close-modal>&times;</button>
-    </div>
-    <form method="post" action="{% url 'settings-alerts-recipients-create' %}" class="form-grid modal-form" data-alert-recipient-create-form>
-      {% csrf_token %}
-      <div class="form-field">
-        <label for="create_alert_recipient_name" class="field-label-with-tooltip">
-          <span>Nome</span>
-        </label>
-        <input id="create_alert_recipient_name" name="name" maxlength="150" />
-      </div>
-      <div class="form-field">
-        <label for="create_alert_recipient_email" class="field-label-with-tooltip">
-          <span>E-mail</span>
-        </label>
-        <input id="create_alert_recipient_email" name="email" type="email" maxlength="254" required />
-      </div>
-      <div class="form-actions">
-        <button class="btn btn--primary" type="submit">Salvar</button>
-        <button class="btn btn--light" type="button" data-close-modal>Cancelar</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<div class="modal-backdrop" data-modal="edit-alert-recipient-modal" aria-hidden="true">
-  <div class="modal-card">
-    <div class="modal-card__header">
-      <h2>Editar destinatario</h2>
-      <button type="button" class="modal-close" data-close-modal>&times;</button>
-    </div>
-    <form method="post" action="" class="form-grid modal-form" data-alert-recipient-edit-form>
-      {% csrf_token %}
-      <div class="form-field">
-        <label for="edit_alert_recipient_name" class="field-label-with-tooltip">
-          <span>Nome</span>
-          <span class="tooltip" tabindex="0" aria-label="Ajuda sobre nome do destinatario">
-            ?
-            <span class="tooltip__text">Campo opcional para facilitar a identificacao do contato.</span>
-          </span>
-        </label>
-        <input id="edit_alert_recipient_name" name="name" maxlength="150" />
-      </div>
-      <div class="form-field">
-        <label for="edit_alert_recipient_email" class="field-label-with-tooltip">
-          <span>E-mail</span>
-          <span class="tooltip" tabindex="0" aria-label="Ajuda sobre e-mail do destinatario">
-            ?
-            <span class="tooltip__text">Endereco obrigatorio para envio das notificacoes de alerta.</span>
-          </span>
-        </label>
-        <input id="edit_alert_recipient_email" name="email" type="email" maxlength="254" required />
-      </div>
-      <div class="form-field form-field--check">
-        <label>
-          <input type="checkbox" name="is_active" value="on" data-edit-alert-recipient-active />
-          <span>Ativo</span>
-          <span class="tooltip" tabindex="0" aria-label="Ajuda sobre status ativo">
-            ?
-            <span class="tooltip__text">Quando marcado, o destinatario recebe alertas automaticamente.</span>
-          </span>
-        </label>
-      </div>
-      <div class="form-actions">
-        <button class="btn btn--primary" type="submit">Salvar</button>
-        <button class="btn btn--light" type="button" data-close-modal>Cancelar</button>
-      </div>
-    </form>
-  </div>
 </div>
 {% endblock %}
 

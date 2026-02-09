@@ -15,9 +15,9 @@
           <th>Empresa</th>
           <th>CNPJ</th>
           <th>Cidade/UF</th>
-          <th>Funcionarios</th>
+          <th>Funcionários</th>
           <th>Status</th>
-          <th>Acoes</th>
+          <th>Ações</th>
         </tr>
       </thead>
       <tbody>
@@ -49,7 +49,7 @@
                 {% csrf_token %}
                 <input type="hidden" name="company_id" value="{{ company.id }}" />
                 <input type="hidden" name="next_url" value="{% url 'dashboard' %}" />
-                <button class="btn btn--light btn--sm" type="submit">Acessar</button>
+                <button class="btn btn--light btn--sm" type="submit" data-loading-text="Acessando...">Acessar</button>
               </form>
               <button
                 class="btn btn--light btn--sm"
@@ -58,6 +58,7 @@
                 data-update-url="{% url 'companies-update' company.id %}"
                 data-name="{{ company.name }}"
                 data-legal-name="{{ company.legal_name }}"
+                data-legal-representative-name="{{ company.legal_representative_name }}"
                 data-cnpj="{{ company.cnpj }}"
                 data-employee-count="{{ company.employee_count }}"
                 data-max-users="{{ company.max_users }}"

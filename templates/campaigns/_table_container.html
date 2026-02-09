@@ -10,14 +10,15 @@
     <table class="table">
       <thead>
         <tr>
-          <th>Titulo</th>
+          <th>Título</th>
           <th>Empresa</th>
-          <th>Inicio</th>
+          <th>Início</th>
           <th>Fim</th>
+          <th>Criado em</th>
           <th>Status</th>
           <th>Link</th>
           <th>QR</th>
-          <th>Acoes</th>
+          <th>Ações</th>
         </tr>
       </thead>
       <tbody>
@@ -27,6 +28,7 @@
             <td>{{ campaign.company.name }}</td>
             <td>{{ campaign.start_date|date:"d/m/Y" }}</td>
             <td>{{ campaign.end_date|date:"d/m/Y" }}</td>
+            <td>{{ campaign.created_at|date:"d/m/Y H:i" }}</td>
             <td>
               <span class="status-badge status-badge--{{ campaign.status|lower }}">
                 {{ campaign.get_status_display }}
@@ -36,9 +38,14 @@
               <a class="btn btn--light btn--sm" href="{% url 'campaigns-access' campaign.uuid %}" target="_blank">Abrir</a>
             </td>
             <td>
-              <a href="{% url 'campaigns-qr' campaign.uuid %}" target="_blank" title="Abrir QR">
-                <img src="{% url 'campaigns-qr' campaign.uuid %}" alt="QR" width="56" height="56" style="display:block;border-radius:8px;border:1px solid #e2e8f0;background:#fff;" />
-              </a>
+              <button
+                class="btn btn--light btn--sm"
+                type="button"
+                data-open-qr
+                data-qr-url="{% url 'campaigns-qr' campaign.uuid %}"
+              >
+                Ver qrcode
+              </button>
             </td>
             <td class="table__actions">
               <a class="btn btn--light btn--sm{% if campaign.status != 'FINISHED' %} is-disabled{% endif %}"
@@ -66,7 +73,7 @@
             </td>
           </tr>
         {% empty %}
-          <tr><td colspan="8">Nenhuma campanha cadastrada.</td></tr>
+          <tr><td colspan="9">Nenhuma campanha cadastrada.</td></tr>
         {% endfor %}
       </tbody>
     </table>

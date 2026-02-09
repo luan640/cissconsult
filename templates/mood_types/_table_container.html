@@ -25,7 +25,7 @@
             </span>
           </th>
           <th>Status</th>
-          <th>Acoes</th>
+          <th>Ações</th>
         </tr>
       </thead>
       <tbody>
@@ -33,7 +33,7 @@
           <tr>
             <td>{{ mood_type.emoji }}</td>
             <td>{{ mood_type.label }}</td>
-            <td>{{ mood_type.sentiment }}</td>
+            <td>{{ mood_type.sentiment_label|default:mood_type.sentiment }}</td>
             <td>{{ mood_type.mood_score }}</td>
             <td>{% if mood_type.is_active %}Ativo{% else %}Inativo{% endif %}</td>
             <td class="table__actions">

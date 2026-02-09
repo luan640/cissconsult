@@ -15,16 +15,12 @@
 <div class="app-layout">
   {% include "partials/sidebar.html" with active_menu="dashboard" %}
 
-  <main class="content">
+  <main class="content" data-page="dashboard">
     <header class="content__header">
       <div>
         <h1 class="content__title">Bem-vindo, {{ username }}</h1>
         <!-- <p class="content__subtitle">Visao geral da operacao da empresa #{{ company_id }}</p> -->
       </div>
-      <form method="post" action="{% url 'logout' %}" style="margin: 0;">
-        {% csrf_token %}
-        <button class="btn btn--primary" type="submit">Sair</button>
-      </form>
     </header>
 
     <!-- <section class="hero">

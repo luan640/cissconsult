@@ -10,23 +10,23 @@
 
   <section class="card alert-settings-card">
     <header class="card__header">
-      <h2 class="card__title">Parametros de alerta</h2>
-      <p class="card__subtitle">Os alertas sao avaliados automaticamente em novos registros e atualizacoes.</p>
+      <h2 class="card__title">Parâmetros de alerta</h2>
+      <p class="card__subtitle">Os alertas são avaliados automaticamente em novos registros e atualizações.</p>
     </header>
     <form method="post" action="{% url 'settings-alerts-update' %}" class="form-grid modal-form alert-settings-form" data-alert-settings-form>
       {% csrf_token %}
       <label class="toggle-field">
         <span class="toggle-field__text">
           <span class="toggle-field__title-row">
-            <strong>Configuracao ativa</strong>
-            <span class="tooltip" tabindex="0" aria-label="Ajuda sobre configuracao ativa">
+            <strong>Configuração ativa</strong>
+            <span class="tooltip" tabindex="0" aria-label="Ajuda sobre configuração ativa">
               ?
               <span class="tooltip__text">
-                Liga ou desliga esta configuracao inteira. Se desativado, nenhum parametro desta tela e aplicado.
+                Liga ou desliga esta configuração inteira. Se desativado, nenhum parâmetro desta tela é aplicado.
               </span>
             </span>
           </span>
-          <small>Controla se os parametros desta tela estao valendo.</small>
+          <small>Controla se os parâmetros desta tela estão valendo.</small>
         </span>
         <span class="toggle-switch">
           <input type="checkbox" name="is_active" value="on" {% if settings_obj.is_active %}checked{% endif %} />
@@ -36,15 +36,15 @@
       <label class="toggle-field">
         <span class="toggle-field__text">
           <span class="toggle-field__title-row">
-            <strong>Disparo automatico</strong>
-            <span class="tooltip" tabindex="0" aria-label="Ajuda sobre disparo automatico">
+            <strong>Disparo automático</strong>
+            <span class="tooltip" tabindex="0" aria-label="Ajuda sobre disparo automático">
               ?
               <span class="tooltip__text">
                 Quando ligado, o sistema cria alertas automaticamente ao atingir os limites configurados.
               </span>
             </span>
           </span>
-          <small>Quando ativo, alertas sao gerados automaticamente.</small>
+          <small>Quando ativo, alertas são gerados automaticamente.</small>
         </span>
         <span class="toggle-switch">
           <input type="checkbox" name="auto_alerts_enabled" value="on" {% if settings_obj.auto_alerts_enabled %}checked{% endif %} />
@@ -53,11 +53,11 @@
       </label>
       <div class="form-field">
         <label for="analysis_window_days" class="field-label-with-tooltip">
-          <span>Janela de analise (dias)</span>
-          <span class="tooltip" tabindex="0" aria-label="Ajuda sobre janela de analise">
+          <span>Janela de análise (dias)</span>
+          <span class="tooltip" tabindex="0" aria-label="Ajuda sobre janela de análise">
             ?
             <span class="tooltip__text">
-              Quantidade de dias usada na analise historica para calcular limites de denuncia e humor negativo.
+              Quantidade de dias usada na análise histórica para calcular limites de denúncia e humor negativo.
             </span>
           </span>
         </label>
@@ -65,11 +65,11 @@
       </div>
       <div class="form-field">
         <label for="max_negative_mood_percent" class="field-label-with-tooltip">
-          <span>Maximo de humor negativo (%)</span>
-          <span class="tooltip" tabindex="0" aria-label="Ajuda sobre maximo de humor negativo">
+          <span>Máximo de humor negativo (%)</span>
+          <span class="tooltip" tabindex="0" aria-label="Ajuda sobre máximo de humor negativo">
             ?
             <span class="tooltip__text">
-              Percentual maximo de registros de humor ruim/muito ruim aceito antes de gerar alerta.
+              Percentual máximo de registros de humor ruim/muito ruim aceito antes de gerar alerta.
             </span>
           </span>
         </label>
@@ -77,11 +77,11 @@
       </div>
       <div class="form-field">
         <label for="max_critical_complaints" class="field-label-with-tooltip">
-          <span>Maximo de denuncias no periodo</span>
-          <span class="tooltip" tabindex="0" aria-label="Ajuda sobre maximo de denuncias">
+          <span>Máximo de denúncias no período</span>
+          <span class="tooltip" tabindex="0" aria-label="Ajuda sobre máximo de denúncias">
             ?
             <span class="tooltip__text">
-              Limite de denuncias no periodo da janela de analise. Ao atingir ou passar desse valor, gera alerta.
+              Limite de denúncias no período da janela de análise. Ao atingir ou passar desse valor, gera alerta.
             </span>
           </span>
         </label>
@@ -89,26 +89,31 @@
       </div>
       <div class="form-field">
         <label for="max_open_help_requests" class="field-label-with-tooltip">
-          <span>Maximo de pedidos de ajuda abertos</span>
-          <span class="tooltip" tabindex="0" aria-label="Ajuda sobre maximo de pedidos de ajuda">
+          <span>Máximo de pedidos de ajuda abertos</span>
+          <span class="tooltip" tabindex="0" aria-label="Ajuda sobre máximo de pedidos de ajuda">
             ?
             <span class="tooltip__text">
-              Numero maximo de pedidos "aberto" ou "em atendimento" permitido antes do alerta operacional.
+              Número máximo de pedidos "aberto" ou "em atendimento" permitido antes do alerta operacional.
             </span>
           </span>
         </label>
         <input id="max_open_help_requests" name="max_open_help_requests" type="number" min="1" required value="{{ settings_obj.max_open_help_requests }}" />
       </div>
       <div class="form-actions">
-        <button class="btn btn--primary" type="submit">Salvar parametros</button>
+        <button class="btn btn--primary" type="submit">Salvar</button>
       </div>
     </form>
   </section>
 
   <section class="card card--table alert-recipients-card">
     <header class="card__header">
-      <h2 class="card__title">E-mails de alerta</h2>
-      <p class="card__subtitle">Somente destinatarios ativos recebem notificacoes.</p>
+      <div>
+        <h2 class="card__title">E-mails de alerta</h2>
+        <p class="card__subtitle">Somente destinatários ativos recebem notificações.</p>
+      </div>
+      <div class="card__header-actions">
+        <button class="btn btn--primary btn--sm" type="button" data-open-modal="create-alert-recipient-modal">Novo e-mail</button>
+      </div>
     </header>
     <table class="table">
       <thead>
@@ -176,3 +181,4 @@
   </section>
   {% include "partials/_table_pagination.html" %}
 </div>
+

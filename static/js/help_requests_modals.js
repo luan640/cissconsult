@@ -1,4 +1,8 @@
 (function () {
+  if (window.__helpRequestsModalsBound) {
+    return;
+  }
+  window.__helpRequestsModalsBound = true;
   const containerId = 'help-requests-table-container';
   const toastStackId = 'floating-toast-stack';
   const filterFormSelector = '[data-help-requests-filter-form]';
@@ -191,6 +195,9 @@
   document.addEventListener('submit', async (event) => {
     const form = event.target;
     if (form.matches(filterFormSelector)) {
+      if (form.hasAttribute('data-ajax-table-form')) {
+        return;
+      }
       event.preventDefault();
       try {
         await applyFilters(form);
@@ -228,5 +235,10 @@
     }
   });
 
-  consumeInlineNotices();
+  const runPageHooks = () => {
+    consumeInlineNotices();
+  };
+
+  window.addEventListener('page:load', runPageHooks);
+  runPageHooks();
 })();

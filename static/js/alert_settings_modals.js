@@ -1,4 +1,8 @@
 (function () {
+  if (window.__alertSettingsModalsBound) {
+    return;
+  }
+  window.__alertSettingsModalsBound = true;
   const containerId = 'alert-settings-container';
   const toastStackId = 'floating-toast-stack';
 
@@ -133,5 +137,10 @@
     }
   });
 
-  consumeInlineNotices();
+  const runPageHooks = () => {
+    consumeInlineNotices();
+  };
+
+  window.addEventListener('page:load', runPageHooks);
+  runPageHooks();
 })();

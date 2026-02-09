@@ -13,7 +13,297 @@
     {% block extra_head %}{% endblock %}
   </head>
   <body>
+    <div id="htmx-indicator" style="position: fixed; top: 0; left: 0; right: 0; height: 3px; background: #1d4ed8; opacity: 0; transition: opacity 0.2s ease; z-index: 9999;"></div>
     {% block content %}{% endblock %}
     {% block extra_scripts %}{% endblock %}
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <script>
+      (function () {
+        document.body.setAttribute('hx-indicator', '#htmx-indicator');
+        const loadedScripts = new Set();
+        const loadScriptOnce = (src) => {
+          if (loadedScripts.has(src)) return;
+          loadedScripts.add(src);
+          const script = document.createElement('script');
+          script.src = src;
+          script.defer = true;
+          document.body.appendChild(script);
+        };
+        const ensurePageScripts = () => {
+          const content = document.querySelector('.content');
+          if (!content) return;
+          const page = content.getAttribute('data-page') || '';
+          if (page.includes('companies')) {
+            loadScriptOnce("{% static 'js/companies_modals.js' %}");
+          }
+          if (page.includes('campaigns')) {
+            loadScriptOnce("{% static 'js/campaigns_modals.js' %}");
+            loadScriptOnce("{% static 'js/table_async.js' %}");
+          }
+          if (page.includes('totems')) {
+            loadScriptOnce("{% static 'js/totems_modals.js' %}");
+            loadScriptOnce("{% static 'js/table_async.js' %}");
+          }
+          if (page.includes('mood-types')) {
+            loadScriptOnce("{% static 'js/mood_types_modals.js' %}");
+            loadScriptOnce("{% static 'js/table_async.js' %}");
+            loadScriptOnce("https://cdn.jsdelivr.net/npm/@joeattardi/emoji-button@4.6.4/dist/index.min.js");
+            loadScriptOnce("{% static 'js/emoji_picker.js' %}");
+          }
+          if (page.includes('complaint-types')) {
+            loadScriptOnce("{% static 'js/complaint_types_modals.js' %}");
+            loadScriptOnce("{% static 'js/table_async.js' %}");
+          }
+          if (page.includes('users')) {
+            loadScriptOnce("{% static 'js/users_modals.js' %}");
+            loadScriptOnce("{% static 'js/table_async.js' %}");
+          }
+          if (page.includes('departments')) {
+            loadScriptOnce("{% static 'js/departments_modals.js' %}");
+            loadScriptOnce("{% static 'js/table_async.js' %}");
+          }
+          if (page.includes('ghes')) {
+            loadScriptOnce("{% static 'js/ghe_modals.js' %}");
+            loadScriptOnce("{% static 'js/table_async.js' %}");
+          }
+          if (page.includes('help-requests')) {
+            loadScriptOnce("{% static 'js/help_requests_modals.js' %}");
+            loadScriptOnce("{% static 'js/table_async.js' %}");
+          }
+          if (page.includes('complaints')) {
+            loadScriptOnce("{% static 'js/complaints_modals.js' %}");
+            loadScriptOnce("{% static 'js/table_async.js' %}");
+          }
+          if (page.includes('settings-alerts')) {
+            loadScriptOnce("{% static 'js/alert_settings_modals.js' %}");
+            loadScriptOnce("{% static 'js/table_async.js' %}");
+          }
+          if (page.includes('dashboard')) {
+            loadScriptOnce("{% static 'js/dashboard_sidebar.js' %}");
+            loadScriptOnce("{% static 'js/dashboard_charts.js' %}");
+            loadScriptOnce("{% static 'js/dashboard_filters.js' %}");
+          }
+        };
+        const firePageLoad = () => {
+          window.dispatchEvent(new Event('page:load'));
+          prefetchCache.clear();
+        };
+        const prefetchCache = new Set();
+        let htmxInFlight = false;
+        let navToken = 0;
+        const prefetch = (url) => {
+          if (!url || prefetchCache.has(url) || navigator.onLine === false) return;
+          let parsed;
+          try {
+            parsed = new URL(url, window.location.origin);
+          } catch (err) {
+            return;
+          }
+          if (parsed.origin !== window.location.origin) return;
+          if (!/^https?:$/.test(parsed.protocol)) return;
+          if (parsed.pathname.startsWith('/__debug__/')) return;
+
+          prefetchCache.add(parsed.href);
+          try {
+            fetch(parsed.href, {
+              cache: 'no-store',
+              credentials: 'same-origin',
+              headers: {
+                'HX-Request': 'true',
+                'HX-Boosted': 'true',
+                'HX-Target': '.content',
+                'HX-Select': '.content',
+              },
+            }).catch(() => {});
+          } catch (err) {
+            // Ignore prefetch failures in development.
+          }
+        };
+        document.body.addEventListener('mouseover', (event) => {
+          const link = event.target && event.target.closest ? event.target.closest('a') : null;
+          if (!link || !link.href) return;
+          if (link.closest('.menu')) {
+            prefetch(link.href);
+          }
+        });
+        const setSkeleton = () => {
+          const content = document.querySelector('.content');
+          if (!content) return;
+          content.innerHTML = `
+            <header class="content__header">
+              <div>
+                <div style="height: 22px; width: 220px; background: #e2e8f0; border-radius: 6px;"></div>
+                <div style="height: 14px; width: 320px; margin-top: 8px; background: #f1f5f9; border-radius: 6px;"></div>
+              </div>
+            </header>
+            <div style="display:grid; gap:12px; margin-top:16px;">
+              <div style="height: 96px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px;"></div>
+              <div style="height: 96px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px;"></div>
+              <div style="height: 96px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px;"></div>
+            </div>
+          `;
+        };
+
+        document.body.addEventListener('htmx:beforeRequest', (event) => {
+          htmxInFlight = true;
+          const bar = document.getElementById('htmx-indicator');
+          if (bar) bar.style.opacity = '1';
+          const elt = event.detail && event.detail.elt;
+          const link = elt && elt.closest ? elt.closest('a') : null;
+          if (link && link.closest('.menu') && link.href) {
+            try {
+              history.pushState(null, '', link.href);
+            } catch (err) {
+              // ignore history errors
+            }
+            setSkeleton();
+          }
+        });
+        document.body.addEventListener('htmx:afterRequest', () => {
+          const bar = document.getElementById('htmx-indicator');
+          if (bar) bar.style.opacity = '0';
+          htmxInFlight = false;
+          ensurePageScripts();
+          firePageLoad();
+        });
+        document.body.addEventListener('click', (event) => {
+          const link = event.target && event.target.closest ? event.target.closest('a') : null;
+          if (!link || !link.href) return;
+          if (!link.closest('.menu')) return;
+          const menu = document.querySelector('.menu');
+          if (menu) {
+            const items = menu.querySelectorAll('.menu__item, .menu__subitem');
+            items.forEach((item) => item.classList.remove('is-active'));
+            link.classList.add('is-active');
+            const group = link.closest('.menu__group');
+            if (group) group.classList.add('is-open');
+          }
+          const token = ++navToken;
+          setTimeout(() => {
+            if (token !== navToken) return;
+            if (!htmxInFlight) {
+              window.location.href = link.href;
+            }
+          }, 150);
+        });
+
+        const updateSidebarActive = () => {
+          const currentPath = window.location.pathname || '/';
+          const menu = document.querySelector('.menu');
+          if (!menu) return;
+          const items = menu.querySelectorAll('.menu__item, .menu__subitem');
+          items.forEach((item) => item.classList.remove('is-active'));
+
+          let matched = null;
+          items.forEach((item) => {
+            const matchPath = item.getAttribute('data-match-path');
+            const href = item.getAttribute('href') || '';
+            if (matchPath && currentPath.startsWith(matchPath)) {
+              matched = item;
+              return;
+            }
+            try {
+              const url = href ? new URL(href, window.location.origin) : null;
+              if (url && url.pathname === currentPath) {
+                matched = item;
+              }
+            } catch (err) {
+              // ignore invalid URLs
+            }
+          });
+
+          if (matched) {
+            matched.classList.add('is-active');
+            const group = matched.closest('.menu__group');
+            if (group) group.classList.add('is-open');
+          }
+        };
+
+        document.body.addEventListener('htmx:afterRequest', updateSidebarActive);
+        window.addEventListener('popstate', updateSidebarActive);
+        updateSidebarActive();
+        ensurePageScripts();
+        firePageLoad();
+      })();
+    </script>
+    <script>
+      (function () {
+        const disableButton = (button) => {
+          if (!button || button.disabled) return;
+          const loadingText = button.getAttribute('data-loading-text') || 'Salvando...';
+          if (!button.dataset.originalText) {
+            button.dataset.originalText = button.textContent || '';
+          }
+          button.textContent = loadingText;
+          button.disabled = true;
+          button.setAttribute('aria-busy', 'true');
+        };
+
+        document.addEventListener('submit', (event) => {
+          if (event.defaultPrevented) return;
+          const form = event.target;
+          if (!(form instanceof HTMLFormElement)) return;
+          if (form.method && form.method.toLowerCase() === 'get') return;
+          if (
+            form.matches('[data-departments-filter-form]') ||
+            form.matches('[data-help-requests-filter-form]') ||
+            form.matches('[data-complaints-filter-form]') ||
+            form.matches('[data-ajax-table-form]')
+          ) {
+            return;
+          }
+          const containerId = form.getAttribute('data-table-container-id');
+          if (containerId) {
+            showTableLoading(form);
+          }
+          const submitter = event.submitter;
+          if (submitter && submitter.type === 'submit') {
+            disableButton(submitter);
+            return;
+          }
+          const fallback = form.querySelector('button[type="submit"]');
+          if (fallback) disableButton(fallback);
+        });
+
+        document.addEventListener('click', (event) => {
+          const button = event.target && event.target.closest ? event.target.closest('[data-loading-on-click]') : null;
+          if (!button) return;
+          disableButton(button);
+        });
+
+        const showTableLoading = (form) => {
+          const containerId = form.getAttribute('data-table-container-id');
+          const container = containerId ? document.getElementById(containerId) : null;
+          if (!container) return;
+          let banner = container.querySelector('[data-inline-loading]');
+          if (!banner) {
+            banner = document.createElement('div');
+            banner.setAttribute('data-inline-loading', 'true');
+            banner.style.margin = '0 0 10px';
+            banner.style.padding = '10px 12px';
+            banner.style.border = '1px solid #e2e8f0';
+            banner.style.borderRadius = '10px';
+            banner.style.background = '#f8fafc';
+            banner.style.color = '#475569';
+            banner.style.fontSize = '0.9rem';
+            banner.textContent = 'Carregando...';
+            container.prepend(banner);
+          }
+        };
+
+        document.addEventListener('submit', (event) => {
+          const form = event.target;
+          if (!(form instanceof HTMLFormElement)) return;
+          if (
+            form.matches('[data-departments-filter-form]') ||
+            form.matches('[data-help-requests-filter-form]') ||
+            form.matches('[data-complaints-filter-form]') ||
+            form.matches('[data-ajax-table-form]')
+          ) {
+            showTableLoading(form);
+          }
+        });
+      })();
+    </script>
   </body>
 </html>

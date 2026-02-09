@@ -22,6 +22,12 @@ from django.utils import timezone
 from django.utils.text import slugify
 from django.utils.text import get_valid_filename
 from django.views import View
+from django.core.cache import cache
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
+from django.views.decorators.vary import vary_on_headers
 from datetime import date, datetime, timedelta
 from uuid import uuid4
 from io import BytesIO
@@ -51,8 +57,10 @@ from apps.core.models import (
     MoodRecord,
     MoodType,
     Report,
+    TechnicalResponsible,
     Totem,
 )
+from masterdata.models import MasterReportSettings
 from apps.tenancy.models import Company, CompanyMembership
 from apps.tenancy.session import (
     get_active_memberships_for_user,
@@ -85,6 +93,11 @@ def campaign_qr(request, campaign_uuid):
     if qrcode is None:
         return HttpResponse('QR dependency not installed', status=501)
 
+    qr_path = f"qrcodes/{campaign.uuid}.png"
+    if default_storage.exists(qr_path):
+        with default_storage.open(qr_path, 'rb') as handle:
+            return HttpResponse(handle.read(), content_type='image/png')
+
     access_url = request.build_absolute_uri(reverse('campaigns-access', args=[campaign.uuid]))
     qr = qrcode.QRCode(
         version=2,
@@ -97,6 +110,8 @@ def campaign_qr(request, campaign_uuid):
     image = qr.make_image(fill_color='black', back_color='white')
     buffer = BytesIO()
     image.save(buffer, format='PNG')
+    default_storage.save(qr_path, ContentFile(buffer.getvalue()))
+
     buffer.seek(0)
     return HttpResponse(buffer.getvalue(), content_type='image/png')
 
@@ -113,6 +128,27 @@ def is_ajax_request(request):
 
 def is_master_user(request):
     return bool(getattr(request, 'user', None) and request.user.is_authenticated and request.user.is_superuser)
+
+
+def get_campaigns_filters(request):
+    company_id = (request.GET.get('company_id') or '').strip()
+    status = (request.GET.get('status') or '').strip()
+    return {
+        'company_id': company_id,
+        'status': status,
+    }
+
+
+def get_campaigns_queryset(filters):
+    campaigns_qs = Campaign.all_objects.select_related('company').order_by('-start_date')
+    company_id = filters.get('company_id') or ''
+    if company_id.isdigit():
+        campaigns_qs = campaigns_qs.filter(company_id=int(company_id))
+    status = filters.get('status') or ''
+    allowed_statuses = {value for value, _ in Campaign.Status.choices}
+    if status in allowed_statuses:
+        campaigns_qs = campaigns_qs.filter(status=status)
+    return campaigns_qs
 
 
 class EmailAuthenticationForm(AuthenticationForm):
@@ -186,6 +222,8 @@ class DashboardView(LoginRequiredMixin, View):
         period_start, period_end = self._resolve_period(request)
         company_slug = None
         active_totems = []
+        active_departments = []
+        active_ghes = []
         if company_id:
             company = Company.objects.filter(id=company_id).only('slug').first()
             company_slug = company.slug if company else None
@@ -195,12 +233,28 @@ class DashboardView(LoginRequiredMixin, View):
                     is_active=True,
                 ).only('id', 'name', 'slug')
             )
+            active_departments = list(
+                Department.all_objects.filter(
+                    company_id=company_id,
+                    is_active=True,
+                ).only('id', 'name', 'ghe_id')
+            )
+            active_ghes = list(
+                GHE.all_objects.filter(
+                    company_id=company_id,
+                    is_active=True,
+                ).only('id', 'name')
+            )
         selected_totem_id, selected_totem_slug = self._resolve_totem_filter(request, active_totems)
+        selected_department_id, selected_department_label = self._resolve_department_filter(request, active_departments)
+        selected_ghe_id, selected_ghe_label = self._resolve_ghe_filter(request, active_ghes)
         metrics, chart_data = self._build_metrics_and_charts(
             company_id,
             period_start,
             period_end,
             selected_totem_id,
+            selected_department_id,
+            selected_ghe_id,
         )
         default_totem_slug = active_totems[0].slug if active_totems else None
         context = {
@@ -208,12 +262,16 @@ class DashboardView(LoginRequiredMixin, View):
             'company_id': company_id,
             'company_slug': company_slug,
             'active_totems': active_totems,
+            'active_departments': active_departments,
+            'active_ghes': active_ghes,
             'default_totem_slug': default_totem_slug,
             'metrics': metrics,
             'chart_data': chart_data,
             'period_start': period_start.isoformat(),
             'period_end': period_end.isoformat(),
             'selected_totem_slug': selected_totem_slug,
+            'selected_department_id': selected_department_id or '',
+            'selected_ghe_id': selected_ghe_id or '',
             'can_manage_access': bool(
                 company_id and user_is_company_admin(request.user, int(company_id))
             ),
@@ -253,7 +311,35 @@ class DashboardView(LoginRequiredMixin, View):
                 return totem.id, selected_slug
         return None, ''
 
-    def _build_metrics_and_charts(self, company_id, period_start, period_end, totem_id=None):
+    @staticmethod
+    def _resolve_department_filter(request, active_departments):
+        raw_value = (request.GET.get('department') or '').strip()
+        if not raw_value:
+            return None, ''
+        try:
+            department_id = int(raw_value)
+        except (TypeError, ValueError):
+            return None, ''
+        for department in active_departments:
+            if department.id == department_id:
+                return department_id, department.name
+        return None, ''
+
+    @staticmethod
+    def _resolve_ghe_filter(request, active_ghes):
+        raw_value = (request.GET.get('ghe') or '').strip()
+        if not raw_value:
+            return None, ''
+        try:
+            ghe_id = int(raw_value)
+        except (TypeError, ValueError):
+            return None, ''
+        for ghe in active_ghes:
+            if ghe.id == ghe_id:
+                return ghe_id, ghe.name
+        return None, ''
+
+    def _build_metrics_and_charts(self, company_id, period_start, period_end, totem_id=None, department_id=None, ghe_id=None):
         if not company_id:
             metrics = {
                 'risk_level': 'Sem dados',
@@ -280,6 +366,10 @@ class DashboardView(LoginRequiredMixin, View):
         if totem_id:
             mood_qs = mood_qs.filter(totem_id=totem_id)
             complaint_qs = complaint_qs.filter(totem_id=totem_id)
+        if department_id:
+            mood_qs = mood_qs.filter(department_id=department_id)
+        if ghe_id:
+            mood_qs = mood_qs.filter(department__ghe_id=ghe_id)
 
         mood_count = mood_qs.count()
         complaint_count = complaint_qs.count()
@@ -302,6 +392,10 @@ class DashboardView(LoginRequiredMixin, View):
         mood_overall_qs = MoodRecord.all_objects.filter(company_id=company_id)
         if totem_id:
             mood_overall_qs = mood_overall_qs.filter(totem_id=totem_id)
+        if department_id:
+            mood_overall_qs = mood_overall_qs.filter(department_id=department_id)
+        if ghe_id:
+            mood_overall_qs = mood_overall_qs.filter(department__ghe_id=ghe_id)
         sentiment_count_overall = (
             mood_overall_qs.values('sentiment')
             .annotate(total=Count('id'))
@@ -351,6 +445,7 @@ class DashboardView(LoginRequiredMixin, View):
             'period_comparison': {'labels': ['Periodo atual', 'Periodo anterior'], 'values': [0, 0]},
             'totem_usage': {'labels': [], 'values': []},
             'mood_by_department': {'labels': [], 'values': []},
+            'mood_by_ghe': {'labels': [], 'values': []},
             'mood_distribution_by_department': {'labels': [], 'datasets': []},
             'complaint_by_department': {'labels': [], 'values': []},
             'complaint_by_type': {'labels': [], 'values': []},
@@ -415,17 +510,10 @@ class DashboardView(LoginRequiredMixin, View):
         ).count()
 
         totem_usage_qs = (
-            MoodRecord.all_objects.filter(
-                company_id=company_id,
-                record_date__gte=period_start,
-                record_date__lte=period_end,
-            )
-            .values('totem__name')
+            mood_qs.values('totem__name')
             .annotate(total=Count('id'))
             .order_by('-total')
         )
-        if totem_id:
-            totem_usage_qs = totem_usage_qs.filter(totem_id=totem_id)
         totem_usage_labels = [
             item['totem__name'] or 'Sem totem'
             for item in totem_usage_qs
@@ -433,22 +521,26 @@ class DashboardView(LoginRequiredMixin, View):
         totem_usage_values = [item['total'] for item in totem_usage_qs]
 
         mood_by_department_qs = (
-            MoodRecord.all_objects.filter(
-                company_id=company_id,
-                record_date__gte=period_start,
-                record_date__lte=period_end,
-            )
-            .values('department__name')
+            mood_qs.values('department__name')
             .annotate(total=Count('id'))
             .order_by('-total')
         )
-        if totem_id:
-            mood_by_department_qs = mood_by_department_qs.filter(totem_id=totem_id)
         mood_by_department_labels = [
             item['department__name'] or 'Sem setor'
             for item in mood_by_department_qs
         ]
         mood_by_department_values = [item['total'] for item in mood_by_department_qs]
+
+        mood_by_ghe_qs = (
+            mood_qs.values('department__ghe__name')
+            .annotate(total=Count('id'))
+            .order_by('-total')
+        )
+        mood_by_ghe_labels = [
+            item['department__ghe__name'] or 'Sem GHE'
+            for item in mood_by_ghe_qs
+        ]
+        mood_by_ghe_values = [item['total'] for item in mood_by_ghe_qs]
 
         complaint_by_department_labels = []
         complaint_by_department_values = []
@@ -536,6 +628,10 @@ class DashboardView(LoginRequiredMixin, View):
                 'labels': mood_by_department_labels,
                 'values': mood_by_department_values,
             },
+            'mood_by_ghe': {
+                'labels': mood_by_ghe_labels,
+                'values': mood_by_ghe_values,
+            },
             'mood_distribution_by_department': {
                 'labels': mood_distribution_by_department_labels,
                 'datasets': mood_distribution_by_department_datasets,
@@ -561,6 +657,10 @@ class MasterRequiredMixin(LoginRequiredMixin):
 class MasterDashboardView(MasterRequiredMixin, View):
     template_name = 'master/dashboard.html'
 
+    @method_decorator(vary_on_headers('Cookie'))
+    @method_decorator(cache_page(30))
+    @method_decorator(vary_on_headers('Cookie'))
+    @method_decorator(cache_page(30))
     def get(self, request):
         return render(request, self.template_name, self._build_context())
 
@@ -688,6 +788,8 @@ class CompanySelectView(LoginRequiredMixin, View):
 class CompanyListView(MasterRequiredMixin, View):
     template_name = 'companies/list.html'
 
+    @method_decorator(vary_on_headers('Cookie'))
+    @method_decorator(cache_page(30))
     def get(self, request):
         companies_qs = Company.objects.order_by('name')
         page_obj = paginate_queryset(request, companies_qs)
@@ -725,9 +827,14 @@ class CompanyCreateView(MasterRequiredMixin, View):
             counter += 1
             final_slug = f'{base_slug}-{counter}'
 
+        create_is_active = True
+        if 'is_active' in request.POST:
+            create_is_active = form.cleaned_data.get('is_active', False)
+
         Company.objects.create(
             name=name,
             legal_name=(form.cleaned_data['legal_name'] or '').strip(),
+            legal_representative_name=(form.cleaned_data['legal_representative_name'] or '').strip(),
             cnpj=cnpj,
             employee_count=form.cleaned_data['employee_count'],
             max_users=form.cleaned_data['max_users'],
@@ -741,8 +848,9 @@ class CompanyCreateView(MasterRequiredMixin, View):
             address_zipcode=(form.cleaned_data['address_zipcode'] or '').strip(),
             logo=form.cleaned_data.get('logo'),
             slug=final_slug,
-            is_active=form.cleaned_data.get('is_active', False),
+            is_active=create_is_active,
         )
+        cache.clear()
         messages.success(request, 'Empresa cadastrada com sucesso.')
         return redirect('companies-list')
 
@@ -767,6 +875,7 @@ class CompanyUpdateView(MasterRequiredMixin, View):
 
         company.name = name
         company.legal_name = (form.cleaned_data['legal_name'] or '').strip()
+        company.legal_representative_name = (form.cleaned_data['legal_representative_name'] or '').strip()
         company.cnpj = cnpj
         company.employee_count = form.cleaned_data['employee_count']
         company.max_users = form.cleaned_data['max_users']
@@ -778,10 +887,12 @@ class CompanyUpdateView(MasterRequiredMixin, View):
         company.address_city = (form.cleaned_data['address_city'] or '').strip()
         company.address_state = form.cleaned_data['address_state']
         company.address_zipcode = (form.cleaned_data['address_zipcode'] or '').strip()
-        company.is_active = form.cleaned_data.get('is_active', False)
+        if 'is_active' in request.POST:
+            company.is_active = form.cleaned_data.get('is_active', False)
         if form.cleaned_data.get('logo'):
             company.logo = form.cleaned_data['logo']
         company.save()
+        cache.clear()
         messages.success(request, 'Empresa atualizada com sucesso.')
         return redirect('companies-list')
 
@@ -791,6 +902,7 @@ class CompanyDeleteView(MasterRequiredMixin, View):
         company = get_object_or_404(Company, pk=company_id)
         company.is_active = not company.is_active
         company.save(update_fields=['is_active', 'updated_at'])
+        cache.clear()
         if company.is_active:
             messages.success(request, 'Empresa ativada com sucesso.')
         else:
@@ -801,9 +913,12 @@ class CompanyDeleteView(MasterRequiredMixin, View):
 class CampaignListView(MasterRequiredMixin, View):
     template_name = 'campaigns/list.html'
 
+    @method_decorator(vary_on_headers('Cookie'))
+    @method_decorator(cache_page(30))
     def get(self, request):
-        campaigns_qs = Campaign.all_objects.select_related('company').order_by('-start_date')
-        page_obj = paginate_queryset(request, campaigns_qs)
+        filters = get_campaigns_filters(request)
+        campaigns_qs = get_campaigns_queryset(filters)
+        page_obj = paginate_queryset(request, campaigns_qs, per_page=15)
         companies = list(Company.objects.order_by('name').only('id', 'name'))
         context = {
             'campaigns': page_obj.object_list,
@@ -813,7 +928,11 @@ class CampaignListView(MasterRequiredMixin, View):
             'active_menu': 'campaigns',
             'is_master': True,
             'status_choices': Campaign.Status.choices,
+            'selected_company_id': filters['company_id'],
+            'selected_status': filters['status'],
         }
+        if is_ajax_request(request) or request.GET.get('partial') == '1':
+            return render(request, 'campaigns/_table_container.html', context)
         return render(request, self.template_name, context)
 
 
@@ -835,6 +954,7 @@ class CampaignCreateView(MasterRequiredMixin, View):
             status=form.cleaned_data['status'],
             created_by=request.user,
         )
+        cache.clear()
         messages.success(request, 'Campanha criada com sucesso.')
         if is_ajax_request(request):
             return render_campaigns_table(request)
@@ -858,6 +978,7 @@ class CampaignUpdateView(MasterRequiredMixin, View):
         campaign.end_date = form.cleaned_data['end_date']
         campaign.status = form.cleaned_data['status']
         campaign.save()
+        cache.clear()
         messages.success(request, 'Campanha atualizada com sucesso.')
         if is_ajax_request(request):
             return render_campaigns_table(request)
@@ -868,10 +989,200 @@ class CampaignDeleteView(MasterRequiredMixin, View):
     def post(self, request, campaign_id):
         campaign = get_object_or_404(Campaign, pk=campaign_id)
         campaign.delete()
+        cache.clear()
         messages.success(request, 'Campanha removida com sucesso.')
         if is_ajax_request(request):
             return render_campaigns_table(request)
         return redirect('campaigns-list')
+
+
+class MasterTechnicalSettingsView(MasterRequiredMixin, View):
+    template_name = 'master/technical_settings.html'
+
+    @method_decorator(vary_on_headers('Cookie'))
+    @method_decorator(cache_page(30))
+    def get(self, request):
+        report_settings = ensure_master_report_settings()
+        responsibles_qs = []
+        page_obj = paginate_queryset(request, responsibles_qs, per_page=15)
+        company = None
+        company_id = request.session.get('company_id')
+        if company_id:
+            try:
+                request.current_company_id = int(company_id)
+            except (TypeError, ValueError) as exc:
+                raise PermissionDenied('Empresa de sessao invalida.') from exc
+            company = get_object_or_404(Company, pk=request.current_company_id)
+            responsibles_qs = TechnicalResponsible.all_objects.filter(
+                company_id=request.current_company_id
+            ).order_by('sort_order', 'name')
+            page_obj = paginate_queryset(request, responsibles_qs, per_page=15)
+        context = {
+            'technical_responsibles': page_obj.object_list,
+            'page_obj': page_obj,
+            'pagination_query': build_pagination_query(request),
+            'active_menu': 'master-settings',
+            'is_master': True,
+            'report_settings': report_settings,
+            'company': company,
+        }
+        if is_ajax_request(request) or request.GET.get('partial') == '1':
+            return render(request, 'master/_technical_table_container.html', context)
+        return render(request, self.template_name, context)
+
+
+class TechnicalResponsibleCreateView(MasterRequiredMixin, View):
+    def post(self, request):
+        if not request.session.get('company_id'):
+            messages.error(request, 'Selecione uma empresa antes de acessar as configuracoes.')
+            return redirect('company-select')
+        try:
+            request.current_company_id = int(request.session.get('company_id'))
+        except (TypeError, ValueError) as exc:
+            raise PermissionDenied('Empresa de sessao invalida.') from exc
+
+        form = TechnicalResponsibleForm(request.POST)
+        if not form.is_valid():
+            messages.error(request, collect_form_errors(form))
+            if is_ajax_request(request):
+                return render_technical_responsibles_table(request)
+            return redirect('master-settings')
+
+        name = (form.cleaned_data['name'] or '').strip()
+        education = (form.cleaned_data['education'] or '').strip()
+        registration = (form.cleaned_data['registration'] or '').strip()
+        sort_order = form.cleaned_data.get('sort_order') or 0
+        if not name or not education or not registration:
+            messages.error(request, 'Preencha nome, formacao e registro.')
+            if is_ajax_request(request):
+                return render_technical_responsibles_table(request)
+            return redirect('master-settings')
+
+        TechnicalResponsible.all_objects.create(
+            company_id=request.current_company_id,
+            name=name,
+            education=education,
+            registration=registration,
+            sort_order=sort_order,
+            is_active=True,
+        )
+        cache.clear()
+        messages.success(request, 'Responsavel tecnico criado com sucesso.')
+        if is_ajax_request(request):
+            return render_technical_responsibles_table(request)
+        return redirect('master-settings')
+
+
+class TechnicalResponsibleUpdateView(MasterRequiredMixin, View):
+    def post(self, request, responsible_id):
+        if not request.session.get('company_id'):
+            messages.error(request, 'Selecione uma empresa antes de acessar as configuracoes.')
+            return redirect('company-select')
+        try:
+            request.current_company_id = int(request.session.get('company_id'))
+        except (TypeError, ValueError) as exc:
+            raise PermissionDenied('Empresa de sessao invalida.') from exc
+
+        responsible = get_object_or_404(
+            TechnicalResponsible.all_objects,
+            pk=responsible_id,
+            company_id=request.current_company_id,
+        )
+        form = TechnicalResponsibleForm(request.POST)
+        if not form.is_valid():
+            messages.error(request, collect_form_errors(form))
+            if is_ajax_request(request):
+                return render_technical_responsibles_table(request)
+            return redirect('master-settings')
+
+        name = (form.cleaned_data['name'] or '').strip()
+        education = (form.cleaned_data['education'] or '').strip()
+        registration = (form.cleaned_data['registration'] or '').strip()
+        sort_order = form.cleaned_data.get('sort_order') or 0
+        if not name or not education or not registration:
+            messages.error(request, 'Preencha nome, formacao e registro.')
+            if is_ajax_request(request):
+                return render_technical_responsibles_table(request)
+            return redirect('master-settings')
+
+        responsible.name = name
+        responsible.education = education
+        responsible.registration = registration
+        responsible.sort_order = sort_order
+        responsible.is_active = form.cleaned_data['is_active']
+        responsible.save()
+        cache.clear()
+        messages.success(request, 'Responsavel tecnico atualizado com sucesso.')
+        if is_ajax_request(request):
+            return render_technical_responsibles_table(request)
+        return redirect('master-settings')
+
+
+class TechnicalResponsibleDeleteView(MasterRequiredMixin, View):
+    def post(self, request, responsible_id):
+        if not request.session.get('company_id'):
+            messages.error(request, 'Selecione uma empresa antes de acessar as configuracoes.')
+            return redirect('company-select')
+        try:
+            request.current_company_id = int(request.session.get('company_id'))
+        except (TypeError, ValueError) as exc:
+            raise PermissionDenied('Empresa de sessao invalida.') from exc
+
+        responsible = get_object_or_404(
+            TechnicalResponsible.all_objects,
+            pk=responsible_id,
+            company_id=request.current_company_id,
+        )
+        responsible.is_active = not responsible.is_active
+        responsible.save(update_fields=['is_active', 'updated_at'])
+        cache.clear()
+        if responsible.is_active:
+            messages.success(request, 'Responsavel tecnico ativado com sucesso.')
+        else:
+            messages.success(request, 'Responsavel tecnico desativado com sucesso.')
+        if is_ajax_request(request):
+            return render_technical_responsibles_table(request)
+        return redirect('master-settings')
+
+
+class TechnicalResponsibleRemoveView(MasterRequiredMixin, View):
+    def post(self, request, responsible_id):
+        if not request.session.get('company_id'):
+            messages.error(request, 'Selecione uma empresa antes de acessar as configuracoes.')
+            return redirect('company-select')
+        try:
+            request.current_company_id = int(request.session.get('company_id'))
+        except (TypeError, ValueError) as exc:
+            raise PermissionDenied('Empresa de sessao invalida.') from exc
+
+        responsible = get_object_or_404(
+            TechnicalResponsible.all_objects,
+            pk=responsible_id,
+            company_id=request.current_company_id,
+        )
+        responsible.delete()
+        cache.clear()
+        messages.success(request, 'Responsavel tecnico excluido com sucesso.')
+        if is_ajax_request(request):
+            return render_technical_responsibles_table(request)
+        return redirect('master-settings')
+
+
+class MasterReportSettingsUpdateView(MasterRequiredMixin, View):
+    def post(self, request):
+        report_settings = ensure_master_report_settings()
+        form = MasterReportSettingsForm(request.POST)
+        if not form.is_valid():
+            messages.error(request, collect_form_errors(form))
+            return redirect('master-settings')
+
+        report_settings.evaluation_representative_name = (
+            form.cleaned_data['evaluation_representative_name'] or ''
+        ).strip()
+        report_settings.save()
+        cache.clear()
+        messages.success(request, 'Representante legal atualizado com sucesso.')
+        return redirect('master-settings')
 
 
 class CampaignAccessView(View):
@@ -1261,6 +1572,60 @@ class CampaignAccessView(View):
         }
 
 
+class CampaignDepartmentsView(View):
+    def get(self, request, campaign_uuid):
+        campaign = get_object_or_404(
+            Campaign.all_objects.select_related('company'),
+            uuid=campaign_uuid,
+        )
+        ghe_id_raw = (request.GET.get('ghe_id') or '').strip()
+        try:
+            ghe_id = int(ghe_id_raw)
+        except (TypeError, ValueError):
+            return JsonResponse({'departments': []})
+
+        departments = list(
+            Department.all_objects.filter(
+                company_id=campaign.company_id,
+                is_active=True,
+                ghe_id=ghe_id,
+            )
+            .order_by('name')
+            .only('id', 'name')
+        )
+        return JsonResponse(
+            {
+                'departments': [{'id': dept.id, 'name': dept.name} for dept in departments],
+            }
+        )
+
+
+class CampaignCpfCheckView(View):
+    def get(self, request, campaign_uuid):
+        campaign = get_object_or_404(
+            Campaign.all_objects.only('uuid'),
+            uuid=campaign_uuid,
+        )
+        cpf_raw = (request.GET.get('cpf') or '').strip()
+        cpf_digits = re.sub(r'\D', '', cpf_raw)
+        if len(cpf_digits) != 11:
+            return JsonResponse(
+                {
+                    'available': False,
+                    'message': 'CPF invalido.',
+                }
+            )
+
+        cpf_hash = CampaignAccessView._hash_cpf(campaign.uuid, cpf_digits)
+        exists = CampaignResponse.all_objects.filter(campaign=campaign, cpf_hash=cpf_hash).exists()
+        return JsonResponse(
+            {
+                'available': not exists,
+                'message': '' if not exists else 'Este CPF ja foi utilizado nesta avaliacao.',
+            }
+        )
+
+
 class CampaignReportView(MasterRequiredMixin, View):
     template_name = 'campaigns/report.html'
     ANSWER_SCORE = {
@@ -1376,6 +1741,7 @@ class CampaignReportView(MasterRequiredMixin, View):
             ),
         }
         return render(request, self.template_name, context)
+
 
     def _build_results(self, responses_qs, ghe_map):
         domain_totals = {key: {'sum': 0, 'count': 0} for key in self.DOMAIN_BY_STEP.keys()}
@@ -1591,8 +1957,6 @@ class CampaignReportSaveView(MasterRequiredMixin, View):
 
         updated_attachments = []
         if isinstance(attachments, list):
-            base_dir = Path(settings.MEDIA_ROOT) / 'report_attachments' / str(campaign.uuid)
-            base_dir.mkdir(parents=True, exist_ok=True)
             for idx, attachment in enumerate(attachments):
                 if not isinstance(attachment, dict):
                     continue
@@ -1610,13 +1974,11 @@ class CampaignReportSaveView(MasterRequiredMixin, View):
                     timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
                     safe_name = get_valid_filename(uploaded_file.name)
                     stored_name = f"{timestamp}_{safe_name}"
-                    stored_path = str(base_dir / stored_name)
+                    stored_path = f"report_attachments/{campaign.uuid}/{stored_name}"
                     original_name = uploaded_file.name
                     if not title:
                         title = f"{timestamp}_{safe_name}"
-                    with open(stored_path, 'wb') as handle:
-                        for chunk in uploaded_file.chunks():
-                            handle.write(chunk)
+                    default_storage.save(stored_path, uploaded_file)
 
                 if title or description or stored_path or original_name:
                     updated_attachments.append(
@@ -1685,6 +2047,15 @@ class CampaignReportPdfView(MasterRequiredMixin, View):
         response_label = CampaignReportView._response_rate_label(response_rate, total_workers)
         ghe_map = {ghe.id: ghe.name for ghe in ghes}
         results = CampaignReportView()._build_results(responses_qs, ghe_map)
+        technical_responsibles_qs = TechnicalResponsible.all_objects.filter(
+            company_id=campaign.company_id,
+            is_active=True,
+        ).order_by('sort_order', 'name')
+        if not technical_responsibles_qs.exists():
+            technical_responsibles_qs = TechnicalResponsible.all_objects.filter(
+                is_active=True,
+            ).order_by('sort_order', 'name')
+
         report_context = {
             'company_name': company.name or '-',
             'company_cnpj': company.cnpj or '-',
@@ -1698,24 +2069,31 @@ class CampaignReportPdfView(MasterRequiredMixin, View):
             'response_rate': round(response_rate, 1) if total_workers else 0,
             'response_label': response_label,
             'results': results,
-            'report_actions': list(
-                CampaignReportAction.all_objects.filter(campaign=campaign).values(
-                    'question_text',
-                    'measures',
-                    'implantation_months',
-                    'status',
-                    'concluded_on',
-                )
-            ),
-            'reevaluate_months': (
-                CampaignReportSettings.all_objects.filter(campaign=campaign).values_list('reevaluate_months', flat=True).first()
-                or 3
-            ),
-            'attachments': (
-                CampaignReportSettings.all_objects.filter(campaign=campaign).values_list('attachments', flat=True).first()
-                or []
-            ),
-        }
+            'company_legal_representative_name': company.legal_representative_name or '-',
+            'company_legal_representative_company': company.legal_name or company.name or '-',
+            'evaluation_representative_name': ensure_master_report_settings().evaluation_representative_name or '-',
+            'evaluation_company_name': 'CISS CONSULTORIA',
+              'technical_responsibles': list(
+                  technical_responsibles_qs.values('name', 'education', 'registration')
+              ),
+        'report_actions': list(
+            CampaignReportAction.all_objects.filter(campaign=campaign).values(
+                'question_text',
+                'measures',
+                'implantation_months',
+                'status',
+                'concluded_on',
+            )
+        ),
+    'reevaluate_months': (
+        CampaignReportSettings.all_objects.filter(campaign=campaign).values_list('reevaluate_months', flat=True).first()
+        or 3
+    ),
+    'attachments': (
+        CampaignReportSettings.all_objects.filter(campaign=campaign).values_list('attachments', flat=True).first()
+        or []
+    ),
+}
         pdf_bytes = build_campaign_report_pdf(report_context)
         filename = f"relatorio-campanha-{campaign.uuid}.pdf"
         response = HttpResponse(pdf_bytes, content_type='application/pdf')
@@ -1751,25 +2129,38 @@ DEFAULT_COMPLAINT_TYPE_SEED = [
 
 
 def ensure_default_totem_types(company):
-    for label, emoji, sentiment, score in DEFAULT_MOOD_TYPE_SEED:
-        MoodType.all_objects.get_or_create(
+    existing_mood_labels = set(
+        MoodType.all_objects.filter(company=company).values_list('label', flat=True)
+    )
+    mood_to_create = [
+        MoodType(
             company=company,
             label=label,
-            defaults={
-                'emoji': emoji,
-                'sentiment': sentiment,
-                'mood_score': score,
-                'is_active': True,
-            },
+            emoji=emoji,
+            sentiment=sentiment,
+            mood_score=score,
+            is_active=True,
         )
-    for label in DEFAULT_COMPLAINT_TYPE_SEED:
-        ComplaintType.all_objects.get_or_create(
+        for label, emoji, sentiment, score in DEFAULT_MOOD_TYPE_SEED
+        if label not in existing_mood_labels
+    ]
+    if mood_to_create:
+        MoodType.all_objects.bulk_create(mood_to_create)
+
+    existing_complaint_labels = set(
+        ComplaintType.all_objects.filter(company=company).values_list('label', flat=True)
+    )
+    complaint_to_create = [
+        ComplaintType(
             company=company,
             label=label,
-            defaults={
-                'is_active': True,
-            },
+            is_active=True,
         )
+        for label in DEFAULT_COMPLAINT_TYPE_SEED
+        if label not in existing_complaint_labels
+    ]
+    if complaint_to_create:
+        ComplaintType.all_objects.bulk_create(complaint_to_create)
 
 
 def ensure_alert_settings(company):
@@ -1783,6 +2174,12 @@ def ensure_alert_settings(company):
             'max_open_help_requests': 10,
             'is_active': True,
         },
+    )[0]
+
+
+def ensure_master_report_settings():
+    return MasterReportSettings.objects.get_or_create(
+        defaults={'evaluation_representative_name': ''},
     )[0]
 
 
@@ -1826,7 +2223,7 @@ def _create_automatic_alert_if_missing(company_id, alert_type, level, period_sta
     )
     _notify_alert_recipients(
         company_id,
-        f'Alerta automatico: {alert_type}',
+        f'Alerta automático: {alert_type}',
         message,
     )
 
@@ -1878,7 +2275,7 @@ def evaluate_automatic_alerts(company):
                 period_start,
                 period_end,
                 (
-                    f'O percentual de humor negativo esta em {negative_percent:.1f}% nos ultimos {days} dias. '
+                    f'O percentual de humor negativo esta em {negative_percent:.1f}% nos últimos {days} dias. '
                     f'Limite configurado: {settings_obj.max_negative_mood_percent}%.'
                 ),
             )
@@ -1992,6 +2389,7 @@ class TotemMoodSubmitView(View):
             period_end=period_end,
             channel='totem',
         )
+        cache.clear()
         evaluate_automatic_alerts(company)
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'ok': True, 'message': 'Humor registrado com sucesso.'})
@@ -2055,6 +2453,7 @@ class TotemComplaintSubmitView(View):
             complaint_status='RECEIVED',
             action_note='Denuncia recebida via totem.',
         )
+        cache.clear()
         evaluate_automatic_alerts(company)
         messages.success(request, 'Denuncia registrada com sucesso.')
         return redirect('totem-home', company_slug=company.slug, totem_slug=totem.slug)
@@ -2084,6 +2483,7 @@ class TotemHelpRequestSubmitView(View):
             department_name=department_name,
             status=HelpRequest.Status.OPEN,
         )
+        cache.clear()
         evaluate_automatic_alerts(company)
         messages.success(request, 'Pedido de ajuda registrado. Nossa equipe vai ate voce.')
         return redirect('totem-home', company_slug=company.slug, totem_slug=totem.slug)
@@ -2133,6 +2533,7 @@ MAX_COMPANY_LOGO_SIZE = 2 * 1024 * 1024
 class CompanyForm(forms.Form):
     name = forms.CharField(max_length=255)
     legal_name = forms.CharField(max_length=255, required=False)
+    legal_representative_name = forms.CharField(max_length=255)
     cnpj = forms.CharField(max_length=18)
     employee_count = forms.IntegerField(min_value=0, required=False)
     max_users = forms.IntegerField(min_value=0, required=False)
@@ -2192,6 +2593,7 @@ class CompanyForm(forms.Form):
 
 class DepartmentForm(forms.Form):
     name = forms.CharField(max_length=150)
+    ghe_id = forms.IntegerField()
     is_active = forms.BooleanField(required=False, initial=True)
 
 
@@ -2240,6 +2642,18 @@ class MoodTypeForm(forms.Form):
 
 class ComplaintTypeForm(forms.Form):
     label = forms.CharField(max_length=80)
+
+
+class MasterReportSettingsForm(forms.Form):
+    evaluation_representative_name = forms.CharField(max_length=255, required=True)
+
+
+class TechnicalResponsibleForm(forms.Form):
+    name = forms.CharField(max_length=150)
+    education = forms.CharField(max_length=255)
+    registration = forms.CharField(max_length=80)
+    sort_order = forms.IntegerField(min_value=0, required=False)
+    is_active = forms.BooleanField(required=False, initial=True)
 
 
 class AlertSettingForm(forms.Form):
@@ -2331,6 +2745,8 @@ def paginate_queryset(request, queryset, per_page=10):
 class TotemListView(CompanyAdminRequiredMixin, View):
     template_name = 'totems/list.html'
 
+    @method_decorator(vary_on_headers('Cookie'))
+    @method_decorator(cache_page(30))
     def get(self, request):
         totems_qs = Totem.all_objects.filter(company_id=request.current_company_id).order_by('name')
         page_obj = paginate_queryset(request, totems_qs)
@@ -2377,7 +2793,10 @@ class TotemCreateView(CompanyAdminRequiredMixin, View):
             slug=final_slug,
             location=form.cleaned_data['location'],
         )
+        cache.clear()
         messages.success(request, 'Totem criado com sucesso.')
+        if is_ajax_request(request):
+            return render_totems_table(request)
         return redirect('totems-list')
 
 
@@ -2396,7 +2815,10 @@ class TotemUpdateView(CompanyAdminRequiredMixin, View):
         totem.name = form.cleaned_data['name']
         totem.location = form.cleaned_data['location']
         totem.save()
+        cache.clear()
         messages.success(request, 'Totem atualizado com sucesso.')
+        if is_ajax_request(request):
+            return render_totems_table(request)
         return redirect('totems-list')
 
 
@@ -2409,10 +2831,13 @@ class TotemDeleteView(CompanyAdminRequiredMixin, View):
         )
         totem.is_active = not totem.is_active
         totem.save(update_fields=['is_active', 'updated_at'])
+        cache.clear()
         if totem.is_active:
             messages.success(request, 'Totem ativado com sucesso.')
         else:
             messages.success(request, 'Totem desativado com sucesso.')
+        if is_ajax_request(request):
+            return render_totems_table(request)
         return redirect('totems-list')
 
 
@@ -2440,6 +2865,23 @@ def render_complaint_types_table(request, company_id):
             'complaint_types': page_obj.object_list,
             'page_obj': page_obj,
             'pagination_query': build_pagination_query(request),
+        },
+    )
+
+
+def render_totems_table(request):
+    totems_qs = Totem.all_objects.filter(company_id=request.current_company_id).order_by('name')
+    page_obj = paginate_queryset(request, totems_qs)
+    return render(
+        request,
+        'totems/_table_container.html',
+        {
+            'totems': page_obj.object_list,
+            'page_obj': page_obj,
+            'pagination_query': build_pagination_query(request),
+            'company_id': request.current_company_id,
+            'active_menu': 'totems',
+            'can_manage_access': True,
         },
     )
 
@@ -2657,13 +3099,30 @@ def render_ghes_table(request, company_id):
 
 
 def render_campaigns_table(request):
-    campaigns_qs = Campaign.all_objects.select_related('company').order_by('-start_date')
-    page_obj = paginate_queryset(request, campaigns_qs)
+    filters = get_campaigns_filters(request)
+    campaigns_qs = get_campaigns_queryset(filters)
+    page_obj = paginate_queryset(request, campaigns_qs, per_page=15)
     return render(
         request,
         'campaigns/_table_container.html',
         {
             'campaigns': page_obj.object_list,
+            'page_obj': page_obj,
+            'pagination_query': build_pagination_query(request),
+        },
+    )
+
+
+def render_technical_responsibles_table(request):
+    responsibles_qs = TechnicalResponsible.all_objects.filter(
+        company_id=request.current_company_id
+    ).order_by('sort_order', 'name')
+    page_obj = paginate_queryset(request, responsibles_qs, per_page=15)
+    return render(
+        request,
+        'master/_technical_table_container.html',
+        {
+            'technical_responsibles': page_obj.object_list,
             'page_obj': page_obj,
             'pagination_query': build_pagination_query(request),
         },
@@ -2690,6 +3149,8 @@ def render_alert_settings_container(request, company_id):
 class MoodTypeListView(CompanyAdminRequiredMixin, View):
     template_name = 'mood_types/list.html'
 
+    @method_decorator(vary_on_headers('Cookie'))
+    @method_decorator(cache_page(30))
     def get(self, request):
         mood_types_qs = MoodType.all_objects.filter(
             company_id=request.current_company_id
@@ -2705,6 +3166,9 @@ class MoodTypeListView(CompanyAdminRequiredMixin, View):
             'emoji_suggestions': MoodTypeForm.EMOJI_SUGGESTIONS,
             'sentiment_choices': MoodTypeForm.SENTIMENT_CHOICES,
         }
+        sentiment_label_map = {key: label for key, label in MoodTypeForm.SENTIMENT_CHOICES}
+        for mood_type in context['mood_types']:
+            mood_type.sentiment_label = sentiment_label_map.get(mood_type.sentiment, mood_type.sentiment)
         if is_ajax_request(request) or request.GET.get('partial') == '1':
             return render(request, 'mood_types/_table_container.html', context)
         return render(request, self.template_name, context)
@@ -2734,6 +3198,7 @@ class MoodTypeCreateView(CompanyAdminRequiredMixin, View):
             mood_score=form.cleaned_data['mood_score'],
             is_active=True,
         )
+        cache.clear()
         messages.success(request, 'Tipo de humor criado com sucesso.')
         if is_ajax_request(request):
             return render_mood_types_table(request, request.current_company_id)
@@ -2769,6 +3234,7 @@ class MoodTypeUpdateView(CompanyAdminRequiredMixin, View):
         mood_type.sentiment = form.cleaned_data['sentiment']
         mood_type.mood_score = form.cleaned_data['mood_score']
         mood_type.save()
+        cache.clear()
         messages.success(request, 'Tipo de humor atualizado com sucesso.')
         if is_ajax_request(request):
             return render_mood_types_table(request, request.current_company_id)
@@ -2784,6 +3250,7 @@ class MoodTypeDeleteView(CompanyAdminRequiredMixin, View):
         )
         mood_type.is_active = not mood_type.is_active
         mood_type.save(update_fields=['is_active', 'updated_at'])
+        cache.clear()
         if mood_type.is_active:
             messages.success(request, 'Tipo de humor ativado com sucesso.')
         else:
@@ -2796,6 +3263,8 @@ class MoodTypeDeleteView(CompanyAdminRequiredMixin, View):
 class ComplaintTypeListView(CompanyAdminRequiredMixin, View):
     template_name = 'complaint_types/list.html'
 
+    @method_decorator(vary_on_headers('Cookie'))
+    @method_decorator(cache_page(30))
     def get(self, request):
         complaint_types_qs = ComplaintType.all_objects.filter(
             company_id=request.current_company_id
@@ -2825,7 +3294,7 @@ class ComplaintTypeCreateView(CompanyAdminRequiredMixin, View):
 
         label = (form.cleaned_data['label'] or '').strip()
         if ComplaintType.all_objects.filter(company_id=request.current_company_id, label__iexact=label).exists():
-            messages.error(request, 'Ja existe tipo de denuncia com este nome.')
+            messages.error(request, 'Já existe tipo de denúncia com este nome.')
             if is_ajax_request(request):
                 return render_complaint_types_table(request, request.current_company_id)
             return redirect('complaint-types-list')
@@ -2835,7 +3304,8 @@ class ComplaintTypeCreateView(CompanyAdminRequiredMixin, View):
             label=label,
             is_active=True,
         )
-        messages.success(request, 'Tipo de denuncia criado com sucesso.')
+        cache.clear()
+        messages.success(request, 'Tipo de denúncia criado com sucesso.')
         if is_ajax_request(request):
             return render_complaint_types_table(request, request.current_company_id)
         return redirect('complaint-types-list')
@@ -2860,14 +3330,15 @@ class ComplaintTypeUpdateView(CompanyAdminRequiredMixin, View):
             company_id=request.current_company_id,
             label__iexact=label,
         ).exclude(pk=complaint_type.id).exists():
-            messages.error(request, 'Ja existe tipo de denuncia com este nome.')
+            messages.error(request, 'Ja existe tipo de denúncia com este nome.')
             if is_ajax_request(request):
                 return render_complaint_types_table(request, request.current_company_id)
             return redirect('complaint-types-list')
 
         complaint_type.label = label
         complaint_type.save()
-        messages.success(request, 'Tipo de denuncia atualizado com sucesso.')
+        cache.clear()
+        messages.success(request, 'Tipo de denúncia atualizado com sucesso.')
         if is_ajax_request(request):
             return render_complaint_types_table(request, request.current_company_id)
         return redirect('complaint-types-list')
@@ -2882,10 +3353,11 @@ class ComplaintTypeDeleteView(CompanyAdminRequiredMixin, View):
         )
         complaint_type.is_active = not complaint_type.is_active
         complaint_type.save(update_fields=['is_active', 'updated_at'])
+        cache.clear()
         if complaint_type.is_active:
-            messages.success(request, 'Tipo de denuncia ativado com sucesso.')
+            messages.success(request, 'Tipo de denúncia ativado com sucesso.')
         else:
-            messages.success(request, 'Tipo de denuncia desativado com sucesso.')
+            messages.success(request, 'Tipo de denúncia desativado com sucesso.')
         if is_ajax_request(request):
             return render_complaint_types_table(request, request.current_company_id)
         return redirect('complaint-types-list')
@@ -2894,6 +3366,8 @@ class ComplaintTypeDeleteView(CompanyAdminRequiredMixin, View):
 class ComplaintListView(CompanyAdminRequiredMixin, View):
     template_name = 'complaints/list.html'
 
+    @method_decorator(vary_on_headers('Cookie'))
+    @method_decorator(cache_page(30))
     def get(self, request):
         filters = get_complaint_filters(request)
         complaints_all = load_complaints_for_company(request.current_company_id, filters=filters)
@@ -3462,6 +3936,7 @@ class ComplaintUpdateView(CompanyAdminRequiredMixin, View):
             action_note=action_note,
             created_by=request.user,
         )
+        cache.clear()
         messages.success(request, 'Denuncia atualizada com sucesso.')
         if is_ajax_request(request):
             return render_complaints_table(request, request.current_company_id)
@@ -3504,10 +3979,17 @@ class ComplaintHistoryView(CompanyAdminRequiredMixin, View):
 class DepartmentListView(CompanyAdminRequiredMixin, View):
     template_name = 'departments/list.html'
 
+    @method_decorator(vary_on_headers('Cookie'))
+    @method_decorator(cache_page(30))
     def get(self, request):
         filters = get_departments_filters(request)
         departments_qs = get_departments_queryset(request.current_company_id, filters)
         page_obj = paginate_queryset(request, departments_qs)
+        ghes = list(
+            GHE.all_objects.filter(company_id=request.current_company_id, is_active=True)
+            .order_by('name')
+            .only('id', 'name')
+        )
         context = {
             'departments': page_obj.object_list,
             'page_obj': page_obj,
@@ -3517,6 +3999,7 @@ class DepartmentListView(CompanyAdminRequiredMixin, View):
             'can_manage_access': True,
             'selected_status': filters['status'],
             'search_name': filters['name'],
+            'ghes': ghes,
         }
         if is_ajax_request(request) or request.GET.get('partial') == '1':
             return render(request, 'departments/_table_container.html', context)
@@ -3526,6 +4009,10 @@ class DepartmentListView(CompanyAdminRequiredMixin, View):
 class DepartmentCreateView(CompanyAdminRequiredMixin, View):
     def post(self, request):
         form = DepartmentForm(request.POST)
+        form.fields['ghe_id'].choices = [
+            (ghe.id, ghe.name)
+            for ghe in GHE.all_objects.filter(company_id=request.current_company_id).order_by('name')
+        ]
         if not form.is_valid():
             messages.error(request, collect_form_errors(form))
             if is_ajax_request(request):
@@ -3551,8 +4038,10 @@ class DepartmentCreateView(CompanyAdminRequiredMixin, View):
         Department.all_objects.create(
             company_id=request.current_company_id,
             name=department_name,
-            is_active=form.cleaned_data['is_active'],
+            ghe_id=form.cleaned_data['ghe_id'],
+            is_active=True,
         )
+        cache.clear()
         messages.success(request, 'Setor criado com sucesso.')
         if is_ajax_request(request):
             return render_departments_table(request, request.current_company_id)
@@ -3567,6 +4056,10 @@ class DepartmentUpdateView(CompanyAdminRequiredMixin, View):
             company_id=request.current_company_id,
         )
         form = DepartmentForm(request.POST)
+        form.fields['ghe_id'].choices = [
+            (ghe.id, ghe.name)
+            for ghe in GHE.all_objects.filter(company_id=request.current_company_id).order_by('name')
+        ]
         if not form.is_valid():
             messages.error(request, collect_form_errors(form))
             if is_ajax_request(request):
@@ -3590,8 +4083,10 @@ class DepartmentUpdateView(CompanyAdminRequiredMixin, View):
             return redirect('departments-list')
 
         department.name = department_name
+        department.ghe_id = form.cleaned_data['ghe_id']
         department.is_active = form.cleaned_data['is_active']
         department.save()
+        cache.clear()
         messages.success(request, 'Setor atualizado com sucesso.')
         if is_ajax_request(request):
             return render_departments_table(request, request.current_company_id)
@@ -3607,6 +4102,7 @@ class DepartmentDeleteView(CompanyAdminRequiredMixin, View):
         )
         department.is_active = not department.is_active
         department.save(update_fields=['is_active', 'updated_at'])
+        cache.clear()
         if department.is_active:
             messages.success(request, 'Setor ativado com sucesso.')
         else:
@@ -3619,6 +4115,8 @@ class DepartmentDeleteView(CompanyAdminRequiredMixin, View):
 class GHEListView(CompanyAdminRequiredMixin, View):
     template_name = 'ghes/list.html'
 
+    @method_decorator(vary_on_headers('Cookie'))
+    @method_decorator(cache_page(30))
     def get(self, request):
         ghes_qs = GHE.all_objects.filter(company_id=request.current_company_id).order_by('name')
         page_obj = paginate_queryset(request, ghes_qs)
@@ -3633,6 +4131,20 @@ class GHEListView(CompanyAdminRequiredMixin, View):
         if is_ajax_request(request) or request.GET.get('partial') == '1':
             return render(request, 'ghes/_table_container.html', context)
         return render(request, self.template_name, context)
+
+
+class GHEOptionsView(CompanyAdminRequiredMixin, View):
+    def get(self, request):
+        ghes = list(
+            GHE.all_objects.filter(company_id=request.current_company_id, is_active=True)
+            .order_by('name')
+            .only('id', 'name')
+        )
+        return JsonResponse(
+            {
+                'ghes': [{'id': ghe.id, 'name': ghe.name} for ghe in ghes],
+            }
+        )
 
 
 class GHECreateView(CompanyAdminRequiredMixin, View):
@@ -3663,8 +4175,9 @@ class GHECreateView(CompanyAdminRequiredMixin, View):
         GHE.all_objects.create(
             company_id=request.current_company_id,
             name=name,
-            is_active=form.cleaned_data['is_active'],
+            is_active=True,
         )
+        cache.clear()
         messages.success(request, 'GHE criado com sucesso.')
         if is_ajax_request(request):
             return render_ghes_table(request, request.current_company_id)
@@ -3703,10 +4216,11 @@ class GHEUpdateView(CompanyAdminRequiredMixin, View):
 
         ghe.name = name
         ghe.save()
+        cache.clear()
         messages.success(request, 'GHE atualizado com sucesso.')
         if is_ajax_request(request):
             return render_ghes_table(request, request.current_company_id)
-            return redirect('ghes-list')
+        return redirect('ghes-list')
 
 
 class GHEDeleteView(CompanyAdminRequiredMixin, View):
@@ -3718,6 +4232,7 @@ class GHEDeleteView(CompanyAdminRequiredMixin, View):
         )
         ghe.is_active = not ghe.is_active
         ghe.save(update_fields=['is_active', 'updated_at'])
+        cache.clear()
         if ghe.is_active:
             messages.success(request, 'GHE ativado com sucesso.')
         else:
@@ -3730,6 +4245,8 @@ class GHEDeleteView(CompanyAdminRequiredMixin, View):
 class AlertSettingsView(CompanyAdminRequiredMixin, View):
     template_name = 'settings/alerts.html'
 
+    @method_decorator(vary_on_headers('Cookie'))
+    @method_decorator(cache_page(30))
     def get(self, request):
         company = get_object_or_404(Company, pk=request.current_company_id, is_active=True)
         settings_obj = ensure_alert_settings(company)
@@ -3776,6 +4293,7 @@ class AlertSettingsUpdateView(CompanyAdminRequiredMixin, View):
 
         if settings_obj.is_active and settings_obj.auto_alerts_enabled:
             evaluate_automatic_alerts(company)
+        cache.clear()
         messages.success(request, 'Configuracoes de alerta atualizadas com sucesso.')
         if is_ajax_request(request):
             return render_alert_settings_container(request, request.current_company_id)
@@ -3807,6 +4325,7 @@ class AlertRecipientCreateView(CompanyAdminRequiredMixin, View):
             email=email,
             is_active=form.cleaned_data['is_active'],
         )
+        cache.clear()
         messages.success(request, 'Destinatario de alerta criado com sucesso.')
         if is_ajax_request(request):
             return render_alert_settings_container(request, request.current_company_id)
@@ -3841,6 +4360,7 @@ class AlertRecipientUpdateView(CompanyAdminRequiredMixin, View):
         recipient.email = email
         recipient.is_active = form.cleaned_data['is_active']
         recipient.save()
+        cache.clear()
         messages.success(request, 'Destinatario atualizado com sucesso.')
         if is_ajax_request(request):
             return render_alert_settings_container(request, request.current_company_id)
@@ -3856,6 +4376,7 @@ class AlertRecipientDeleteView(CompanyAdminRequiredMixin, View):
         )
         recipient.is_active = not recipient.is_active
         recipient.save(update_fields=['is_active', 'updated_at'])
+        cache.clear()
         if recipient.is_active:
             messages.success(request, 'Destinatario ativado com sucesso.')
         else:
@@ -3868,6 +4389,8 @@ class AlertRecipientDeleteView(CompanyAdminRequiredMixin, View):
 class HelpRequestListView(CompanyAdminRequiredMixin, View):
     template_name = 'help_requests/list.html'
 
+    @method_decorator(vary_on_headers('Cookie'))
+    @method_decorator(cache_page(30))
     def get(self, request):
         filters = get_help_request_filters(request)
         help_requests_qs = get_help_requests_queryset(request.current_company_id, filters)
@@ -3917,6 +4440,7 @@ class HelpRequestUpdateView(CompanyAdminRequiredMixin, View):
             created_by=request.user,
         )
         evaluate_automatic_alerts(help_request.company)
+        cache.clear()
         messages.success(request, 'Pedido de ajuda atualizado com sucesso.')
         if is_ajax_request(request):
             return render_help_requests_table(request, request.current_company_id)
@@ -3952,6 +4476,7 @@ class HelpRequestDeleteView(CompanyAdminRequiredMixin, View):
             company_id=request.current_company_id,
         )
         help_request.delete()
+        cache.clear()
         messages.success(request, 'Pedido de ajuda removido com sucesso.')
         return redirect('help-requests-list')
 
@@ -3959,6 +4484,8 @@ class HelpRequestDeleteView(CompanyAdminRequiredMixin, View):
 class InternalUserListView(CompanyAdminRequiredMixin, View):
     template_name = 'users/list.html'
 
+    @method_decorator(vary_on_headers('Cookie'))
+    @method_decorator(cache_page(30))
     def get(self, request):
         memberships_qs = (
             CompanyMembership.objects.select_related('user', 'company')
@@ -4022,6 +4549,7 @@ class InternalUserCreateView(CompanyAdminRequiredMixin, View):
                 is_active=form.cleaned_data['is_active'],
             )
 
+        cache.clear()
         messages.success(request, 'Usuario criado com sucesso.')
         return redirect('users-list')
 
@@ -4065,6 +4593,7 @@ class InternalUserUpdateView(CompanyAdminRequiredMixin, View):
             membership.is_active = form.cleaned_data['is_active']
             membership.save()
 
+        cache.clear()
         messages.success(request, 'Usuario atualizado com sucesso.')
         return redirect('users-list')
 
@@ -4088,5 +4617,6 @@ class InternalUserDeleteView(CompanyAdminRequiredMixin, View):
             return redirect('users-list')
 
         membership.delete()
+        cache.clear()
         messages.success(request, 'Acesso removido com sucesso.')
         return redirect('users-list')

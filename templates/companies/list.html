@@ -14,7 +14,7 @@
 <div class="app-layout">
   {% include "partials/sidebar.html" with active_menu="companies" is_master=True %}
 
-  <main class="content">
+  <main class="content" data-page="companies">
     <header class="content__header">
       <div>
         <h1 class="content__title">Empresas</h1>
@@ -24,163 +24,181 @@
     </header>
 
     {% include "companies/_table_container.html" %}
+
+    <div class="modal-backdrop" data-modal="create-company-modal" aria-hidden="true">
+      <div class="modal-card modal-card--lg">
+        <div class="modal-card__header">
+          <h2>Cadastrar empresa</h2>
+          <button type="button" class="modal-close" data-close-modal>&times;</button>
+        </div>
+        <form method="post" action="{% url 'companies-create' %}" class="form-grid modal-form" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="form-field" style="grid-column: 1 / -1;">
+            <p class="card__label">Dados gerais</p>
+          </div>
+          <div class="form-field">
+            <label for="create_company_name">Nome fantasia</label>
+            <input id="create_company_name" name="name" required maxlength="255" />
+          </div>
+          <div class="form-field">
+            <label for="create_company_legal_name">Razao social</label>
+            <input id="create_company_legal_name" name="legal_name" maxlength="255" />
+          </div>
+          <div class="form-field">
+            <label for="create_company_legal_representative">Representante legal</label>
+            <input id="create_company_legal_representative" name="legal_representative_name" required maxlength="255" />
+          </div>
+          <div class="form-field">
+            <label for="create_company_cnpj">CNPJ</label>
+            <input id="create_company_cnpj" name="cnpj" required maxlength="18" />
+          </div>
+          <div class="form-field">
+            <label for="create_company_employee_count">Quantidade de funcionarios</label>
+            <input id="create_company_employee_count" name="employee_count" type="number" min="0" />
+          </div>
+
+          <div class="form-field" style="grid-column: 1 / -1;">
+            <p class="card__label">Limites a ser estabelecido (deixe vazio para não ter limites)</p>
+          </div>
+          <div class="form-field">
+            <label for="create_company_max_users">Limite de usuarios</label>
+            <input id="create_company_max_users" name="max_users" type="number" min="0" />
+          </div>
+          <div class="form-field">
+            <label for="create_company_max_totems">Limite de totens</label>
+            <input id="create_company_max_totems" name="max_totems" type="number" min="0" />
+          </div>
+
+          <div class="form-field" style="grid-column: 1 / -1;">
+            <p class="card__label">Endereco</p>
+          </div>
+          <div class="form-field">
+            <label for="create_company_address_street">Logradouro</label>
+            <input id="create_company_address_street" name="address_street" maxlength="255" />
+          </div>
+          <div class="form-field">
+            <label for="create_company_address_number">Numero</label>
+            <input id="create_company_address_number" name="address_number" maxlength="40" />
+          </div>
+          <div class="form-field">
+            <label for="create_company_address_complement">Complemento</label>
+            <input id="create_company_address_complement" name="address_complement" maxlength="120" />
+          </div>
+          <div class="form-field">
+            <label for="create_company_address_neighborhood">Bairro</label>
+            <input id="create_company_address_neighborhood" name="address_neighborhood" maxlength="120" />
+          </div>
+          <div class="form-field">
+            <label for="create_company_address_city">Cidade</label>
+            <input id="create_company_address_city" name="address_city" maxlength="120" />
+          </div>
+          <div class="form-field">
+            <label for="create_company_address_state">UF</label>
+            <input id="create_company_address_state" name="address_state" maxlength="2" />
+          </div>
+          <div class="form-field">
+            <label for="create_company_address_zipcode">CEP</label>
+            <input id="create_company_address_zipcode" name="address_zipcode" maxlength="10" />
+          </div>
+          <div class="form-field">
+            <label for="create_company_logo">Logo</label>
+            <input id="create_company_logo" name="logo" type="file" accept="image/*" />
+          </div>
+          <div class="form-actions">
+            <button class="btn btn--primary" type="submit">Salvar</button>
+            <button class="btn btn--light" type="button" data-close-modal>Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" data-modal="edit-company-modal" aria-hidden="true">
+      <div class="modal-card modal-card--lg">
+        <div class="modal-card__header">
+          <h2>Editar empresa</h2>
+          <button type="button" class="modal-close" data-close-modal>&times;</button>
+        </div>
+        <form method="post" action="" class="form-grid modal-form" data-edit-company-form enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="form-field" style="grid-column: 1 / -1;">
+            <p class="card__label">Dados gerais</p>
+          </div>
+          <div class="form-field">
+            <label for="edit_company_name">Nome fantasia</label>
+            <input id="edit_company_name" name="name" required maxlength="255" />
+          </div>
+          <div class="form-field">
+            <label for="edit_company_legal_name">Razao social</label>
+            <input id="edit_company_legal_name" name="legal_name" maxlength="255" />
+          </div>
+          <div class="form-field">
+            <label for="edit_company_legal_representative">Representante legal</label>
+            <input id="edit_company_legal_representative" name="legal_representative_name" required maxlength="255" />
+          </div>
+          <div class="form-field">
+            <label for="edit_company_cnpj">CNPJ</label>
+            <input id="edit_company_cnpj" name="cnpj" required maxlength="18" />
+          </div>
+          <div class="form-field">
+            <label for="edit_company_employee_count">Quantidade de funcionarios</label>
+            <input id="edit_company_employee_count" name="employee_count" type="number" min="0" />
+          </div>
+
+          <div class="form-field" style="grid-column: 1 / -1;">
+            <p class="card__label">Limites a ser estabelecido (deixe vazio para não ter limites)</p>
+          </div>
+          <div class="form-field">
+            <label for="edit_company_max_users">Limite de usuarios</label>
+            <input id="edit_company_max_users" name="max_users" type="number" min="0" />
+          </div>
+          <div class="form-field">
+            <label for="edit_company_max_totems">Limite de totens</label>
+            <input id="edit_company_max_totems" name="max_totems" type="number" min="0" />
+          </div>
+
+          <div class="form-field" style="grid-column: 1 / -1;">
+            <p class="card__label">Endereco</p>
+          </div>
+          <div class="form-field">
+            <label for="edit_company_address_street">Logradouro</label>
+            <input id="edit_company_address_street" name="address_street" maxlength="255" />
+          </div>
+          <div class="form-field">
+            <label for="edit_company_address_number">Numero</label>
+            <input id="edit_company_address_number" name="address_number" maxlength="40" />
+          </div>
+          <div class="form-field">
+            <label for="edit_company_address_complement">Complemento</label>
+            <input id="edit_company_address_complement" name="address_complement" maxlength="120" />
+          </div>
+          <div class="form-field">
+            <label for="edit_company_address_neighborhood">Bairro</label>
+            <input id="edit_company_address_neighborhood" name="address_neighborhood" maxlength="120" />
+          </div>
+          <div class="form-field">
+            <label for="edit_company_address_city">Cidade</label>
+            <input id="edit_company_address_city" name="address_city" maxlength="120" />
+          </div>
+          <div class="form-field">
+            <label for="edit_company_address_state">UF</label>
+            <input id="edit_company_address_state" name="address_state" maxlength="2" />
+          </div>
+          <div class="form-field">
+            <label for="edit_company_address_zipcode">CEP</label>
+            <input id="edit_company_address_zipcode" name="address_zipcode" maxlength="10" />
+          </div>
+          <div class="form-field">
+            <label for="edit_company_logo">Logo</label>
+            <input id="edit_company_logo" name="logo" type="file" accept="image/*" />
+          </div>
+          <div class="form-actions">
+            <button class="btn btn--primary" type="submit">Salvar</button>
+            <button class="btn btn--light" type="button" data-close-modal>Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </div>
   </main>
-</div>
-
-<div class="modal-backdrop" data-modal="create-company-modal" aria-hidden="true">
-  <div class="modal-card modal-card--lg">
-    <div class="modal-card__header">
-      <h2>Cadastrar empresa</h2>
-      <button type="button" class="modal-close" data-close-modal>&times;</button>
-    </div>
-    <form method="post" action="{% url 'companies-create' %}" class="form-grid modal-form" enctype="multipart/form-data">
-      {% csrf_token %}
-      <div class="form-field">
-        <label for="create_company_name">Nome fantasia</label>
-        <input id="create_company_name" name="name" required maxlength="255" />
-      </div>
-      <div class="form-field">
-        <label for="create_company_legal_name">Razao social</label>
-        <input id="create_company_legal_name" name="legal_name" maxlength="255" />
-      </div>
-      <div class="form-field">
-        <label for="create_company_cnpj">CNPJ</label>
-        <input id="create_company_cnpj" name="cnpj" required maxlength="18" />
-      </div>
-      <div class="form-field">
-        <label for="create_company_employee_count">Quantidade de funcionarios</label>
-        <input id="create_company_employee_count" name="employee_count" type="number" min="0" />
-      </div>
-      <div class="form-field">
-        <label for="create_company_max_users">Limite de usuarios</label>
-        <input id="create_company_max_users" name="max_users" type="number" min="0" />
-      </div>
-      <div class="form-field">
-        <label for="create_company_max_totems">Limite de totens</label>
-        <input id="create_company_max_totems" name="max_totems" type="number" min="0" />
-      </div>
-      <div class="form-field">
-        <label for="create_company_address_street">Logradouro</label>
-        <input id="create_company_address_street" name="address_street" maxlength="255" />
-      </div>
-      <div class="form-field">
-        <label for="create_company_address_number">Numero</label>
-        <input id="create_company_address_number" name="address_number" maxlength="40" />
-      </div>
-      <div class="form-field">
-        <label for="create_company_address_complement">Complemento</label>
-        <input id="create_company_address_complement" name="address_complement" maxlength="120" />
-      </div>
-      <div class="form-field">
-        <label for="create_company_address_neighborhood">Bairro</label>
-        <input id="create_company_address_neighborhood" name="address_neighborhood" maxlength="120" />
-      </div>
-      <div class="form-field">
-        <label for="create_company_address_city">Cidade</label>
-        <input id="create_company_address_city" name="address_city" maxlength="120" />
-      </div>
-      <div class="form-field">
-        <label for="create_company_address_state">UF</label>
-        <input id="create_company_address_state" name="address_state" maxlength="2" />
-      </div>
-      <div class="form-field">
-        <label for="create_company_address_zipcode">CEP</label>
-        <input id="create_company_address_zipcode" name="address_zipcode" maxlength="10" />
-      </div>
-      <div class="form-field">
-        <label for="create_company_logo">Logo</label>
-        <input id="create_company_logo" name="logo" type="file" accept="image/*" />
-      </div>
-      <div class="form-field form-field--inline">
-        <label>
-          <input type="checkbox" name="is_active" checked />
-          Empresa ativa
-        </label>
-      </div>
-      <div class="form-actions">
-        <button class="btn btn--primary" type="submit">Salvar</button>
-        <button class="btn btn--light" type="button" data-close-modal>Cancelar</button>
-      </div>
-    </form>
-  </div>
-</div>
-
-<div class="modal-backdrop" data-modal="edit-company-modal" aria-hidden="true">
-  <div class="modal-card modal-card--lg">
-    <div class="modal-card__header">
-      <h2>Editar empresa</h2>
-      <button type="button" class="modal-close" data-close-modal>&times;</button>
-    </div>
-    <form method="post" action="" class="form-grid modal-form" data-edit-company-form enctype="multipart/form-data">
-      {% csrf_token %}
-      <div class="form-field">
-        <label for="edit_company_name">Nome fantasia</label>
-        <input id="edit_company_name" name="name" required maxlength="255" />
-      </div>
-      <div class="form-field">
-        <label for="edit_company_legal_name">Razao social</label>
-        <input id="edit_company_legal_name" name="legal_name" maxlength="255" />
-      </div>
-      <div class="form-field">
-        <label for="edit_company_cnpj">CNPJ</label>
-        <input id="edit_company_cnpj" name="cnpj" required maxlength="18" />
-      </div>
-      <div class="form-field">
-        <label for="edit_company_employee_count">Quantidade de funcionarios</label>
-        <input id="edit_company_employee_count" name="employee_count" type="number" min="0" />
-      </div>
-      <div class="form-field">
-        <label for="edit_company_max_users">Limite de usuarios</label>
-        <input id="edit_company_max_users" name="max_users" type="number" min="0" />
-      </div>
-      <div class="form-field">
-        <label for="edit_company_max_totems">Limite de totens</label>
-        <input id="edit_company_max_totems" name="max_totems" type="number" min="0" />
-      </div>
-      <div class="form-field">
-        <label for="edit_company_address_street">Logradouro</label>
-        <input id="edit_company_address_street" name="address_street" maxlength="255" />
-      </div>
-      <div class="form-field">
-        <label for="edit_company_address_number">Numero</label>
-        <input id="edit_company_address_number" name="address_number" maxlength="40" />
-      </div>
-      <div class="form-field">
-        <label for="edit_company_address_complement">Complemento</label>
-        <input id="edit_company_address_complement" name="address_complement" maxlength="120" />
-      </div>
-      <div class="form-field">
-        <label for="edit_company_address_neighborhood">Bairro</label>
-        <input id="edit_company_address_neighborhood" name="address_neighborhood" maxlength="120" />
-      </div>
-      <div class="form-field">
-        <label for="edit_company_address_city">Cidade</label>
-        <input id="edit_company_address_city" name="address_city" maxlength="120" />
-      </div>
-      <div class="form-field">
-        <label for="edit_company_address_state">UF</label>
-        <input id="edit_company_address_state" name="address_state" maxlength="2" />
-      </div>
-      <div class="form-field">
-        <label for="edit_company_address_zipcode">CEP</label>
-        <input id="edit_company_address_zipcode" name="address_zipcode" maxlength="10" />
-      </div>
-      <div class="form-field">
-        <label for="edit_company_logo">Logo</label>
-        <input id="edit_company_logo" name="logo" type="file" accept="image/*" />
-      </div>
-      <div class="form-field form-field--inline">
-        <label>
-          <input type="checkbox" name="is_active" data-edit-company-active />
-          Empresa ativa
-        </label>
-      </div>
-      <div class="form-actions">
-        <button class="btn btn--primary" type="submit">Salvar</button>
-        <button class="btn btn--light" type="button" data-close-modal>Cancelar</button>
-      </div>
-    </form>
-  </div>
 </div>
 {% endblock %}
 

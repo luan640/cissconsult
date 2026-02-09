@@ -1,10 +1,10 @@
 (function () {
+  if (window.__companiesModalsBound) {
+    return;
+  }
+  window.__companiesModalsBound = true;
   const containerId = 'companies-table-container';
   const toastStackId = 'floating-toast-stack';
-  const openButtons = document.querySelectorAll('[data-open-modal]');
-  const editButtons = document.querySelectorAll('[data-open-edit-company]');
-  const closeButtons = document.querySelectorAll('[data-close-modal]');
-  const editForm = document.querySelector('[data-edit-company-form]');
 
   const getToastStack = () => {
     let stack = document.getElementById(toastStackId);
@@ -69,55 +69,57 @@
     }
   };
 
-  openButtons.forEach((button) => {
-    button.addEventListener('click', () => {
-      openModal(button.getAttribute('data-open-modal'));
-    });
-  });
+  document.addEventListener('click', (event) => {
+    const openButton = event.target.closest('[data-open-modal]');
+    if (openButton) {
+      openModal(openButton.getAttribute('data-open-modal'));
+      return;
+    }
 
-  editButtons.forEach((button) => {
-    button.addEventListener('click', () => {
-      if (!editForm) {
-        return;
-      }
-      editForm.action = button.dataset.updateUrl || '';
-      editForm.querySelector('#edit_company_name').value = button.dataset.name || '';
-      editForm.querySelector('#edit_company_legal_name').value = button.dataset.legalName || '';
-      editForm.querySelector('#edit_company_cnpj').value = button.dataset.cnpj || '';
-      editForm.querySelector('#edit_company_employee_count').value = button.dataset.employeeCount || '';
-      editForm.querySelector('#edit_company_max_users').value = button.dataset.maxUsers || '';
-      editForm.querySelector('#edit_company_max_totems').value = button.dataset.maxTotems || '';
-      editForm.querySelector('#edit_company_address_street').value = button.dataset.addressStreet || '';
-      editForm.querySelector('#edit_company_address_number').value = button.dataset.addressNumber || '';
-      editForm.querySelector('#edit_company_address_complement').value = button.dataset.addressComplement || '';
-      editForm.querySelector('#edit_company_address_neighborhood').value = button.dataset.addressNeighborhood || '';
-      editForm.querySelector('#edit_company_address_city').value = button.dataset.addressCity || '';
-      editForm.querySelector('#edit_company_address_state').value = button.dataset.addressState || '';
-      editForm.querySelector('#edit_company_address_zipcode').value = button.dataset.addressZipcode || '';
+    const editButton = event.target.closest('[data-open-edit-company]');
+    if (editButton) {
+      const editForm = document.querySelector('[data-edit-company-form]');
+      if (!editForm) return;
+      editForm.action = editButton.dataset.updateUrl || '';
+      editForm.querySelector('#edit_company_name').value = editButton.dataset.name || '';
+      editForm.querySelector('#edit_company_legal_name').value = editButton.dataset.legalName || '';
+      editForm.querySelector('#edit_company_legal_representative').value = editButton.dataset.legalRepresentativeName || '';
+      editForm.querySelector('#edit_company_cnpj').value = editButton.dataset.cnpj || '';
+      editForm.querySelector('#edit_company_employee_count').value = editButton.dataset.employeeCount || '';
+      editForm.querySelector('#edit_company_max_users').value = editButton.dataset.maxUsers || '';
+      editForm.querySelector('#edit_company_max_totems').value = editButton.dataset.maxTotems || '';
+      editForm.querySelector('#edit_company_address_street').value = editButton.dataset.addressStreet || '';
+      editForm.querySelector('#edit_company_address_number').value = editButton.dataset.addressNumber || '';
+      editForm.querySelector('#edit_company_address_complement').value = editButton.dataset.addressComplement || '';
+      editForm.querySelector('#edit_company_address_neighborhood').value = editButton.dataset.addressNeighborhood || '';
+      editForm.querySelector('#edit_company_address_city').value = editButton.dataset.addressCity || '';
+      editForm.querySelector('#edit_company_address_state').value = editButton.dataset.addressState || '';
+      editForm.querySelector('#edit_company_address_zipcode').value = editButton.dataset.addressZipcode || '';
       const activeField = editForm.querySelector('[data-edit-company-active]');
       if (activeField) {
-        activeField.checked = button.dataset.isActive === '1';
+        activeField.checked = editButton.dataset.isActive === '1';
       }
       openModal('edit-company-modal');
-    });
+      return;
+    }
+
+    const closeButton = event.target.closest('[data-close-modal]');
+    if (closeButton) {
+      const modal = closeButton.closest('.modal-backdrop');
+      if (modal) closeModal(modal);
+      return;
+    }
+
+    const backdrop = event.target.closest('.modal-backdrop');
+    if (backdrop && event.target === backdrop) {
+      closeModal(backdrop);
+    }
   });
 
-  closeButtons.forEach((button) => {
-    button.addEventListener('click', () => {
-      const modal = button.closest('.modal-backdrop');
-      if (modal) {
-        closeModal(modal);
-      }
-    });
-  });
+  const runPageHooks = () => {
+    consumeInlineNotices();
+  };
 
-  document.querySelectorAll('.modal-backdrop').forEach((modal) => {
-    modal.addEventListener('click', (event) => {
-      if (event.target === modal) {
-        closeModal(modal);
-      }
-    });
-  });
-
-  consumeInlineNotices();
+  window.addEventListener('page:load', runPageHooks);
+  runPageHooks();
 })();

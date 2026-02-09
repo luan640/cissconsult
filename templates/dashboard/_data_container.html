@@ -22,6 +22,28 @@
             {% endfor %}
           </select>
         </div>
+        <div class="filter-field">
+          <label for="ghe">GHE</label>
+          <select id="ghe" name="ghe">
+            <option value="">Todos</option>
+            {% for ghe in active_ghes %}
+              <option value="{{ ghe.id }}"{% if selected_ghe_id|stringformat:'s' == ghe.id|stringformat:'s' %} selected{% endif %}>
+                {{ ghe.name }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="filter-field">
+          <label for="department">Setor</label>
+          <select id="department" name="department">
+            <option value="">Todos</option>
+            {% for department in active_departments %}
+              <option value="{{ department.id }}"{% if selected_department_id|stringformat:'s' == department.id|stringformat:'s' %} selected{% endif %}>
+                {{ department.name }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
         <button class="btn btn--primary" type="submit">Filtrar</button>
       </form>
     </article>
@@ -32,8 +54,8 @@
         <span class="tooltip">
           ?
           <span class="tooltip__text">
-            Regra atual: conta total de denuncias no período filtrado.
-            Menor que 2 = Baixo; de 2 a 4 = Medio; 5 ou mais = Alto.
+            Regra atual: conta total de denúncias no período filtrado.
+            Menor que 2 = Baixo; de 2 a 4 = Médio; 5 ou mais = Alto.
           </span>
         </span>
       </div>
@@ -44,7 +66,7 @@
       <p class="card__value">{{ metrics.mood_count_period }}</p>
     </article>
     <article class="card">
-      <p class="card__label">Denuncias (período)</p>
+      <p class="card__label">Denúncias (período)</p>
       <p class="card__value">{{ metrics.complaint_count_period }}</p>
     </article>
     <article class="card">
@@ -91,6 +113,11 @@
     <article class="card card--chart card--span2">
       <p class="card__label">Registros por totem</p>
       <canvas id="chartTotemUsage"></canvas>
+    </article>
+
+    <article class="card card--chart">
+      <p class="card__label">Distribuicao de humor por GHE</p>
+      <canvas id="chartMoodByGhe"></canvas>
     </article>
 
     <article class="card card--chart">

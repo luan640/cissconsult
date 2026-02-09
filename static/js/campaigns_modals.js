@@ -85,10 +85,66 @@
     replaceTable(await response.text());
   };
 
+  const resetForm = (form) => {
+    if (!form) return;
+    form.reset();
+    const selectEls = form.querySelectorAll('select');
+    selectEls.forEach((select) => {
+      if (select.options.length) {
+        select.selectedIndex = 0;
+      }
+    });
+  };
+
+  const setButtonLoading = (button) => {
+    if (!button || button.disabled) return null;
+    const original = button.textContent || '';
+    button.textContent = button.getAttribute('data-loading-text') || 'Salvando...';
+    button.disabled = true;
+    button.setAttribute('aria-busy', 'true');
+    return () => {
+      button.textContent = original;
+      button.disabled = false;
+      button.removeAttribute('aria-busy');
+    };
+  };
+
   document.addEventListener('click', (event) => {
     const openButton = event.target.closest('[data-open-modal]');
     if (openButton) {
       openModal(openButton.getAttribute('data-open-modal'));
+      return;
+    }
+
+    const qrButton = event.target.closest('[data-open-qr]');
+    if (qrButton) {
+      const modal = document.querySelector('[data-modal="qr-preview-modal"]');
+      if (!modal) return;
+      const img = modal.querySelector('[data-qr-image]');
+      const loading = modal.querySelector('[data-qr-loading]');
+      const download = modal.querySelector('[data-qr-download]');
+      const url = qrButton.getAttribute('data-qr-url') || '';
+      if (!img || !loading || !download) return;
+
+      img.style.display = 'none';
+      img.removeAttribute('src');
+      loading.style.display = 'block';
+      download.setAttribute('href', url || '#');
+
+      if (url) {
+        img.onload = () => {
+          loading.style.display = 'none';
+          img.style.display = 'block';
+        };
+        img.onerror = () => {
+          loading.textContent = 'Nao foi possivel carregar o QR Code.';
+        };
+        img.src = url;
+      } else {
+        loading.textContent = 'QR Code indisponivel.';
+      }
+
+      openModal('qr-preview-modal');
       return;
     }
 
@@ -129,11 +185,18 @@
     if (event.defaultPrevented) return;
 
     event.preventDefault();
+    const restoreButton = setButtonLoading(event.submitter);
     try {
       await submitAjaxForm(form);
       document.querySelectorAll('.modal-backdrop.is-open').forEach((modal) => closeModal(modal));
+      if (form.matches('[data-campaign-create-form]')) {
+        resetForm(form);
+      }
     } catch (error) {
       form.submit();
+      return;
+    } finally {
+      if (restoreButton) restoreButton();
     }
   });
 

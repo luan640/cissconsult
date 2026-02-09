@@ -10,12 +10,12 @@
             <span class="status-badge status-badge--help-{{ item.status|lower }}">{{ item.get_status_display }}</span>
             <small style="color:#64748b;">{{ item.created_at|date:"d/m/Y H:i" }}</small>
           </div>
-          <p style="margin:0; color:#0f172a;">{{ item.admin_notes|default:"Sem observacoes." }}</p>
+          <p style="margin:0; color:#0f172a;">{{ item.admin_notes|default:"Sem observações." }}</p>
           <small style="color:#64748b;">Atualizado por: {{ item.created_by.username|default:"Sistema" }}</small>
         </article>
       {% endfor %}
     </div>
   {% else %}
-    <p style="margin:0; color:#64748b;">Sem historico de atualizacoes para este pedido.</p>
+    <p style="margin:0; color:#64748b;">Sem histórico de atualizações para este pedido.</p>
   {% endif %}
 </div>

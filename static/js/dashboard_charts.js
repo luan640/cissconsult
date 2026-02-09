@@ -9,6 +9,16 @@
     }
   };
 
+  const destroyChartForCanvas = (canvas) => {
+    if (!canvas || typeof Chart === 'undefined' || !Chart.getChart) {
+      return;
+    }
+    const existing = Chart.getChart(canvas);
+    if (existing) {
+      existing.destroy();
+    }
+  };
+
   const initDashboardCharts = () => {
     const dataNode = document.getElementById('dashboard-chart-data');
     if (!dataNode || typeof Chart === 'undefined') {
@@ -106,6 +116,7 @@
 
     const moodCanvas = byId('chartMoodDistribution');
     if (moodCanvas) {
+      destroyChartForCanvas(moodCanvas);
       chartInstances.push(new Chart(moodCanvas, {
       type: 'doughnut',
       data: {
@@ -130,6 +141,7 @@
 
     const timelineCanvas = byId('chartTimeline');
     if (timelineCanvas) {
+      destroyChartForCanvas(timelineCanvas);
       chartInstances.push(new Chart(timelineCanvas, {
       type: 'line',
       data: {
@@ -150,7 +162,7 @@
             tension: 0.3,
           },
           {
-            label: 'Denuncias',
+            label: 'Denúncias',
             data: chartData.timeline.complaint_values,
             borderColor: palette.violet,
             backgroundColor: (context) =>
@@ -171,6 +183,7 @@
 
     const weekdayCanvas = byId('chartWeekday');
     if (weekdayCanvas) {
+      destroyChartForCanvas(weekdayCanvas);
       chartInstances.push(new Chart(weekdayCanvas, {
       type: 'bar',
       data: {
@@ -204,6 +217,7 @@
 
     const comparisonCanvas = byId('chartPeriodComparison');
     if (comparisonCanvas) {
+      destroyChartForCanvas(comparisonCanvas);
       chartInstances.push(new Chart(comparisonCanvas, {
       type: 'bar',
       data: {
@@ -237,6 +251,7 @@
 
     const totemUsageCanvas = byId('chartTotemUsage');
     if (totemUsageCanvas) {
+      destroyChartForCanvas(totemUsageCanvas);
       chartInstances.push(new Chart(totemUsageCanvas, {
       type: 'bar',
       data: {
@@ -268,8 +283,43 @@
       }));
     }
 
+    const moodByGheCanvas = byId('chartMoodByGhe');
+    if (moodByGheCanvas) {
+      destroyChartForCanvas(moodByGheCanvas);
+      chartInstances.push(new Chart(moodByGheCanvas, {
+      type: 'bar',
+      data: {
+        labels: chartData.mood_by_ghe.labels,
+        datasets: [
+          {
+            label: 'Humor por GHE',
+            data: chartData.mood_by_ghe.values,
+            backgroundColor: [palette.emerald, palette.teal, palette.cyan, palette.blue, palette.indigo, palette.violet],
+            borderRadius: 10,
+            borderSkipped: false,
+            maxBarThickness: 38,
+          },
+        ],
+      },
+      options: {
+        ...chartOptions,
+        layout: {
+          padding: { left: 10, right: 10 },
+        },
+        scales: {
+          ...chartOptions.scales,
+          x: {
+            ...chartOptions.scales.x,
+            offset: true,
+          },
+        },
+      },
+      }));
+    }
+
     const moodByDepartmentCanvas = byId('chartMoodByDepartment');
     if (moodByDepartmentCanvas) {
+      destroyChartForCanvas(moodByDepartmentCanvas);
       const moodDistributionSets = chartData.mood_distribution_by_department.datasets || [];
       const moodColors = [palette.emerald, palette.teal, palette.cyan, palette.blue, palette.amber];
       chartInstances.push(new Chart(moodByDepartmentCanvas, {
@@ -315,6 +365,7 @@
 
     const complaintByDepartmentCanvas = byId('chartComplaintByDepartment');
     if (complaintByDepartmentCanvas) {
+      destroyChartForCanvas(complaintByDepartmentCanvas);
       chartInstances.push(new Chart(complaintByDepartmentCanvas, {
       type: 'bar',
       data: {
@@ -348,6 +399,7 @@
 
     const complaintByTypeCanvas = byId('chartComplaintByType');
     if (complaintByTypeCanvas) {
+      destroyChartForCanvas(complaintByTypeCanvas);
       chartInstances.push(new Chart(complaintByTypeCanvas, {
       type: 'bar',
       data: {
@@ -381,5 +433,6 @@
   };
 
   window.initDashboardCharts = initDashboardCharts;
+  window.addEventListener('page:load', initDashboardCharts);
   initDashboardCharts();
 })();

@@ -295,7 +295,7 @@
     <div class="report-section" style="margin-top: 22px;">
       <div style="display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 1.05rem; color: #0f172a;">
         <span style="width: 26px; height: 26px; border-radius: 999px; background: #1d4ed8; color: #ffffff; display: inline-flex; align-items: center; justify-content: center; font-size: 0.85rem;">2</span>
-        <span>CONCLUSOES E RECOMENDACOES PRELIMINARES</span>
+        <span>CONCLUSÕES E RECOMENDAÇÕES PRELIMINARES</span>
       </div>
       <div style="height: 2px; background: #1d4ed8; margin: 10px 0 12px;"></div>
       <div style="display: grid; gap: 8px; padding: 12px 14px; border: 1px solid #cbd5f5; border-radius: 12px; background: #f8fbff;">
@@ -311,14 +311,14 @@
         </div>
         <div style="display: flex; gap: 8px; align-items: flex-start;">
           <span style="width: 6px; height: 6px; border-radius: 999px; background: #1d4ed8; margin-top: 6px;"></span>
-          <span style="font-size: 0.9rem;">Promover treinamentos sobre saude mental e fatores psicossociais.</span>
+          <span style="font-size: 0.9rem;">Promover treinamentos sobre saúde mental e fatores psicossociais.</span>
         </div>
         <div style="display: flex; gap: 8px; align-items: flex-start;">
           <span style="width: 6px; height: 6px; border-radius: 999px; background: #1d4ed8; margin-top: 6px;"></span>
-          <span style="font-size: 0.9rem;">Caso necessario, realizar AET aprofundada conforme NR-17.</span>
+          <span style="font-size: 0.9rem;">Caso necessário, realizar AET aprofundada conforme NR-17.</span>
         </div>
       </div>
-      <div style="margin-top: 14px; font-weight: 800; color: #92400e;">Plano de Acao Recomendado</div>
+      <div style="margin-top: 14px; font-weight: 800; color: #92400e;">Plano de Ação Recomendado</div>
       <div style="display: grid; gap: 12px; margin-top: 10px;">
         {% for domain in results.domain_details %}
           <div style="border-radius: 12px; border: 1px solid #fde68a; background: #fffbeb; padding: 12px;">
@@ -329,7 +329,7 @@
                   <div style="border-radius: 10px; border: 1px solid #fed7aa; background: #ffffff; padding: 10px;" data-question-card data-question-text="{{ question.text|escape }}">
                     <div style="font-size: 0.9rem; font-weight: 700; color: #0f172a;">{{ question.text }}</div>
                     <div style="margin-top: 6px; font-size: 0.82rem; color: #7c2d12;">
-                      Media: {{ question.avg }} | Nivel de Risco: {{ question.zone }} |
+                      Média: {{ question.avg }} | Nível de Risco: {{ question.zone }} |
                       {% if question.avg < 4.0 %}
                         Zona Vermelha
                       {% else %}
@@ -338,12 +338,12 @@
                     </div>
                     <div class="action-box" data-action-box style="margin-top: 6px;">
                       <button type="button" class="action-add" data-action-add style="font-size: 0.8rem; color: #1d4ed8; font-weight: 700; background: transparent; border: 0; padding: 0; cursor: pointer;">
-                        + adicionar medida temporaria
+                        + adicionar medida temporária
                       </button>
                       <div class="action-list" data-action-list style="display: grid; gap: 6px; margin-top: 6px;"></div>
                       <template class="action-template">
                         <div class="action-row" style="display: grid; grid-template-columns: 1fr 28px 28px; gap: 6px; align-items: center;">
-                          <input type="text" placeholder="Descreva a medida temporaria" style="height: 28px; border-radius: 6px; border: 1px solid #cbd5e1; padding: 0 8px; font-size: 0.82rem;" />
+                          <input type="text" placeholder="Descreva a medida temporária" style="height: 28px; border-radius: 6px; border: 1px solid #cbd5e1; padding: 0 8px; font-size: 0.82rem;" />
                           <button type="button" title="Salvar" class="action-save" style="height: 28px; width: 28px; border-radius: 6px; border: 1px solid #cbd5e1; background: #ecfdf3; color: #16a34a; font-weight: 800; cursor: pointer;">✓</button>
                           <button type="button" title="Excluir" class="action-remove" style="height: 28px; width: 28px; border-radius: 6px; border: 1px solid #fecaca; background: #fff1f2; color: #b91c1c; font-weight: 800; cursor: pointer;">🗑</button>
                         </div>
@@ -358,13 +358,13 @@
                       </div>
                       <div class="when-table" data-when-table style="display: none; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
                         <div style="display: grid; grid-template-columns: 1.2fr 1fr 0.8fr 0.8fr 0.8fr 0.8fr 1fr; background: #f1f5f9; font-size: 0.78rem; font-weight: 800; color: #334155;">
-                          <div style="padding: 6px 8px;">Responsavel</div>
-                          <div style="padding: 6px 8px;">Data da implantacao</div>
+                          <div style="padding: 6px 8px;">Responsável</div>
+                          <div style="padding: 6px 8px;">Data da implantação</div>
                           <div style="padding: 6px 8px;">A fazer</div>
                           <div style="padding: 6px 8px;">Fazendo</div>
                           <div style="padding: 6px 8px;">Adiado</div>
-                          <div style="padding: 6px 8px;">Concluido</div>
-                          <div style="padding: 6px 8px;">Concluido em</div>
+                          <div style="padding: 6px 8px;">Concluído</div>
+                          <div style="padding: 6px 8px;">Concluído em</div>
                         </div>
                         <div class="when-row" data-when-row style="display: grid; grid-template-columns: 1.2fr 1fr 0.8fr 0.8fr 0.8fr 0.8fr 1fr; font-size: 0.78rem; color: #0f172a;">
                           <div class="when-company" style="padding: 6px 8px;"></div>
@@ -374,7 +374,7 @@
                           <div style="padding: 6px 8px; text-align: center;"><input type="checkbox" data-status="adiado" /></div>
                           <div style="padding: 6px 8px; text-align: center;"><input type="checkbox" data-status="concluido" /></div>
                           <div style="padding: 6px 8px; font-family: monospace;">
-                            <input type="text" class="when-concluded" placeholder="___/_____/___" style="width: 100%; border: 0; background: transparent; font-family: monospace;" />
+                            <input type="text" class="when-concluded" placeholder="___/___/___" style="width: 100%; border: 0; background: transparent; font-family: monospace;" />
                           </div>
                         </div>
                       </div>
@@ -394,14 +394,14 @@
       </div>
       <div style="height: 2px; background: #1d4ed8; margin: 10px 0 12px;"></div>
       <p style="margin: 0 0 10px; font-size: 0.9rem; color: #334155;">
-        Inclua documentos relacionados ao relatorio.
+        Inclua documentos relacionados ao relatório.
       </p>
       <div data-attachments-list style="display: grid; gap: 10px;"></div>
       <button type="button" data-attachments-add class="btn btn--sm" style="margin-top: 10px;">+ adicionar anexo</button>
       <template id="attachment-template">
         <div data-attachment-row style="border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px; background: #f8fafc; display: grid; gap: 8px;">
-          <input type="text" data-attachment-name placeholder="Titulo do anexo" style="height: 32px; border-radius: 6px; border: 1px solid #cbd5e1; padding: 0 10px; font-size: 0.85rem;" />
-          <input type="text" data-attachment-desc placeholder="Descricao (opcional)" style="height: 32px; border-radius: 6px; border: 1px solid #cbd5e1; padding: 0 10px; font-size: 0.85rem;" />
+          <input type="text" data-attachment-name placeholder="Título do anexo" style="height: 32px; border-radius: 6px; border: 1px solid #cbd5e1; padding: 0 10px; font-size: 0.85rem;" />
+          <input type="text" data-attachment-desc placeholder="Descrição (opcional)" style="height: 32px; border-radius: 6px; border: 1px solid #cbd5e1; padding: 0 10px; font-size: 0.85rem;" />
           <input type="file" data-attachment-file style="height: 32px; border-radius: 6px; border: 1px solid #cbd5e1; padding: 3px 6px; font-size: 0.85rem; background: #ffffff;" />
           <input type="hidden" data-attachment-stored />
           <input type="hidden" data-attachment-original />

@@ -1,9 +1,8 @@
 (function () {
-  const openButtons = document.querySelectorAll('[data-open-modal]');
-  const editButtons = document.querySelectorAll('[data-open-edit]');
-  const closeButtons = document.querySelectorAll('[data-close-modal]');
-  const editModal = document.querySelector('[data-modal="edit-user-modal"]');
-  const editForm = document.querySelector('[data-edit-form]');
+  if (window.__usersModalsBound) {
+    return;
+  }
+  window.__usersModalsBound = true;
 
   const openModal = (modalName) => {
     const modal = document.querySelector(`[data-modal="${modalName}"]`);
@@ -23,47 +22,48 @@
     }
   };
 
-  openButtons.forEach((button) => {
-    button.addEventListener('click', () => {
-      const modalName = button.getAttribute('data-open-modal');
+  document.addEventListener('click', (event) => {
+    const openButton = event.target.closest('[data-open-modal]');
+    if (openButton) {
+      const modalName = openButton.getAttribute('data-open-modal');
       openModal(modalName);
-    });
-  });
+      return;
+    }
 
-  editButtons.forEach((button) => {
-    button.addEventListener('click', () => {
+    const editButton = event.target.closest('[data-open-edit]');
+    if (editButton) {
+      const editModal = document.querySelector('[data-modal="edit-user-modal"]');
+      const editForm = document.querySelector('[data-edit-form]');
       if (!editModal || !editForm) {
         return;
       }
 
-      editForm.action = button.dataset.updateUrl || '';
-      editForm.querySelector('#edit_username').value = button.dataset.username || '';
-      editForm.querySelector('#edit_first_name').value = button.dataset.firstName || '';
-      editForm.querySelector('#edit_last_name').value = button.dataset.lastName || '';
-      editForm.querySelector('#edit_email').value = button.dataset.email || '';
-      editForm.querySelector('#edit_role').value = button.dataset.role || 'COLABORADOR';
+      editForm.action = editButton.dataset.updateUrl || '';
+      editForm.querySelector('#edit_username').value = editButton.dataset.username || '';
+      editForm.querySelector('#edit_first_name').value = editButton.dataset.firstName || '';
+      editForm.querySelector('#edit_last_name').value = editButton.dataset.lastName || '';
+      editForm.querySelector('#edit_email').value = editButton.dataset.email || '';
+      editForm.querySelector('#edit_role').value = editButton.dataset.role || 'COLABORADOR';
       editForm.querySelector('#edit_password').value = '';
 
       const activeCheckbox = editForm.querySelector('[data-edit-active]');
-      activeCheckbox.checked = button.dataset.isActive === '1';
+      activeCheckbox.checked = editButton.dataset.isActive === '1';
       openModal('edit-user-modal');
-    });
-  });
+      return;
+    }
 
-  closeButtons.forEach((button) => {
-    button.addEventListener('click', () => {
-      const modal = button.closest('.modal-backdrop');
+    const closeButton = event.target.closest('[data-close-modal]');
+    if (closeButton) {
+      const modal = closeButton.closest('.modal-backdrop');
       if (modal) {
         closeModal(modal);
       }
-    });
-  });
+      return;
+    }
 
-  document.querySelectorAll('.modal-backdrop').forEach((modal) => {
-    modal.addEventListener('click', (event) => {
-      if (event.target === modal) {
-        closeModal(modal);
-      }
-    });
+    const backdrop = event.target.closest('.modal-backdrop');
+    if (backdrop && event.target === backdrop) {
+      closeModal(backdrop);
+    }
   });
 })();

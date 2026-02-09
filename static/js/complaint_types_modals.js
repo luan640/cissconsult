@@ -1,4 +1,8 @@
 (function () {
+  if (window.__complaintTypesModalsBound) {
+    return;
+  }
+  window.__complaintTypesModalsBound = true;
   const containerId = 'complaint-types-table-container';
   const toastStackId = 'floating-toast-stack';
 
@@ -80,7 +84,7 @@
       },
     });
     if (!response.ok) {
-      throw new Error('Falha ao atualizar tipos de denuncia.');
+      throw new Error('Falha ao atualizar tipos de denúncia.');
     }
     replaceTable(await response.text());
   };
@@ -133,5 +137,10 @@
     }
   });
 
-  consumeInlineNotices();
+  const runPageHooks = () => {
+    consumeInlineNotices();
+  };
+
+  window.addEventListener('page:load', runPageHooks);
+  runPageHooks();
 })();
