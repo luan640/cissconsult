@@ -53,6 +53,21 @@ class GHE(TenantModel):
         return self.name
 
 
+class JobFunction(TenantModel):
+    name = models.CharField(max_length=150)
+    is_active = models.BooleanField(default=True)
+    ghes = models.ManyToManyField('GHE', blank=True, related_name='job_functions')
+    departments = models.ManyToManyField('Department', blank=True, related_name='job_functions')
+
+    class Meta:
+        db_table = 'job_functions'
+        ordering = ['name']
+        unique_together = (('company', 'name'),)
+
+    def __str__(self) -> str:
+        return self.name
+
+
 class Campaign(TenantModel):
     class Status(models.TextChoices):
         PLANNED = 'PLANNED', 'Planejada'

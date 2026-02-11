@@ -27,7 +27,8 @@
             <td>{{ responsible.sort_order }}</td>
             <td>{% if responsible.is_active %}Ativo{% else %}Inativo{% endif %}</td>
             <td class="table__actions">
-              <button class="btn btn--light btn--sm" type="button"
+              <button class="icon-btn" type="button"
+                title="Editar" aria-label="Editar"
                 data-open-edit-technical
                 data-update-url="{% url 'master-settings-technical-update' responsible.id %}"
                 data-name="{{ responsible.name }}"
@@ -35,17 +36,13 @@
                 data-registration="{{ responsible.registration }}"
                 data-order="{{ responsible.sort_order }}"
                 data-active="{{ responsible.is_active|yesno:'true,false' }}">
-                Editar
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17.25V20h2.75l8.11-8.11-2.75-2.75L4 17.25Zm13.71-8.04a1 1 0 0 0 0-1.42l-1.5-1.5a1 1 0 0 0-1.42 0l-1.17 1.17 2.75 2.75 1.34-1.3Z" fill="currentColor"/></svg>
               </button>
-              <form method="post" action="{% url 'master-settings-technical-delete' responsible.id %}" data-technical-toggle-form data-table-container-id="technical-table-container" onsubmit="return confirm('{% if responsible.is_active %}Desativar{% else %}Ativar{% endif %} este responsavel tecnico?');">
+<form method="post" action="{% url 'master-settings-technical-remove' responsible.id %}" data-technical-remove-form data-table-container-id="technical-table-container" onsubmit="return confirm('Excluir definitivamente este responsavel tecnico?');">
                 {% csrf_token %}
-                <button class="btn {% if responsible.is_active %}btn--danger{% else %}btn--primary{% endif %} btn--sm" type="submit">
-                  {% if responsible.is_active %}Desativar{% else %}Ativar{% endif %}
+                <button class="icon-btn" type="submit" title="Excluir" aria-label="Excluir">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7h12m-10 0 1 12h8l1-12M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </button>
-              </form>
-              <form method="post" action="{% url 'master-settings-technical-remove' responsible.id %}" data-technical-remove-form data-table-container-id="technical-table-container" onsubmit="return confirm('Excluir definitivamente este responsavel tecnico?');">
-                {% csrf_token %}
-                <button class="btn btn--danger btn--sm" type="submit">Excluir</button>
               </form>
             </td>
           </tr>

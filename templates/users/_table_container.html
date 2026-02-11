@@ -29,8 +29,10 @@
             <td>{% if membership.is_active %}Ativo{% else %}Inativo{% endif %}</td>
             <td class="table__actions">
               <button
-                class="btn btn--light btn--sm"
+                class="icon-btn"
                 type="button"
+                title="Editar"
+                aria-label="Editar"
                 data-open-edit
                 data-membership-id="{{ membership.id }}"
                 data-update-url="{% url 'users-update' membership.id %}"
@@ -41,12 +43,14 @@
                 data-role="{{ membership.role }}"
                 data-is-active="{% if membership.is_active %}1{% else %}0{% endif %}"
               >
-                Editar
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17.25V20h2.75l8.11-8.11-2.75-2.75L4 17.25Zm13.71-8.04a1 1 0 0 0 0-1.42l-1.5-1.5a1 1 0 0 0-1.42 0l-1.17 1.17 2.75 2.75 1.34-1.3Z" fill="currentColor"/></svg>
               </button>
               {% if membership.user_id != request.user.id %}
                 <form method="post" action="{% url 'users-delete' membership.id %}" onsubmit="return confirm('Remover acesso deste usuario da empresa?');">
                   {% csrf_token %}
-                  <button class="btn btn--danger btn--sm" type="submit">Remover</button>
+                  <button class="icon-btn" type="submit" title="Remover" aria-label="Remover">
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 7h12m-10 0 1 12h8l1-12M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                  </button>
                 </form>
               {% endif %}
             </td>

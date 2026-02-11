@@ -49,6 +49,17 @@
           </select>
         </div>
         <div class="filter-field">
+          <label for="complaints_department">Setor</label>
+          <select id="complaints_department" name="department">
+            <option value="">Todos</option>
+            {% for department in department_choices %}
+              <option value="{{ department.name }}"{% if selected_department == department.name %} selected{% endif %}>
+                {{ department.name }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="filter-field">
           <label for="complaints_totem">Totem</label>
           <select id="complaints_totem" name="totem">
             <option value="">Todos</option>

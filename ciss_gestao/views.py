@@ -52,6 +52,7 @@ from apps.core.models import (
     ComplaintType,
     Department,
     GHE,
+    JobFunction,
     HelpRequest,
     HelpRequestActionHistory,
     MoodRecord,
@@ -792,14 +793,28 @@ class CompanyListView(MasterRequiredMixin, View):
     @method_decorator(cache_page(30))
     def get(self, request):
         companies_qs = Company.objects.order_by('name')
+        search_name = (request.GET.get('name') or '').strip()
+        selected_status = (request.GET.get('status') or '').strip().lower()
+        if search_name:
+            companies_qs = companies_qs.filter(name=search_name)
+        if selected_status == 'active':
+            companies_qs = companies_qs.filter(is_active=True)
+        elif selected_status == 'inactive':
+            companies_qs = companies_qs.filter(is_active=False)
         page_obj = paginate_queryset(request, companies_qs)
+        companies_filter_options = list(Company.objects.order_by('name').only('id', 'name'))
         context = {
             'companies': page_obj.object_list,
             'page_obj': page_obj,
             'pagination_query': build_pagination_query(request),
+            'search_name': search_name,
+            'selected_status': selected_status,
+            'companies_filter_options': companies_filter_options,
             'active_menu': 'companies',
             'is_master': True,
         }
+        if is_ajax_request(request) or request.GET.get('partial') == '1':
+            return render(request, 'companies/_table_container.html', context)
         return render(request, self.template_name, context)
 
 
@@ -808,16 +823,22 @@ class CompanyCreateView(MasterRequiredMixin, View):
         form = CompanyForm(request.POST, request.FILES)
         if not form.is_valid():
             messages.error(request, collect_form_errors(form))
+            if is_ajax_request(request):
+                return render_companies_table(request)
             return redirect('companies-list')
 
         name = (form.cleaned_data['name'] or '').strip()
         if not name:
             messages.error(request, 'Nome da empresa e obrigatorio.')
+            if is_ajax_request(request):
+                return render_companies_table(request)
             return redirect('companies-list')
 
         cnpj = form.cleaned_data['cnpj']
         if Company.objects.filter(cnpj=cnpj).exists():
             messages.error(request, 'Ja existe empresa com este CNPJ.')
+            if is_ajax_request(request):
+                return render_companies_table(request)
             return redirect('companies-list')
 
         base_slug = slugify(name) or uuid4().hex[:8]
@@ -835,7 +856,11 @@ class CompanyCreateView(MasterRequiredMixin, View):
             name=name,
             legal_name=(form.cleaned_data['legal_name'] or '').strip(),
             legal_representative_name=(form.cleaned_data['legal_representative_name'] or '').strip(),
+            responsible_email=(form.cleaned_data.get('responsible_email') or '').strip(),
             cnpj=cnpj,
+            assessment_type=form.cleaned_data.get('assessment_type') or '',
+            cnae=(form.cleaned_data.get('cnae') or '').strip(),
+            risk_level=form.cleaned_data.get('risk_level') or 1,
             employee_count=form.cleaned_data['employee_count'],
             max_users=form.cleaned_data['max_users'],
             max_totems=form.cleaned_data['max_totems'],
@@ -848,10 +873,14 @@ class CompanyCreateView(MasterRequiredMixin, View):
             address_zipcode=(form.cleaned_data['address_zipcode'] or '').strip(),
             logo=form.cleaned_data.get('logo'),
             slug=final_slug,
+            unit_type=form.cleaned_data.get('unit_type') or '',
+            unit_name=(form.cleaned_data.get('unit_name') or '').strip(),
             is_active=create_is_active,
         )
         cache.clear()
         messages.success(request, 'Empresa cadastrada com sucesso.')
+        if is_ajax_request(request):
+            return render_companies_table(request)
         return redirect('companies-list')
 
 
@@ -861,22 +890,32 @@ class CompanyUpdateView(MasterRequiredMixin, View):
         form = CompanyForm(request.POST, request.FILES)
         if not form.is_valid():
             messages.error(request, collect_form_errors(form))
+            if is_ajax_request(request):
+                return render_companies_table(request)
             return redirect('companies-list')
 
         name = (form.cleaned_data['name'] or '').strip()
         if not name:
             messages.error(request, 'Nome da empresa e obrigatorio.')
+            if is_ajax_request(request):
+                return render_companies_table(request)
             return redirect('companies-list')
 
         cnpj = form.cleaned_data['cnpj']
         if Company.objects.filter(cnpj=cnpj).exclude(pk=company.id).exists():
             messages.error(request, 'Ja existe empresa com este CNPJ.')
+            if is_ajax_request(request):
+                return render_companies_table(request)
             return redirect('companies-list')
 
         company.name = name
         company.legal_name = (form.cleaned_data['legal_name'] or '').strip()
         company.legal_representative_name = (form.cleaned_data['legal_representative_name'] or '').strip()
+        company.responsible_email = (form.cleaned_data.get('responsible_email') or '').strip()
         company.cnpj = cnpj
+        company.assessment_type = form.cleaned_data.get('assessment_type') or ''
+        company.cnae = (form.cleaned_data.get('cnae') or '').strip()
+        company.risk_level = form.cleaned_data.get('risk_level') or 1
         company.employee_count = form.cleaned_data['employee_count']
         company.max_users = form.cleaned_data['max_users']
         company.max_totems = form.cleaned_data['max_totems']
@@ -887,6 +926,8 @@ class CompanyUpdateView(MasterRequiredMixin, View):
         company.address_city = (form.cleaned_data['address_city'] or '').strip()
         company.address_state = form.cleaned_data['address_state']
         company.address_zipcode = (form.cleaned_data['address_zipcode'] or '').strip()
+        company.unit_type = form.cleaned_data.get('unit_type') or ''
+        company.unit_name = (form.cleaned_data.get('unit_name') or '').strip()
         if 'is_active' in request.POST:
             company.is_active = form.cleaned_data.get('is_active', False)
         if form.cleaned_data.get('logo'):
@@ -894,6 +935,8 @@ class CompanyUpdateView(MasterRequiredMixin, View):
         company.save()
         cache.clear()
         messages.success(request, 'Empresa atualizada com sucesso.')
+        if is_ajax_request(request):
+            return render_companies_table(request)
         return redirect('companies-list')
 
 
@@ -1889,26 +1932,64 @@ class CampaignReportSaveView(MasterRequiredMixin, View):
             return JsonResponse({'error': 'Formato invalido.'}, status=400)
 
         saved = 0
+        normalized_items = []
         for item in items:
             question_text = (item.get('question_text') or '').strip()
             if not question_text:
                 continue
-            measures = item.get('measures') or []
-            months = item.get('implantation_months') or []
-            status = item.get('status') or {}
-            concluded_on = (item.get('concluded_on') or '').strip()
-            CampaignReportAction.all_objects.update_or_create(
-                campaign=campaign,
-                question_text=question_text,
-                defaults={
-                    'company': campaign.company,
-                    'measures': measures,
-                    'implantation_months': months,
-                    'status': status,
-                    'concluded_on': concluded_on,
-                },
+            normalized_items.append(
+                {
+                    'question_text': question_text,
+                    'measures': item.get('measures') or [],
+                    'months': item.get('implantation_months') or [],
+                    'status': item.get('status') or {},
+                    'concluded_on': (item.get('concluded_on') or '').strip(),
+                }
             )
-            saved += 1
+
+        if normalized_items:
+            question_texts = [item['question_text'] for item in normalized_items]
+            existing_actions = {
+                action.question_text: action
+                for action in CampaignReportAction.all_objects.filter(
+                    campaign=campaign,
+                    question_text__in=question_texts,
+                )
+            }
+
+            to_create = []
+            to_update = []
+            for item in normalized_items:
+                action = existing_actions.get(item['question_text'])
+                if action:
+                    action.measures = item['measures']
+                    action.implantation_months = item['months']
+                    action.status = item['status']
+                    action.concluded_on = item['concluded_on']
+                    to_update.append(action)
+                else:
+                    to_create.append(
+                        CampaignReportAction(
+                            campaign=campaign,
+                            company=campaign.company,
+                            question_text=item['question_text'],
+                            measures=item['measures'],
+                            implantation_months=item['months'],
+                            status=item['status'],
+                            concluded_on=item['concluded_on'],
+                        )
+                    )
+
+            if to_create:
+                CampaignReportAction.all_objects.bulk_create(to_create, batch_size=200)
+            if to_update:
+                CampaignReportAction.all_objects.bulk_update(
+                    to_update,
+                    ['measures', 'implantation_months', 'status', 'concluded_on'],
+                    batch_size=200,
+                )
+
+            saved = len(normalized_items)
 
         updated_attachments = []
         if isinstance(attachments, list):
@@ -2481,10 +2562,23 @@ MAX_COMPANY_LOGO_SIZE = 2 * 1024 * 1024
 
 
 class CompanyForm(forms.Form):
+    document_type = forms.ChoiceField(
+        choices=(('cnpj', 'CNPJ'), ('cpf', 'CPF')),
+        required=False,
+    )
+    unit_type = forms.ChoiceField(
+        choices=(('matriz', 'Matriz'), ('filial', 'Filial'), ('unidade', 'Unidade'), ('outro', 'Outro')),
+        required=False,
+    )
+    unit_name = forms.CharField(max_length=255, required=False)
     name = forms.CharField(max_length=255)
     legal_name = forms.CharField(max_length=255, required=False)
     legal_representative_name = forms.CharField(max_length=255)
+    responsible_email = forms.EmailField(max_length=255, required=False)
     cnpj = forms.CharField(max_length=18)
+    assessment_type = forms.ChoiceField(choices=(('setor', 'Setor'), ('ghe', 'GHE')), required=False)
+    cnae = forms.CharField(max_length=20, required=False)
+    risk_level = forms.IntegerField(min_value=1, max_value=4, required=False)
     employee_count = forms.IntegerField(min_value=0, required=False)
     max_users = forms.IntegerField(min_value=0, required=False)
     max_totems = forms.IntegerField(min_value=0, required=False)
@@ -2501,8 +2595,13 @@ class CompanyForm(forms.Form):
     def clean_cnpj(self):
         raw = (self.cleaned_data.get('cnpj') or '').strip()
         digits = re.sub(r'\D', '', raw)
-        if len(digits) != 14:
-            raise forms.ValidationError('CNPJ deve conter 14 digitos numericos.')
+        document_type = (self.cleaned_data.get('document_type') or self.data.get('document_type') or 'cnpj').lower()
+        if document_type == 'cpf':
+            if len(digits) != 11:
+                raise forms.ValidationError('CPF deve conter 11 digitos numericos.')
+        else:
+            if len(digits) != 14:
+                raise forms.ValidationError('CNPJ deve conter 14 digitos numericos.')
         return digits
 
     def clean_employee_count(self):
@@ -2544,6 +2643,13 @@ class CompanyForm(forms.Form):
 class DepartmentForm(forms.Form):
     name = forms.CharField(max_length=150)
     ghe_id = forms.IntegerField()
+    is_active = forms.BooleanField(required=False, initial=True)
+
+
+class JobFunctionForm(forms.Form):
+    name = forms.CharField(max_length=150)
+    ghes = forms.MultipleChoiceField(required=False)
+    departments = forms.MultipleChoiceField(required=False)
     is_active = forms.BooleanField(required=False, initial=True)
 
 
@@ -2858,6 +2964,28 @@ def get_departments_queryset(company_id, filters):
     return queryset.order_by('name')
 
 
+def get_job_functions_filters(request):
+    status = (request.GET.get('status') or '').strip().lower()
+    if status not in {'active', 'inactive'}:
+        status = ''
+    search = (request.GET.get('name') or '').strip()
+    return {
+        'status': status,
+        'name': search,
+    }
+
+
+def get_job_functions_queryset(company_id, filters):
+    queryset = JobFunction.all_objects.filter(company_id=company_id).prefetch_related('ghes', 'departments')
+    if filters['status'] == 'active':
+        queryset = queryset.filter(is_active=True)
+    elif filters['status'] == 'inactive':
+        queryset = queryset.filter(is_active=False)
+    if filters['name']:
+        queryset = queryset.filter(name__icontains=filters['name'])
+    return queryset.order_by('name')
+
+
 def get_complaint_filters(request):
     valid_statuses = {choice[0] for choice in Complaint.STATUS_CHOICES}
     status = (request.GET.get('status') or '').strip()
@@ -2865,6 +2993,7 @@ def get_complaint_filters(request):
         status = ''
 
     category = (request.GET.get('category') or '').strip().lower()
+    department = (request.GET.get('department') or '').strip()
 
     raw_totem = (request.GET.get('totem') or '').strip()
     selected_totem = ''
@@ -2879,6 +3008,7 @@ def get_complaint_filters(request):
     return {
         'status': status,
         'category': category,
+        'department': department,
         'totem': selected_totem,
         'totem_id': totem_id,
     }
@@ -2892,9 +3022,13 @@ def get_complaint_filter_options(company_id):
         (normalize_complaint_type_key(item.label), item.label)
         for item in complaint_types
     ]
+    department_choices = list(
+        Department.all_objects.filter(company_id=company_id, is_active=True).order_by('name')
+    )
     totems = Totem.all_objects.filter(company_id=company_id).order_by('name')
     return {
         'complaint_type_choices': complaint_type_filter_choices,
+        'department_choices': department_choices,
         'totem_choices': totems,
     }
 
@@ -2992,6 +3126,8 @@ def load_complaints_for_company(company_id, filters=None):
             complaints_qs = complaints_qs.filter(complaint_status=filters['status'])
         if filters.get('category'):
             complaints_qs = complaints_qs.filter(category=filters['category'])
+        if filters.get('department'):
+            complaints_qs = complaints_qs.filter(details__icontains=f"Setor: {filters['department']}")
         if filters.get('totem_id') is not None:
             complaints_qs = complaints_qs.filter(totem_id=filters['totem_id'])
     complaints = list(complaints_qs.order_by('-record_date', '-created_at'))
@@ -3000,6 +3136,25 @@ def load_complaints_for_company(company_id, filters=None):
             complaint.category,
             complaint_type_display_name(complaint.category),
         )
+        details_raw = (complaint.details or '').strip()
+        complaint.department_label = '-'
+        complaint.complaint_detail = details_raw or '-'
+        if details_raw:
+            parts = [part.strip() for part in details_raw.split('|') if part.strip()]
+            relato = ''
+            complemento = ''
+            for part in parts:
+                lower_part = part.lower()
+                if lower_part.startswith('setor:'):
+                    complaint.department_label = part.split(':', 1)[1].strip() or '-'
+                elif lower_part.startswith('relato:'):
+                    relato = part.split(':', 1)[1].strip()
+                elif lower_part.startswith('complemento:'):
+                    complemento = part.split(':', 1)[1].strip()
+            if relato or complemento:
+                complaint.complaint_detail = ' | '.join(
+                    [value for value in [relato, complemento] if value]
+                )
     return complaints
 
 
@@ -3042,6 +3197,43 @@ def render_ghes_table(request, company_id):
         'ghes/_table_container.html',
         {
             'ghes': page_obj.object_list,
+            'page_obj': page_obj,
+            'pagination_query': build_pagination_query(request),
+        },
+    )
+
+
+def render_job_functions_table(request, company_id):
+    filters = get_job_functions_filters(request)
+    job_functions_qs = get_job_functions_queryset(company_id, filters)
+    page_obj = paginate_queryset(request, job_functions_qs)
+    return render(
+        request,
+        'job_functions/_table_container.html',
+        {
+            'job_functions': page_obj.object_list,
+            'page_obj': page_obj,
+            'pagination_query': build_pagination_query(request),
+        },
+    )
+
+
+def render_companies_table(request):
+    companies_qs = Company.objects.order_by('name')
+    search_name = (request.GET.get('name') or '').strip()
+    selected_status = (request.GET.get('status') or '').strip().lower()
+    if search_name:
+        companies_qs = companies_qs.filter(name=search_name)
+    if selected_status == 'active':
+        companies_qs = companies_qs.filter(is_active=True)
+    elif selected_status == 'inactive':
+        companies_qs = companies_qs.filter(is_active=False)
+    page_obj = paginate_queryset(request, companies_qs)
+    return render(
+        request,
+        'companies/_table_container.html',
+        {
+            'companies': page_obj.object_list,
             'page_obj': page_obj,
             'pagination_query': build_pagination_query(request),
         },
@@ -3332,9 +3524,11 @@ class ComplaintListView(CompanyAdminRequiredMixin, View):
             'can_manage_access': True,
             'status_choices': Complaint.STATUS_CHOICES,
             'complaint_type_choices': filter_options['complaint_type_choices'],
+            'department_choices': filter_options['department_choices'],
             'totem_choices': filter_options['totem_choices'],
             'selected_status': filters['status'],
             'selected_category': filters['category'],
+            'selected_department': filters['department'],
             'selected_totem': filters['totem'],
         }
         if is_ajax_request(request) or request.GET.get('partial') == '1':
@@ -4190,6 +4384,176 @@ class GHEDeleteView(CompanyAdminRequiredMixin, View):
         if is_ajax_request(request):
             return render_ghes_table(request, request.current_company_id)
         return redirect('ghes-list')
+
+
+class JobFunctionListView(CompanyAdminRequiredMixin, View):
+    template_name = 'job_functions/list.html'
+
+    @method_decorator(vary_on_headers('Cookie'))
+    @method_decorator(cache_page(30))
+    def get(self, request):
+        filters = get_job_functions_filters(request)
+        job_functions_qs = get_job_functions_queryset(request.current_company_id, filters)
+        page_obj = paginate_queryset(request, job_functions_qs)
+        ghes = list(
+            GHE.all_objects.filter(company_id=request.current_company_id, is_active=True)
+            .order_by('name')
+            .only('id', 'name')
+        )
+        departments = list(
+            Department.all_objects.filter(company_id=request.current_company_id, is_active=True)
+            .order_by('name')
+            .only('id', 'name')
+        )
+        context = {
+            'job_functions': page_obj.object_list,
+            'page_obj': page_obj,
+            'pagination_query': build_pagination_query(request),
+            'company_id': request.current_company_id,
+            'active_menu': 'job_functions',
+            'can_manage_access': True,
+            'selected_status': filters['status'],
+            'search_name': filters['name'],
+            'ghes': ghes,
+            'departments': departments,
+        }
+        if is_ajax_request(request) or request.GET.get('partial') == '1':
+            return render(request, 'job_functions/_table_container.html', context)
+        return render(request, self.template_name, context)
+
+
+class JobFunctionCreateView(CompanyAdminRequiredMixin, View):
+    def post(self, request):
+        form = JobFunctionForm(request.POST)
+        form.fields['ghes'].choices = [
+            (ghe.id, ghe.name)
+            for ghe in GHE.all_objects.filter(company_id=request.current_company_id).order_by('name')
+        ]
+        form.fields['departments'].choices = [
+            (department.id, department.name)
+            for department in Department.all_objects.filter(company_id=request.current_company_id).order_by('name')
+        ]
+        if not form.is_valid():
+            messages.error(request, collect_form_errors(form))
+            if is_ajax_request(request):
+                return render_job_functions_table(request, request.current_company_id)
+            return redirect('job-functions-list')
+
+        name = (form.cleaned_data['name'] or '').strip()
+        if not name:
+            messages.error(request, 'Nome da funcao e obrigatorio.')
+            if is_ajax_request(request):
+                return render_job_functions_table(request, request.current_company_id)
+            return redirect('job-functions-list')
+
+        ghes_ids = [int(value) for value in form.cleaned_data.get('ghes') or []]
+        departments_ids = [int(value) for value in form.cleaned_data.get('departments') or []]
+        if not ghes_ids and not departments_ids:
+            messages.error(request, 'Selecione ao menos um GHE ou um setor.')
+            if is_ajax_request(request):
+                return render_job_functions_table(request, request.current_company_id)
+            return redirect('job-functions-list')
+
+        if JobFunction.all_objects.filter(
+            company_id=request.current_company_id,
+            name__iexact=name,
+        ).exists():
+            messages.error(request, 'Ja existe funcao com este nome na empresa.')
+            if is_ajax_request(request):
+                return render_job_functions_table(request, request.current_company_id)
+            return redirect('job-functions-list')
+
+        job_function = JobFunction.all_objects.create(
+            company_id=request.current_company_id,
+            name=name,
+            is_active=True,
+        )
+        if ghes_ids:
+            job_function.ghes.set(ghes_ids)
+        if departments_ids:
+            job_function.departments.set(departments_ids)
+        cache.clear()
+        messages.success(request, 'Funcao criada com sucesso.')
+        if is_ajax_request(request):
+            return render_job_functions_table(request, request.current_company_id)
+        return redirect('job-functions-list')
+
+
+class JobFunctionUpdateView(CompanyAdminRequiredMixin, View):
+    def post(self, request, job_function_id):
+        job_function = get_object_or_404(
+            JobFunction.all_objects,
+            pk=job_function_id,
+            company_id=request.current_company_id,
+        )
+        form = JobFunctionForm(request.POST)
+        form.fields['ghes'].choices = [
+            (ghe.id, ghe.name)
+            for ghe in GHE.all_objects.filter(company_id=request.current_company_id).order_by('name')
+        ]
+        form.fields['departments'].choices = [
+            (department.id, department.name)
+            for department in Department.all_objects.filter(company_id=request.current_company_id).order_by('name')
+        ]
+        if not form.is_valid():
+            messages.error(request, collect_form_errors(form))
+            if is_ajax_request(request):
+                return render_job_functions_table(request, request.current_company_id)
+            return redirect('job-functions-list')
+
+        name = (form.cleaned_data['name'] or '').strip()
+        if not name:
+            messages.error(request, 'Nome da funcao e obrigatorio.')
+            if is_ajax_request(request):
+                return render_job_functions_table(request, request.current_company_id)
+            return redirect('job-functions-list')
+
+        ghes_ids = [int(value) for value in form.cleaned_data.get('ghes') or []]
+        departments_ids = [int(value) for value in form.cleaned_data.get('departments') or []]
+        if not ghes_ids and not departments_ids:
+            messages.error(request, 'Selecione ao menos um GHE ou um setor.')
+            if is_ajax_request(request):
+                return render_job_functions_table(request, request.current_company_id)
+            return redirect('job-functions-list')
+
+        if JobFunction.all_objects.filter(
+            company_id=request.current_company_id,
+            name__iexact=name,
+        ).exclude(pk=job_function.id).exists():
+            messages.error(request, 'Ja existe funcao com este nome na empresa.')
+            if is_ajax_request(request):
+                return render_job_functions_table(request, request.current_company_id)
+            return redirect('job-functions-list')
+
+        job_function.name = name
+        job_function.is_active = form.cleaned_data['is_active']
+        job_function.save()
+        job_function.ghes.set(ghes_ids)
+        job_function.departments.set(departments_ids)
+        cache.clear()
+        messages.success(request, 'Funcao atualizada com sucesso.')
+        if is_ajax_request(request):
+            return render_job_functions_table(request, request.current_company_id)
+        return redirect('job-functions-list')
+
+
+class JobFunctionDeleteView(CompanyAdminRequiredMixin, View):
+    def post(self, request, job_function_id):
+        job_function = get_object_or_404(
+            JobFunction.all_objects,
+            pk=job_function_id,
+            company_id=request.current_company_id,
+        )
+        job_function.is_active = not job_function.is_active
+        job_function.save(update_fields=['is_active', 'updated_at'])
+        cache.clear()
+        if job_function.is_active:
+            messages.success(request, 'Funcao ativada com sucesso.')
+        else:
+            messages.success(request, 'Funcao desativada com sucesso.')
+        if is_ajax_request(request):
+            return render_job_functions_table(request, request.current_company_id)
+        return redirect('job-functions-list')
 
 
 class AlertSettingsView(CompanyAdminRequiredMixin, View):

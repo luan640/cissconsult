@@ -1,17 +1,14 @@
 (function () {
-  if (window.__helpRequestsModalsBound) {
+  if (window.__jobFunctionsModalsBound) {
     return;
   }
-  window.__helpRequestsModalsBound = true;
-  const containerId = 'help-requests-table-container';
+  window.__jobFunctionsModalsBound = true;
+  const containerId = 'job-functions-table-container';
   const toastStackId = 'floating-toast-stack';
-  const filterFormSelector = '[data-help-requests-filter-form]';
 
   const openModal = (name) => {
     const modal = document.querySelector(`[data-modal="${name}"]`);
-    if (!modal) {
-      return;
-    }
+    if (!modal) return;
     modal.classList.add('is-open');
     modal.setAttribute('aria-hidden', 'false');
     document.documentElement.classList.add('modal-open');
@@ -54,7 +51,6 @@
     if (!container) return;
     const notices = container.querySelectorAll('.notice');
     if (!notices.length) return;
-
     notices.forEach((notice) => {
       const tone = notice.classList.contains('notice--error')
         ? 'error'
@@ -63,7 +59,6 @@
           : 'success';
       showToast(notice.textContent.trim(), tone);
     });
-
     const stackGap = container.querySelector('.stack-gap');
     if (stackGap) {
       stackGap.remove();
@@ -98,30 +93,17 @@
       },
     });
     if (!response.ok) {
-      throw new Error('Falha ao atualizar pedido de ajuda.');
+      throw new Error('Falha ao atualizar funcoes.');
     }
-    replaceTable(await response.text());
+    return await response.text();
   };
 
-  const loadHistory = async (url) => {
-    const container = document.getElementById('help-request-history-container');
-    if (!container) return;
-    openModal('help-request-history-modal');
-    container.innerHTML = '<p style="margin:0; color:#475569;">Carregando historico...</p>';
-    try {
-      const response = await fetch(url, {
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest',
-        },
-      });
-      if (!response.ok) {
-        throw new Error('Falha ao carregar historico.');
-      }
-      container.innerHTML = await response.text();
-    } catch (error) {
-      container.innerHTML = '<p style="margin:0; color:#b91c1c;">Falha ao carregar historico.</p>';
-      throw error;
-    }
+  const setMultiSelectValues = (select, values) => {
+    if (!select) return;
+    const valueSet = new Set(values);
+    Array.from(select.options).forEach((option) => {
+      option.selected = valueSet.has(option.value);
+    });
   };
 
   const buildFilterFetchUrl = (form) => {
@@ -157,30 +139,40 @@
       },
     });
     if (!response.ok) {
-      throw new Error('Falha ao filtrar pedidos de ajuda.');
+      throw new Error('Falha ao filtrar funcoes.');
     }
     replaceTable(await response.text());
     syncBrowserUrlFromFilterForm(form);
   };
 
   document.addEventListener('click', (event) => {
-    const historyButton = event.target.closest('[data-open-help-request-history]');
-    if (historyButton) {
-      const historyUrl = historyButton.dataset.historyUrl || '';
-      if (!historyUrl) return;
-      loadHistory(historyUrl)
-        .catch(() => showToast('Falha ao carregar historico do pedido.', 'error'));
+    const openButton = event.target.closest('[data-open-modal]');
+    if (openButton) {
+      openModal(openButton.getAttribute('data-open-modal'));
       return;
     }
 
-    const editButton = event.target.closest('[data-open-edit-help-request]');
+    const editButton = event.target.closest('[data-open-edit-job-function]');
     if (editButton) {
-      const editForm = document.querySelector('[data-edit-help-request-form]');
+      const editForm = document.querySelector('[data-edit-job-function-form]');
       if (!editForm) return;
       editForm.action = editButton.dataset.updateUrl || '';
-      editForm.querySelector('#edit_help_request_status').value = editButton.dataset.status || 'OPEN';
-      editForm.querySelector('#edit_help_request_notes').value = '';
-      openModal('edit-help-request-modal');
+      editForm.querySelector('#edit_job_function_name').value = editButton.dataset.name || '';
+      const gheValues = (editButton.dataset.ghes || '')
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean);
+      const departmentValues = (editButton.dataset.departments || '')
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean);
+      setMultiSelectValues(editForm.querySelector('#edit_job_function_ghes'), gheValues);
+      setMultiSelectValues(editForm.querySelector('#edit_job_function_departments'), departmentValues);
+      const activeField = editForm.querySelector('[data-edit-job-function-active]');
+      if (activeField) {
+        activeField.checked = editButton.dataset.isActive === '1';
+      }
+      openModal('edit-job-function-modal');
       return;
     }
 
@@ -199,40 +191,38 @@
 
   document.addEventListener('submit', async (event) => {
     const form = event.target;
-    if (form.matches(filterFormSelector)) {
-      if (form.hasAttribute('data-ajax-table-form')) {
-        return;
-      }
-      event.preventDefault();
-      try {
-        await applyFilters(form);
-      } catch (error) {
-        window.location.assign(form.action);
-      }
-      return;
-    }
-    if (!form.matches('[data-edit-help-request-form]')) return;
+    const shouldHandle =
+      form.matches('[data-job-function-create-form]') ||
+      form.matches('[data-edit-job-function-form]') ||
+      form.matches('[data-job-function-toggle-form]');
+    if (!shouldHandle) return;
+    if (event.defaultPrevented) return;
     event.preventDefault();
+    const restoreButton = setButtonLoading(event.submitter);
     try {
-      await submitAjaxForm(form);
-      document.querySelectorAll('.modal-backdrop.is-open').forEach((modal) => closeModal(modal));
+      const html = await submitAjaxForm(form);
+      replaceTable(html);
+      if (!html.includes('notice--error')) {
+        document.querySelectorAll('.modal-backdrop.is-open').forEach((modal) => closeModal(modal));
+      }
     } catch (error) {
       form.submit();
+      return;
+    } finally {
+      if (restoreButton) restoreButton();
     }
   });
 
   document.addEventListener('click', async (event) => {
-    const clearButton = event.target.closest('[data-help-requests-clear-filters]');
+    const clearButton = event.target.closest('[data-job-functions-clear-filters]');
     if (!clearButton) return;
     event.preventDefault();
-    const form = document.querySelector(filterFormSelector);
+    const form = document.querySelector('[data-job-functions-filter-form]');
     if (!form) {
       window.location.assign(clearButton.href);
       return;
     }
-    form.querySelectorAll('select').forEach((select) => {
-      select.value = '';
-    });
+    form.reset();
     try {
       await applyFilters(form);
     } catch (error) {
@@ -247,3 +237,15 @@
   window.addEventListener('page:load', runPageHooks);
   runPageHooks();
 })();
+  const setButtonLoading = (button) => {
+    if (!button || button.disabled) return null;
+    const original = button.textContent || '';
+    button.textContent = button.getAttribute('data-loading-text') || 'Salvando...';
+    button.disabled = true;
+    button.setAttribute('aria-busy', 'true');
+    return () => {
+      button.textContent = original;
+      button.disabled = false;
+      button.removeAttribute('aria-busy');
+    };
+  };

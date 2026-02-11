@@ -6,77 +6,64 @@
       {% endfor %}
     </section>
   {% endif %}
-  <section class="card card--table">
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Título</th>
-          <th>Empresa</th>
-          <th>Início</th>
-          <th>Fim</th>
-          <th>Criado em</th>
-          <th>Status</th>
-          <th>Link</th>
-          <th>QR</th>
-          <th>Ações</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for campaign in campaigns %}
-          <tr>
-            <td>{{ campaign.title }}</td>
-            <td>{{ campaign.company.name }}</td>
-            <td>{{ campaign.start_date|date:"d/m/Y" }}</td>
-            <td>{{ campaign.end_date|date:"d/m/Y" }}</td>
-            <td>{{ campaign.created_at|date:"d/m/Y H:i" }}</td>
-            <td>
-              <span class="status-badge status-badge--{{ campaign.status|lower }}">
-                {{ campaign.get_status_display }}
-              </span>
-            </td>
-            <td>
-              <a class="btn btn--light btn--sm" href="{% url 'campaigns-access' campaign.uuid %}" target="_blank">Abrir</a>
-            </td>
-            <td>
-              <button
-                class="btn btn--light btn--sm"
-                type="button"
-                data-open-qr
-                data-qr-url="{% url 'campaigns-qr' campaign.uuid %}"
-              >
-                Ver qrcode
-              </button>
-            </td>
-            <td class="table__actions">
-              <a class="btn btn--light btn--sm{% if campaign.status != 'FINISHED' %} is-disabled{% endif %}"
-                 {% if campaign.status == 'FINISHED' %}
-                   href="{% url 'campaigns-report' campaign.uuid %}"
-                   target="_blank"
-                 {% else %}
-                   href="#"
-                   aria-disabled="true"
-                   onclick="return false;"
-                   style="opacity:0.5;pointer-events:none;"
-                 {% endif %}
-              >Relatorio</a>
-              <button class="btn btn--light btn--sm" type="button"
-                data-open-edit-campaign
-                data-update-url="{% url 'campaigns-update' campaign.id %}"
-                data-title="{{ campaign.title }}"
-                data-company-id="{{ campaign.company_id }}"
-                data-start-date="{{ campaign.start_date|date:'Y-m-d' }}"
-                data-end-date="{{ campaign.end_date|date:'Y-m-d' }}"
-                data-status="{{ campaign.status }}">
-                Editar
-              </button>
-              {# Remocao de campanha desativada #}
-            </td>
-          </tr>
-        {% empty %}
-          <tr><td colspan="9">Nenhuma campanha cadastrada.</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
+  <section class="campaign-list">
+    {% for campaign in campaigns %}
+      <article class="campaign-row">
+        <div class="campaign-row__main">
+          <h3>{{ campaign.title }}</h3>
+          <p>{{ campaign.company.name }}</p>
+          <div class="campaign-row__meta">
+            <span>{{ campaign.start_date|date:"d/m/Y" }} - {{ campaign.end_date|date:"d/m/Y" }}</span>
+            <span>Criado em {{ campaign.created_at|date:"d/m/Y H:i" }}</span>
+          </div>
+        </div>
+        <div class="campaign-row__status">
+          <span class="status-badge status-badge--{{ campaign.status|lower }}">
+            {{ campaign.get_status_display }}
+          </span>
+        </div>
+        <div class="campaign-row__actions">
+          <a class="icon-btn" href="{% url 'campaigns-access' campaign.uuid %}" target="_blank" title="Abrir" aria-label="Abrir">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h9m0 0-4-4m4 4-4 4M14 5h4v14h-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+          <button
+            class="icon-btn"
+            type="button"
+            title="QR"
+            aria-label="QR"
+            data-open-qr
+            data-qr-url="{% url 'campaigns-qr' campaign.uuid %}"
+          >
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 3h8v8H3V3Zm2 2v4h4V5H5Zm8-2h8v8h-8V3Zm2 2v4h4V5h-4ZM3 13h8v8H3v-8Zm2 2v4h4v-4H5Zm10 0h2v2h-2v-2Zm4 0h2v6h-2v-6Zm-4 4h6v2h-6v-2Z" fill="currentColor"/></svg>
+          </button>
+          <a class="icon-btn{% if campaign.status != 'FINISHED' %} is-disabled{% endif %}"
+             {% if campaign.status == 'FINISHED' %}
+               href="{% url 'campaigns-report' campaign.uuid %}"
+               target="_blank"
+             {% else %}
+               href="#"
+               aria-disabled="true"
+               onclick="return false;"
+             {% endif %}
+             title="Relatorio" aria-label="Relatorio">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 3h9l5 5v13a1 1 0 0 1-1 1H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Zm8 1.5V9h4.5M8 13h8M8 17h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+          </a>
+          <button class="icon-btn" type="button"
+            title="Editar" aria-label="Editar"
+            data-open-edit-campaign
+            data-update-url="{% url 'campaigns-update' campaign.id %}"
+            data-title="{{ campaign.title }}"
+            data-company-id="{{ campaign.company_id }}"
+            data-start-date="{{ campaign.start_date|date:'Y-m-d' }}"
+            data-end-date="{{ campaign.end_date|date:'Y-m-d' }}"
+            data-status="{{ campaign.status }}">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m14.4 4.2 5.4 5.4-9.9 9.9-5.5 1.1 1.1-5.5 9.9-9.9Zm2.1-2.1 1.2-1.2c.4-.4 1.1-.4 1.5 0l2.3 2.3c.4.4.4 1.1 0 1.5l-1.2 1.2-3.8-3.8Z" fill="currentColor"/></svg>
+          </button>
+        </div>
+      </article>
+    {% empty %}
+      <div class="campaign-row campaign-row--empty">Nenhuma campanha cadastrada.</div>
+    {% endfor %}
   </section>
   {% include "partials/_table_pagination.html" %}
 </div>

@@ -82,8 +82,8 @@
           <a class="menu__subitem{% if active_menu == 'complaint_types' %} is-active{% endif %}" href="{% url 'complaint-types-list' %}">Tipo de denúncia</a>
         </div>
       </div>
-      <div class="menu__group{% if active_menu == 'users' or active_menu == 'departments' or active_menu == 'ghes' %} is-open{% endif %}" data-menu-group>
-        <button class="menu__item menu__item--toggle{% if active_menu == 'users' or active_menu == 'departments' or active_menu == 'ghes' %} is-active{% endif %}" type="button" data-menu-group-toggle>
+      <div class="menu__group{% if active_menu == 'users' or active_menu == 'departments' or active_menu == 'ghes' or active_menu == 'job_functions' %} is-open{% endif %}" data-menu-group>
+        <button class="menu__item menu__item--toggle{% if active_menu == 'users' or active_menu == 'departments' or active_menu == 'ghes' or active_menu == 'job_functions' %} is-active{% endif %}" type="button" data-menu-group-toggle>
           <svg class="menu__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3H3V5Zm0 5h18v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-9Zm4 2v2h3v-2H7Zm0 4v2h3v-2H7Z" fill="currentColor"/></svg>
           <span class="menu__text">Cadastros</span>
           <span class="menu__caret" aria-hidden="true">&#9662;</span>
@@ -92,6 +92,7 @@
           <a class="menu__subitem{% if active_menu == 'users' %} is-active{% endif %}" href="{% url 'users-list' %}">Usuarios</a>
           <a class="menu__subitem{% if active_menu == 'departments' %} is-active{% endif %}" href="{% url 'departments-list' %}">Setores</a>
           <a class="menu__subitem{% if active_menu == 'ghes' %} is-active{% endif %}" href="{% url 'ghes-list' %}" data-match-path="/ghes/">GHE</a>
+          <a class="menu__subitem{% if active_menu == 'job_functions' %} is-active{% endif %}" href="{% url 'job-functions-list' %}" data-match-path="/job-functions/">Funcoes</a>
         </div>
       </div>
       <a class="menu__item{% if active_menu == 'help_requests' %} is-active{% endif %}" href="{% url 'help-requests-list' %}" data-match-path="/help-requests/">

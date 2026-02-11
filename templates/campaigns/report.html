@@ -119,7 +119,7 @@
   <section class="report-card">
     <div style="display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 8px;">
       <button type="button" class="btn btn--sm" id="report-save-btn">Salvar</button>
-      <a class="btn btn--primary btn--sm" href="{% url 'campaigns-report-pdf' campaign.uuid %}">Baixar PDF</a>
+      <a class="btn btn--primary btn--sm" href="{% url 'campaigns-report-pdf' campaign.uuid %}" data-report-download>Baixar PDF</a>
     </div>
     <h1 class="report-title">Analise os dados a seguir e proponha planos de ação</h1>
 
@@ -246,9 +246,9 @@
                     <div>
                       <div style="font-size: 0.82rem; color: #334155;">{{ question.text }}</div>
                       <div style="height: 22px; border-radius: 999px; background: #e2e8f0; border: 1px solid #cbd5e1; overflow: hidden; margin-top: 6px; position: relative;">
-                        <span style="display: block; height: 100%; width: {{ question.percent_css }}%; background: {% if question.zone == 'BOM' %}#22c55e{% elif question.zone == 'ATENÇÃO' %}#f59e0b{% elif question.zone == 'RUIM' %}#ef4444{% else %}#94a3b8{% endif %};"></span>
+                        <span style="display: block; height: 100%; width: {{ question.percent_css }}%; background: {% if question.zone == 'BOM' %}#22c55e{% elif question.zone == 'ATENCAO' %}#f59e0b{% elif question.zone == 'RUIM' %}#ef4444{% else %}#94a3b8{% endif %};"></span>
                         <span style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 800; color: #0f172a;">
-                          {{ question.percent }}% | {{ question.zone }}
+                          {{ question.percent }}% | {% if question.zone == 'ATENCAO' %}ATENÇÃO{% else %}{{ question.zone }}{% endif %}
                         </span>
                       </div>
                     </div>
@@ -273,15 +273,15 @@
                       <div>
                         <div style="font-size: 0.82rem; color: #334155;">{{ question.text }}</div>
                         <div style="height: 22px; border-radius: 999px; background: #e2e8f0; border: 1px solid #cbd5e1; overflow: hidden; margin-top: 6px; position: relative;">
-                          <span style="display: block; height: 100%; width: {{ question.percent_css }}%; background: {% if question.zone == 'BOM' %}#22c55e{% elif question.zone == 'ATENÇÃO' %}#f59e0b{% elif question.zone == 'RUIM' %}#ef4444{% else %}#94a3b8{% endif %};"></span>
-                          <span style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 800; color: #0f172a;">
-                            {{ question.percent }}% | {{ question.zone }}
-                          </span>
+                        <span style="display: block; height: 100%; width: {{ question.percent_css }}%; background: {% if question.zone == 'BOM' %}#22c55e{% elif question.zone == 'ATENCAO' %}#f59e0b{% elif question.zone == 'RUIM' %}#ef4444{% else %}#94a3b8{% endif %};"></span>
+                        <span style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 800; color: #0f172a;">
+                          {{ question.percent }}% | {% if question.zone == 'ATENCAO' %}ATENÇÃO{% else %}{{ question.zone }}{% endif %}
+                        </span>
                         </div>
                       </div>
                       <div style="text-align: right; font-size: 0.8rem; font-weight: 700;">
                         <div>{{ question.percent }}%</div>
-                        <div style="color: #64748b;">{{ question.avg }} | {{ question.zone }}</div>
+                      <div style="color: #64748b;">{{ question.avg }} | {% if question.zone == 'ATENCAO' %}ATENÇÃO{% else %}{{ question.zone }}{% endif %}</div>
                       </div>
                     </div>
                   {% endfor %}
@@ -413,6 +413,13 @@
     </div>
   </section>
 </main>
+<div class="report-download-overlay" data-report-download-overlay aria-hidden="true">
+  <div class="report-download-overlay__content">
+    <div class="app-spinner app-spinner--lg" role="status" aria-live="polite"></div>
+    <p>Gerando PDF...</p>
+  </div>
+</div>
+
 <script>
   (function () {
     const boxes = document.querySelectorAll('[data-action-box]');

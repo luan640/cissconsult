@@ -14,6 +14,8 @@
           <th>Data/Hora</th>
           <th>Última atualização</th>
           <th>Tipo de denúncia</th>
+          <th>Setor</th>
+          <th>Denúncia</th>
           <th>Totem</th>
           <th>Status</th>
           <th>Ações</th>
@@ -25,6 +27,16 @@
             <td>{{ complaint.created_at|date:"d/m/Y H:i" }}</td>
             <td>{{ complaint.updated_at|date:"d/m/Y H:i" }}</td>
             <td>{{ complaint.complaint_type_label }}</td>
+            <td>
+              <span class="table__truncate table__truncate--sm" title="{{ complaint.department_label|default:'-' }}">
+                {{ complaint.department_label|default:"-" }}
+              </span>
+            </td>
+            <td>
+              <span class="table__truncate" title="{{ complaint.complaint_detail|default:'-' }}">
+                {{ complaint.complaint_detail|default:"-" }}
+              </span>
+            </td>
             <td>{{ complaint.totem.name|default:"-" }}</td>
             <td>
               <span class="status-badge status-badge--{{ complaint.complaint_status|lower }}">
@@ -46,7 +58,7 @@
           </tr>
         {% empty %}
           <tr>
-            <td colspan="6">Nenhuma denuncia registrada.</td>
+            <td colspan="8">Nenhuma denuncia registrada.</td>
           </tr>
         {% endfor %}
       </tbody>

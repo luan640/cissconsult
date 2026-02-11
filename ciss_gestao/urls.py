@@ -17,6 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.contrib.auth.views import LogoutView
 from django.urls import path, include
+from django.conf.urls.static import static
 from django.conf import settings
 
 from .views import (
@@ -45,6 +46,10 @@ from .views import (
     GHEListView,
     GHEOptionsView,
     GHEUpdateView,
+    JobFunctionCreateView,
+    JobFunctionDeleteView,
+    JobFunctionListView,
+    JobFunctionUpdateView,
     MasterDashboardView,
     MasterTechnicalSettingsView,
     DashboardView,
@@ -134,6 +139,10 @@ urlpatterns = [
     path('ghes/new/', GHECreateView.as_view(), name='ghes-create'),
     path('ghes/<int:ghe_id>/edit/', GHEUpdateView.as_view(), name='ghes-update'),
     path('ghes/<int:ghe_id>/delete/', GHEDeleteView.as_view(), name='ghes-delete'),
+    path('job-functions/', JobFunctionListView.as_view(), name='job-functions-list'),
+    path('job-functions/new/', JobFunctionCreateView.as_view(), name='job-functions-create'),
+    path('job-functions/<int:job_function_id>/edit/', JobFunctionUpdateView.as_view(), name='job-functions-update'),
+    path('job-functions/<int:job_function_id>/delete/', JobFunctionDeleteView.as_view(), name='job-functions-delete'),
     path('help-requests/', HelpRequestListView.as_view(), name='help-requests-list'),
     path('help-requests/<int:help_request_id>/edit/', HelpRequestUpdateView.as_view(), name='help-requests-update'),
     path('help-requests/<int:help_request_id>/history/', HelpRequestHistoryView.as_view(), name='help-requests-history'),
@@ -171,5 +180,7 @@ if settings.DEBUG:
     urlpatterns += [
         path('__debug__/', include('debug_toolbar.urls')),
     ]
+    if not getattr(settings, 'USE_S3', False):
+        urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 handler403 = 'ciss_gestao.views.inactive_company'

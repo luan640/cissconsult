@@ -94,6 +94,14 @@
     }
   });
 
+  // Guarantee Cadastros group stays open for GHE/Funcoes routes.
+  if (path.startsWith('/ghes/') || path.startsWith('/job-functions/')) {
+    const group = document.querySelector('[data-menu-group]');
+    if (group) {
+      group.classList.add('is-open');
+    }
+  }
+
   if (isSidebarCollapsed()) {
     closeAllMenuGroups();
   }
@@ -116,6 +124,11 @@
   });
 
   document.addEventListener('click', function (event) {
+    const submenuLink = event.target.closest('.menu__subitem');
+    if (submenuLink && isSidebarCollapsed()) {
+      closeAllMenuGroups();
+      return;
+    }
     if (!isSidebarCollapsed()) {
       return;
     }

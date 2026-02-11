@@ -1,0 +1,83 @@
+<div id="job-functions-table-container" data-table-container>
+  {% if messages %}
+    <section class="stack-gap">
+      {% for message in messages %}
+        <div class="notice{% if message.tags %} notice--{{ message.tags }}{% endif %}">{{ message }}</div>
+      {% endfor %}
+    </section>
+  {% endif %}
+
+  <section class="card card--table">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>GHE(s)</th>
+          <th>Setor(es)</th>
+          <th>Status</th>
+          <th>Acoes</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for job_function in job_functions %}
+          <tr>
+            <td>{{ job_function.name }}</td>
+            <td>
+              {% with ghes=job_function.ghes.all %}
+                {% if ghes %}
+                  {% for ghe in ghes %}
+                    {{ ghe.name }}{% if not forloop.last %}, {% endif %}
+                  {% endfor %}
+                {% else %}
+                  -
+                {% endif %}
+              {% endwith %}
+            </td>
+            <td>
+              {% with departments=job_function.departments.all %}
+                {% if departments %}
+                  {% for department in departments %}
+                    {{ department.name }}{% if not forloop.last %}, {% endif %}
+                  {% endfor %}
+                {% else %}
+                  -
+                {% endif %}
+              {% endwith %}
+            </td>
+            <td>{% if job_function.is_active %}Ativo{% else %}Inativo{% endif %}</td>
+            <td class="table__actions">
+              <button
+                class="btn btn--light btn--sm"
+                type="button"
+                data-open-edit-job-function
+                data-update-url="{% url 'job-functions-update' job_function.id %}"
+                data-name="{{ job_function.name }}"
+                data-ghes="{% for ghe in job_function.ghes.all %}{{ ghe.id }}{% if not forloop.last %},{% endif %}{% endfor %}"
+                data-departments="{% for department in job_function.departments.all %}{{ department.id }}{% if not forloop.last %},{% endif %}{% endfor %}"
+                data-is-active="{% if job_function.is_active %}1{% else %}0{% endif %}"
+              >
+                Editar
+              </button>
+              <form
+                method="post"
+                action="{% url 'job-functions-delete' job_function.id %}"
+                data-job-function-toggle-form
+                onsubmit="return confirm('{% if job_function.is_active %}Desativar{% else %}Ativar{% endif %} esta funcao?');"
+              >
+                {% csrf_token %}
+                <button class="btn {% if job_function.is_active %}btn--danger{% else %}btn--primary{% endif %} btn--sm" type="submit">
+                  {% if job_function.is_active %}Desativar{% else %}Ativar{% endif %}
+                </button>
+              </form>
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="5">Nenhuma funcao cadastrada.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% include "partials/_table_pagination.html" %}
+</div>

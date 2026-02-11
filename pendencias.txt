@@ -18,3 +18,4 @@ não salva estado atual do questionário, caso saia ele retorna para a tela inic
 
 PERGUNTAS (todas com tooltip explicando cada pergunta. Deixando o mais claro possivel e adicionando um exemplo):
 
+Ao criar uma empresa tem um campo chamado "tipo de avaliacao" setor ou ghe, Isso deve ser consultado ao criar a campanha, pois o questionário deve ter: "escolha o ghe" ou "escolha o setor" deve liberar o campo de "funcao" com base nesse campo. 

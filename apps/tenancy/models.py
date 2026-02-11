@@ -1,5 +1,8 @@
 from django.conf import settings
+import os
 from django.core.validators import MinValueValidator, RegexValidator
+from django.utils import timezone
+from django.utils.text import get_valid_filename
 from django.db import models
 from django.db.models import Q
 
@@ -14,13 +17,21 @@ cnpj_validator = RegexValidator(
 
 
 def company_logo_upload_to(instance, filename):
-    return f'companies/{instance.slug}/logo/{filename}'
+    base, ext = os.path.splitext(get_valid_filename(filename))
+    timestamp = timezone.now().strftime('%y%m%d%H%M%S')
+    return f'companies/{instance.slug}/logo/{timestamp}{ext.lower()}'
 
 
 class Company(models.Model):
     name = models.CharField(max_length=255)
     legal_name = models.CharField(max_length=255, blank=True)
     legal_representative_name = models.CharField(max_length=255, blank=True)
+    responsible_email = models.EmailField(max_length=255, blank=True)
+    assessment_type = models.CharField(max_length=20, blank=True)
+    cnae = models.CharField(max_length=20, blank=True)
+    risk_level = models.PositiveSmallIntegerField(default=1)
+    unit_type = models.CharField(max_length=20, blank=True)
+    unit_name = models.CharField(max_length=255, blank=True)
     cnpj = models.CharField(
         max_length=14,
         unique=True,
@@ -43,6 +54,7 @@ class Company(models.Model):
     address_zipcode = models.CharField(max_length=10, blank=True)
     logo = models.ImageField(
         upload_to=company_logo_upload_to,
+        max_length=255,
         blank=True,
         null=True,
     )

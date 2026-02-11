@@ -8,6 +8,8 @@ from reportlab.lib import colors
 from reportlab.lib.utils import ImageReader
 from reportlab.graphics.shapes import Drawing, Rect, String, Path, Circle
 import os
+import re
+import unicodedata
 from django.core.files.storage import default_storage
 
 def build_campaign_report_pdf(report_context: dict) -> bytes:
@@ -117,6 +119,23 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
         if percent >= 40:
             return colors.HexColor("#f59e0b")
         return colors.HexColor("#ef4444")
+
+    def normalize_zone_label(zone):
+        if not zone:
+            return "Sem dados"
+        zone_text = str(zone).strip()
+        zone_upper = zone_text.upper()
+        zone_ascii = "".join(
+            ch for ch in unicodedata.normalize("NFKD", zone_upper) if not unicodedata.combining(ch)
+        )
+        zone_ascii = re.sub(r"[^A-Z]", "", zone_ascii)
+        if zone_ascii.startswith("ATEN") and zone_ascii.endswith("AO"):
+            return "ATENÇÃO"
+        if "BOM" in zone_ascii:
+            return "BOM"
+        if "RUIM" in zone_ascii:
+            return "RUIM"
+        return zone_text
 
     def make_bar(percent, width, height, fill_color, label_text=None, show_container=True):
         d = Drawing(width, height)
@@ -917,11 +936,12 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
                     q_percent = q.get("percent", 0)
                     q_avg = q.get("avg", 0)
                     zone = q.get("zone", "Sem dados")
-                    if zone == "BOM":
+                    zone_label = normalize_zone_label(zone)
+                    if zone_label == "BOM":
                         q_color = colors.HexColor("#22c55e")
-                    elif zone == "ATENÇÃO":
+                    elif zone_label == "ATENÇÃO":
                         q_color = colors.HexColor("#f59e0b")
-                    elif zone == "RUIM":
+                    elif zone_label == "RUIM":
                         q_color = colors.HexColor("#ef4444")
                     else:
                         q_color = colors.HexColor("#94a3b8")
@@ -948,7 +968,7 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
                         )
                     )
                     question_right = Table(
-                        [[make_bar(q_percent, question_bar_width, 18, q_color, f"{q_percent}% | {zone}"), score_cell]],
+                        [[make_bar(q_percent, question_bar_width, 18, q_color, f"{q_percent}% | {zone_label}"), score_cell]],
                         colWidths=[question_bar_width, 60],
                     )
                     question_right.setStyle(
@@ -999,11 +1019,12 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
                         q_percent = q.get("percent", 0)
                         q_avg = q.get("avg", 0)
                         zone = q.get("zone", "Sem dados")
-                        if zone == "BOM":
+                        zone_label = normalize_zone_label(zone)
+                        if zone_label == "BOM":
                             q_color = colors.HexColor("#22c55e")
-                        elif zone == "ATENÇÃO":
+                        elif zone_label == "ATENÇÃO":
                             q_color = colors.HexColor("#f59e0b")
-                        elif zone == "RUIM":
+                        elif zone_label == "RUIM":
                             q_color = colors.HexColor("#ef4444")
                         else:
                             q_color = colors.HexColor("#94a3b8")
@@ -1030,7 +1051,7 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
                             )
                         )
                         question_right = Table(
-                            [[make_bar(q_percent, question_bar_width, 18, q_color, f"{q_percent}% | {zone}"), score_cell]],
+                            [[make_bar(q_percent, question_bar_width, 18, q_color, f"{q_percent}% | {zone_label}"), score_cell]],
                             colWidths=[question_bar_width, 60],
                         )
                         question_right.setStyle(
@@ -1457,3 +1478,6 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
     pdf = buffer.getvalue()
     buffer.close()
     return pdf
+
+
+

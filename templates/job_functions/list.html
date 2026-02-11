@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Funcoes | PLATAFORMA NR-1{% endblock %}
+
+{% block extra_head %}
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}" />
+{% endblock %}
+
+{% block content %}
+<div class="app-layout">
+  {% include "partials/sidebar.html" with active_menu="job_functions" can_manage_access=True %}
+
+  <main class="content" data-page="job-functions">
+    <header class="content__header">
+      <div>
+        <h1 class="content__title">Funcoes</h1>
+        <p class="content__subtitle">Cadastre funcoes ligadas a GHE e/ou setor.</p>
+      </div>
+      <button class="btn btn--primary" type="button" data-open-modal="create-job-function-modal">Nova funcao</button>
+    </header>
+
+    <section class="card card--full table-filters-card">
+      <p class="card__label">Filtros</p>
+      <form method="get" action="{% url 'job-functions-list' %}" class="period-filter table-filters-form" data-job-functions-filter-form data-ajax-table-form data-table-container-id="job-functions-table-container">
+        <div class="filter-field">
+          <label for="job_functions_name">Nome</label>
+          <input id="job_functions_name" type="text" name="name" value="{{ search_name }}" placeholder="Buscar por nome" />
+        </div>
+        <div class="filter-field">
+          <label for="job_functions_status">Status</label>
+          <select id="job_functions_status" name="status">
+            <option value="">Todos</option>
+            <option value="active"{% if selected_status == 'active' %} selected{% endif %}>Ativo</option>
+            <option value="inactive"{% if selected_status == 'inactive' %} selected{% endif %}>Inativo</option>
+          </select>
+        </div>
+        <button class="btn btn--primary" type="submit">Filtrar</button>
+        <a class="btn btn--light" href="{% url 'job-functions-list' %}" data-job-functions-clear-filters>Limpar</a>
+      </form>
+    </section>
+
+    {% include "job_functions/_table_container.html" %}
+
+    <div class="modal-backdrop" data-modal="create-job-function-modal" aria-hidden="true">
+      <div class="modal-card">
+        <div class="modal-card__header">
+          <h2>Nova funcao</h2>
+          <button type="button" class="modal-close" data-close-modal>&times;</button>
+        </div>
+        <form method="post" action="{% url 'job-functions-create' %}" class="form-grid modal-form" data-job-function-create-form>
+          {% csrf_token %}
+          <div class="form-field form-field--full">
+            <label for="create_job_function_name">Nome</label>
+            <input id="create_job_function_name" name="name" required maxlength="150" />
+          </div>
+          <div class="form-field">
+            <label for="create_job_function_ghes">GHE(s)</label>
+            <select id="create_job_function_ghes" name="ghes" multiple>
+              {% for ghe in ghes %}
+                <option value="{{ ghe.id }}">{{ ghe.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="create_job_function_departments">Setor(es)</label>
+            <select id="create_job_function_departments" name="departments" multiple>
+              {% for department in departments %}
+                <option value="{{ department.id }}">{{ department.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn--primary" type="submit">Salvar</button>
+            <button class="btn btn--light" type="button" data-close-modal>Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="modal-backdrop" data-modal="edit-job-function-modal" aria-hidden="true">
+      <div class="modal-card">
+        <div class="modal-card__header">
+          <h2>Editar funcao</h2>
+          <button type="button" class="modal-close" data-close-modal>&times;</button>
+        </div>
+        <form method="post" action="" class="form-grid modal-form" data-edit-job-function-form>
+          {% csrf_token %}
+          <div class="form-field form-field--full">
+            <label for="edit_job_function_name">Nome</label>
+            <input id="edit_job_function_name" name="name" required maxlength="150" />
+          </div>
+          <div class="form-field">
+            <label for="edit_job_function_ghes">GHE(s)</label>
+            <select id="edit_job_function_ghes" name="ghes" multiple>
+              {% for ghe in ghes %}
+                <option value="{{ ghe.id }}">{{ ghe.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-field">
+            <label for="edit_job_function_departments">Setor(es)</label>
+            <select id="edit_job_function_departments" name="departments" multiple>
+              {% for department in departments %}
+                <option value="{{ department.id }}">{{ department.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-field form-field--check">
+            <label for="edit_job_function_active">
+              <input id="edit_job_function_active" type="checkbox" name="is_active" value="1" data-edit-job-function-active />
+              Ativo
+            </label>
+          </div>
+          <div class="form-actions">
+            <button class="btn btn--primary" type="submit">Salvar</button>
+            <button class="btn btn--light" type="button" data-close-modal>Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="{% static 'js/dashboard_sidebar.js' %}"></script>
+  <script src="{% static 'js/table_async.js' %}"></script>
+  <script src="{% static 'js/job_functions_modals.js' %}"></script>
+{% endblock %}
