@@ -253,13 +253,18 @@
   };
 
   const setButtonLoading = (button) => {
-    if (!button || button.disabled) return null;
-    const original = button.textContent || '';
+    if (!button) return null;
+    const existingOriginal = button.dataset ? button.dataset.originalText : '';
+    const original = existingOriginal || button.textContent || '';
+    if (button.dataset && !button.dataset.originalText) {
+      button.dataset.originalText = original;
+    }
     button.textContent = button.getAttribute('data-loading-text') || 'Salvando...';
     button.disabled = true;
     button.setAttribute('aria-busy', 'true');
     return () => {
-      button.textContent = original;
+      const restored = button.dataset && button.dataset.originalText ? button.dataset.originalText : original;
+      button.textContent = restored;
       button.disabled = false;
       button.removeAttribute('aria-busy');
     };

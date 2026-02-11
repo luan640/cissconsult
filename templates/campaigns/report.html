@@ -246,9 +246,9 @@
                     <div>
                       <div style="font-size: 0.82rem; color: #334155;">{{ question.text }}</div>
                       <div style="height: 22px; border-radius: 999px; background: #e2e8f0; border: 1px solid #cbd5e1; overflow: hidden; margin-top: 6px; position: relative;">
-                        <span style="display: block; height: 100%; width: {{ question.percent_css }}%; background: {% if question.zone == 'BOM' %}#22c55e{% elif question.zone == 'ATENCAO' %}#f59e0b{% elif question.zone == 'RUIM' %}#ef4444{% else %}#94a3b8{% endif %};"></span>
+                        <span style="display: block; height: 100%; width: {{ question.percent_css }}%; background: {% if question.zone == 'BOM' %}#22c55e{% elif question.zone == 'ATENÇÃO' %}#f59e0b{% elif question.zone == 'RUIM' %}#ef4444{% else %}#94a3b8{% endif %};"></span>
                         <span style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 800; color: #0f172a;">
-                          {{ question.percent }}% | {% if question.zone == 'ATENCAO' %}ATENÇÃO{% else %}{{ question.zone }}{% endif %}
+                          {{ question.percent }}% | {% if question.zone == 'ATENÇÃO' %}ATENÇÃO{% else %}{{ question.zone }}{% endif %}
                         </span>
                       </div>
                     </div>
@@ -273,15 +273,15 @@
                       <div>
                         <div style="font-size: 0.82rem; color: #334155;">{{ question.text }}</div>
                         <div style="height: 22px; border-radius: 999px; background: #e2e8f0; border: 1px solid #cbd5e1; overflow: hidden; margin-top: 6px; position: relative;">
-                        <span style="display: block; height: 100%; width: {{ question.percent_css }}%; background: {% if question.zone == 'BOM' %}#22c55e{% elif question.zone == 'ATENCAO' %}#f59e0b{% elif question.zone == 'RUIM' %}#ef4444{% else %}#94a3b8{% endif %};"></span>
+                        <span style="display: block; height: 100%; width: {{ question.percent_css }}%; background: {% if question.zone == 'BOM' %}#22c55e{% elif question.zone == 'ATENÇÃO' %}#f59e0b{% elif question.zone == 'RUIM' %}#ef4444{% else %}#94a3b8{% endif %};"></span>
                         <span style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 0.68rem; font-weight: 800; color: #0f172a;">
-                          {{ question.percent }}% | {% if question.zone == 'ATENCAO' %}ATENÇÃO{% else %}{{ question.zone }}{% endif %}
+                          {{ question.percent }}% | {% if question.zone == 'ATENÇÃO' %}ATENÇÃO{% else %}{{ question.zone }}{% endif %}
                         </span>
                         </div>
                       </div>
                       <div style="text-align: right; font-size: 0.8rem; font-weight: 700;">
                         <div>{{ question.percent }}%</div>
-                      <div style="color: #64748b;">{{ question.avg }} | {% if question.zone == 'ATENCAO' %}ATENÇÃO{% else %}{{ question.zone }}{% endif %}</div>
+                      <div style="color: #64748b;">{{ question.avg }} | {% if question.zone == 'ATENÇÃO' %}ATENÇÃO{% else %}{{ question.zone }}{% endif %}</div>
                       </div>
                     </div>
                   {% endfor %}
@@ -403,6 +403,7 @@
           <input type="text" data-attachment-name placeholder="Título do anexo" style="height: 32px; border-radius: 6px; border: 1px solid #cbd5e1; padding: 0 10px; font-size: 0.85rem;" />
           <input type="text" data-attachment-desc placeholder="Descrição (opcional)" style="height: 32px; border-radius: 6px; border: 1px solid #cbd5e1; padding: 0 10px; font-size: 0.85rem;" />
           <input type="file" data-attachment-file style="height: 32px; border-radius: 6px; border: 1px solid #cbd5e1; padding: 3px 6px; font-size: 0.85rem; background: #ffffff;" />
+          <small data-attachment-file-label style="color:#64748b; font-size:0.78rem;">Nenhum arquivo escolhido</small>
           <input type="hidden" data-attachment-stored />
           <input type="hidden" data-attachment-original />
           <div style="display: flex; justify-content: flex-end;">
@@ -420,6 +421,31 @@
   </div>
 </div>
 
+<script>
+  (function () {
+    const downloadLink = document.querySelector('[data-report-download]');
+    const overlay = document.querySelector('[data-report-download-overlay]');
+    if (downloadLink && overlay) {
+      const resetDownloadState = () => {
+        overlay.classList.remove('is-visible');
+        overlay.setAttribute('aria-hidden', 'true');
+        downloadLink.textContent = 'Baixar PDF';
+        downloadLink.classList.remove('is-disabled');
+        downloadLink.removeAttribute('aria-busy');
+      };
+      downloadLink.addEventListener('click', () => {
+        overlay.classList.add('is-visible');
+        overlay.setAttribute('aria-hidden', 'false');
+        downloadLink.textContent = 'Gerando PDF...';
+        downloadLink.classList.add('is-disabled');
+        downloadLink.setAttribute('aria-busy', 'true');
+        window.setTimeout(resetDownloadState, 10000);
+      });
+      window.addEventListener('focus', resetDownloadState);
+      window.addEventListener('pageshow', resetDownloadState);
+    }
+  })();
+</script>
 <script>
   (function () {
     const boxes = document.querySelectorAll('[data-action-box]');
@@ -474,18 +500,25 @@
       const fileInput = fragment.querySelector('[data-attachment-file]');
       const storedInput = fragment.querySelector('[data-attachment-stored]');
       const originalInput = fragment.querySelector('[data-attachment-original]');
+      const fileLabel = fragment.querySelector('[data-attachment-file-label]');
       const removeBtn = fragment.querySelector('[data-attachment-remove]');
 
       nameInput.value = item.title || '';
       descInput.value = item.description || '';
       storedInput.value = item.stored_path || '';
       originalInput.value = item.original_name || '';
+      if (fileLabel) {
+        fileLabel.textContent = item.original_name || 'Nenhum arquivo escolhido';
+      }
 
       fileInput.addEventListener('change', () => {
         const file = fileInput.files && fileInput.files[0];
         if (!file) return;
         const stamped = `${nowStamp()}_${file.name}`;
         nameInput.value = stamped;
+        if (fileLabel) {
+          fileLabel.textContent = file.name;
+        }
       });
 
       removeBtn.addEventListener('click', () => row.remove());

@@ -10,6 +10,11 @@ from reportlab.graphics.shapes import Drawing, Rect, String, Path, Circle
 import os
 import re
 import unicodedata
+from io import BytesIO
+from urllib.parse import urlparse
+from urllib.request import urlopen, build_opener, ProxyHandler
+from urllib.error import URLError, HTTPError
+from django.conf import settings
 from django.core.files.storage import default_storage
 
 def build_campaign_report_pdf(report_context: dict) -> bytes:
@@ -1009,84 +1014,85 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
         if ghe_questions:
             for ghe in ghe_questions:
                 qs = ghe.get("questions", [])
-                for chunk in chunk_list(qs, 6):
-                    block = [
-                        Paragraph(f"{domain.get('label', '').upper()} (Análise por Setor)", chart_title_big),
-                        Paragraph(f"SETOR: {ghe.get('name', '-')}", chart_subtitle_big),
-                        Spacer(1, 2),
-                    ]
-                    for q in chunk:
-                        q_percent = q.get("percent", 0)
-                        q_avg = q.get("avg", 0)
-                        zone = q.get("zone", "Sem dados")
-                        zone_label = normalize_zone_label(zone)
-                        if zone_label == "BOM":
-                            q_color = colors.HexColor("#22c55e")
-                        elif zone_label == "ATENÇÃO":
-                            q_color = colors.HexColor("#f59e0b")
-                        elif zone_label == "RUIM":
-                            q_color = colors.HexColor("#ef4444")
-                        else:
-                            q_color = colors.HexColor("#94a3b8")
+                if not qs:
+                    continue
+                block = [
+                    Paragraph(f"{domain.get('label', '').upper()} (Análise por Setor)", chart_title_big),
+                    Paragraph(f"SETOR: {ghe.get('name', '-')}", chart_subtitle_big),
+                    Spacer(1, 2),
+                ]
+                for q in qs:
+                    q_percent = q.get("percent", 0)
+                    q_avg = q.get("avg", 0)
+                    zone = q.get("zone", "Sem dados")
+                    zone_label = normalize_zone_label(zone)
+                    if zone_label == "BOM":
+                        q_color = colors.HexColor("#22c55e")
+                    elif zone_label == "ATENÇÃO":
+                        q_color = colors.HexColor("#f59e0b")
+                    elif zone_label == "RUIM":
+                        q_color = colors.HexColor("#ef4444")
+                    else:
+                        q_color = colors.HexColor("#94a3b8")
 
-                        question_bar_width = max(80, bar_width - 90)
-                        question_table_left = max(120, bar_width - 20)
-                        question_left = [
-                            Paragraph(q.get("text", "-"), chart_text_left),
-                        ]
-                        score_cell = Table(
-                            [[Paragraph(f"{q_avg}", chart_text_center)], [Paragraph("Score", chart_small_center)]],
-                            colWidths=[60],
+                    question_bar_width = max(80, bar_width - 90)
+                    question_table_left = max(120, bar_width - 20)
+                    question_left = [
+                        Paragraph(q.get("text", "-"), chart_text_left),
+                    ]
+                    score_cell = Table(
+                        [[Paragraph(f"{q_avg}", chart_text_center)], [Paragraph("Score", chart_small_center)]],
+                        colWidths=[60],
+                    )
+                    score_cell.setStyle(
+                        TableStyle(
+                            [
+                                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                            ]
                         )
-                        score_cell.setStyle(
-                            TableStyle(
-                                [
-                                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                                    ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-                                    ("LEFTPADDING", (0, 0), (-1, -1), 0),
-                                    ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-                                    ("TOPPADDING", (0, 0), (-1, -1), 0),
-                                    ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-                                ]
-                            )
+                    )
+                    question_right = Table(
+                        [[make_bar(q_percent, question_bar_width, 18, q_color, f"{q_percent}% | {zone_label}"), score_cell]],
+                        colWidths=[question_bar_width, 60],
+                    )
+                    question_right.setStyle(
+                        TableStyle(
+                            [
+                                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                                ("RIGHTPADDING", (0, 0), (0, 0), 8),
+                                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                            ]
                         )
-                        question_right = Table(
-                            [[make_bar(q_percent, question_bar_width, 18, q_color, f"{q_percent}% | {zone_label}"), score_cell]],
-                            colWidths=[question_bar_width, 60],
+                    )
+                    question_table = Table(
+                        [[question_left, question_right]],
+                        colWidths=[question_table_left, question_bar_width + 60],
+                        hAlign="LEFT",
+                    )
+                    question_table.setStyle(
+                        TableStyle(
+                            [
+                                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                                ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                                ("RIGHTPADDING", (0, 0), (0, 0), 8),
+                                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                            ]
                         )
-                        question_right.setStyle(
-                            TableStyle(
-                                [
-                                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                                    ("ALIGN", (0, 0), (-1, -1), "CENTER"),
-                                    ("LEFTPADDING", (0, 0), (-1, -1), 0),
-                                    ("RIGHTPADDING", (0, 0), (0, 0), 8),
-                                    ("RIGHTPADDING", (0, 0), (-1, -1), 0),
-                                    ("TOPPADDING", (0, 0), (-1, -1), 0),
-                                    ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-                                ]
-                            )
-                        )
-                        question_table = Table(
-                            [[question_left, question_right]],
-                            colWidths=[question_table_left, question_bar_width + 60],
-                            hAlign="LEFT",
-                        )
-                        question_table.setStyle(
-                            TableStyle(
-                                [
-                                    ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                                    ("ALIGN", (0, 0), (-1, -1), "LEFT"),
-                                    ("RIGHTPADDING", (0, 0), (0, 0), 8),
-                                    ("TOPPADDING", (0, 0), (-1, -1), 0),
-                                    ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
-                                ]
-                            )
-                        )
-                        block.append(question_table)
-                    story.extend(block)
-                    story.append(Spacer(1, 6))
-                    story.append(Spacer(1, 6))
+                    )
+                    block.append(question_table)
+                story.extend(block)
+                story.append(Spacer(1, 6))
+                story.append(Spacer(1, 6))
 
     # 6. CONCLUSOES E RECOMENDACOES PRELIMINARES
     story.append(PageBreak())
@@ -1443,6 +1449,7 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
             description = attachment.get("description") or ""
             original_name = attachment.get("original_name") or ""
             stored_path = attachment.get("stored_path") or ""
+            stored_name = attachment.get("stored_name") or ""
             line = f"<b>{title}</b>"
             if description:
                 line += f" - {description}"
@@ -1451,15 +1458,73 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
             story.append(Paragraph(line, body_style))
             story.append(Spacer(1, 4))
 
-            if stored_path:
-                _, ext = os.path.splitext(stored_path.lower())
+            if stored_path or stored_name:
+                campaign_uuid = report_context.get("campaign_uuid") or ""
+                normalized_path = stored_path.strip()
+                if stored_name and campaign_uuid:
+                    normalized_path = f"report_attachments/{campaign_uuid}/{stored_name}"
+                public_url = getattr(settings, 'AWS_S3_PUBLIC_URL', '').strip().rstrip('/')
+                if public_url and normalized_path.startswith(public_url):
+                    normalized_path = normalized_path[len(public_url):]
+                if '://' in normalized_path:
+                    try:
+                        parsed = urlparse(normalized_path)
+                        normalized_path = parsed.path or ''
+                    except Exception:
+                        normalized_path = stored_path
+                normalized_path = normalized_path.lstrip('/')
+                for marker in (
+                    'storage/v1/object/public/',
+                    'storage/v1/object/',
+                    'storage/v1/s3/',
+                ):
+                    if marker in normalized_path:
+                        normalized_path = normalized_path.split(marker, 1)[1]
+                        break
+                bucket = getattr(settings, 'AWS_STORAGE_BUCKET_NAME', '').strip('/')
+                if bucket and normalized_path.startswith(bucket + '/'):
+                    normalized_path = normalized_path[len(bucket) + 1:]
+                if stored_name and campaign_uuid and not normalized_path.startswith('report_attachments/'):
+                    normalized_path = f"report_attachments/{campaign_uuid}/{stored_name}"
+                _, ext = os.path.splitext(normalized_path.lower())
                 if ext in image_exts:
                     try:
-                        if os.path.exists(stored_path):
-                            img = Image(stored_path)
+                        if os.path.exists(normalized_path):
+                            img = Image(normalized_path)
                         else:
-                            with default_storage.open(stored_path, 'rb') as handle:
-                                img = Image(ImageReader(handle))
+                            try:
+                                with default_storage.open(normalized_path, 'rb') as handle:
+                                    img = Image(ImageReader(handle))
+                            except Exception:
+                                public_url = getattr(settings, 'AWS_S3_PUBLIC_URL', '').strip().rstrip('/')
+                                bucket = getattr(settings, 'AWS_STORAGE_BUCKET_NAME', '').strip('/')
+                                if public_url and bucket:
+                                    object_url = f"{public_url}/{bucket}/{normalized_path.lstrip('/')}"
+                                    print(f"[report_pdf] Loading attachment from URL: {object_url}")
+                                    try:
+                                        opener = build_opener(ProxyHandler({}))
+                                        response = opener.open(object_url, timeout=15)
+                                        content_type = response.headers.get('Content-Type', '')
+                                        print(
+                                            f"[report_pdf] URL status: {getattr(response, 'status', 'unknown')} "
+                                            f"content-type: {content_type}"
+                                        )
+                                        data = response.read()
+                                        # try:
+                                        #     from PIL import Image as PILImage
+                                        #     pil_img = PILImage.open(BytesIO(data)).convert('RGB')
+                                        #     img = Image(ImageReader(pil_img))
+                                        # except Exception:
+                                        #     img = Image(ImageReader(BytesIO(data)))
+                                        image_stream = BytesIO(data)
+                                        img = Image(image_stream)
+                                        print("IMG WIDTH:", img.imageWidth)
+                                        print("IMG HEIGHT:", img.imageHeight)
+                                    except (HTTPError, URLError, OSError) as fetch_err:
+                                        print(f"[report_pdf] Failed to fetch attachment: {fetch_err}")
+                                        raise
+                                else:
+                                    raise
                         max_width = doc.width
                         max_height = doc.height * 0.45
                         img_width, img_height = img.imageWidth, img.imageHeight
@@ -1474,6 +1539,7 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
                         story.append(Spacer(1, 4))
     else:
         story.append(Paragraph("Nenhum anexo informado.", body_style))
+    
     doc.build(story)
     pdf = buffer.getvalue()
     buffer.close()

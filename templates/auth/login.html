@@ -19,7 +19,7 @@
         <p class="auth-brand__name">PLATAFORMA NR-1</p>
       </div>
       <h1 class="auth-title">Entrar</h1>
-      <p>Use seu usuario interno para acessar o painel.</p>
+      <p class="auth-subtitle">Insira suas credenciais para acessar sua conta.</p>
     </header>
 
     {% if form.errors %}
@@ -36,7 +36,14 @@
         <label for="id_password">Senha</label>
         {{ form.password }}
       </div>
-      <button type="submit" class="auth-submit" data-loading-text="Acessando...">Acessar</button>
+      <div class="auth-row">
+        <label class="auth-remember">
+          <input type="checkbox" name="remember_me" />
+          <span>Lembrar-me</span>
+        </label>
+        <a class="auth-link" href="#" aria-disabled="true">Esqueci minha senha</a>
+      </div>
+      <button type="submit" class="auth-submit" data-loading-text="Acessando...">Entrar</button>
       {% if next %}
         <input type="hidden" name="next" value="{{ next }}" />
       {% endif %}

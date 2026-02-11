@@ -3,6 +3,7 @@ import json
 import os
 import re
 from pathlib import Path
+from urllib.parse import urlparse
 from django.conf import settings
 from django import forms
 from django.contrib import messages
@@ -160,6 +161,7 @@ class EmailAuthenticationForm(AuthenticationForm):
             attrs={
                 'autofocus': True,
                 'autocomplete': 'email',
+                'placeholder': 'E-mail',
             }
         ),
     )
@@ -168,6 +170,15 @@ class EmailAuthenticationForm(AuthenticationForm):
         **AuthenticationForm.error_messages,
         'invalid_login': 'E-mail ou senha invalidos.',
     }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['password'].widget.attrs.update(
+            {
+                'autocomplete': 'current-password',
+                'placeholder': 'Senha',
+            }
+        )
 
     def clean(self):
         email = (self.cleaned_data.get('username') or '').strip().lower()
@@ -1889,7 +1900,7 @@ class CampaignReportView(MasterRequiredMixin, View):
         if percent >= 75:
             return 'BOM'
         if percent >= 40:
-            return 'ATENCAO'
+            return 'ATENÇÃO'
         return 'RUIM'
 
     @staticmethod
@@ -1899,7 +1910,7 @@ class CampaignReportView(MasterRequiredMixin, View):
         if rate >= 75:
             return 'Bom'
         if rate >= 40:
-            return 'Atencao'
+            return 'Atenção'
         return 'Critico'
 
 
@@ -2001,6 +2012,10 @@ class CampaignReportSaveView(MasterRequiredMixin, View):
                 if file_index is not None:
                     uploaded_file = request.FILES.get(f'attachments_file_{file_index}')
                 stored_path = (attachment.get('stored_path') or '').strip()
+                if stored_path:
+                    if '://' in stored_path:
+                        stored_path = urlparse(stored_path).path
+                    stored_path = stored_path.lstrip('/')
                 stored_name = (attachment.get('stored_name') or '').strip()
                 original_name = (attachment.get('original_name') or '').strip()
                 title = (attachment.get('title') or '').strip()
@@ -2008,12 +2023,17 @@ class CampaignReportSaveView(MasterRequiredMixin, View):
 
                 if uploaded_file:
                     timestamp = timezone.now().strftime('%Y%m%d_%H%M%S')
-                    safe_name = get_valid_filename(uploaded_file.name)
-                    stored_name = f"{timestamp}_{safe_name}"
-                    stored_path = f"report_attachments/{campaign.uuid}/{stored_name}"
                     original_name = uploaded_file.name
+                    base_name = Path(original_name).stem
+                    extension = Path(original_name).suffix.lower()
+                    safe_base = slugify(base_name) or uuid4().hex
+                    safe_base = safe_base.strip('-_')[:80] or uuid4().hex
+                    safe_name = f"{safe_base}{extension}"
+                    stored_name = f"{timestamp}_{safe_name}"[:180]
+                    stored_path = f"report_attachments/{campaign.uuid}/{stored_name}"
                     if not title:
                         title = f"{timestamp}_{safe_name}"
+                    print(f"[report] saving attachment key: {stored_path} (len={len(stored_path)})")
                     default_storage.save(stored_path, uploaded_file)
 
                 if title or description or stored_path or original_name:
@@ -2088,11 +2108,12 @@ class CampaignReportPdfView(MasterRequiredMixin, View):
         ).order_by('sort_order', 'name')
 
         report_context = {
+            'campaign_uuid': str(campaign.uuid),
             'company_name': company.name or '-',
             'company_cnpj': company.cnpj or '-',
             'company_address': company_address,
-            'company_cnae': '-',
-            'company_risk': '-',
+            'company_cnae': company.cnae or '-',
+            'company_risk': f"Grau {company.risk_level}" if company.risk_level else '-',
             'company_ghes': ghes_label,
             'responses_count': responses_qs.count(),
             'evaluation_date': evaluation_date,

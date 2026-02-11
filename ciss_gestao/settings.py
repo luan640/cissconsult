@@ -193,32 +193,47 @@ if USE_S3:
     AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY', '')
     AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME', '')
     AWS_S3_ENDPOINT_URL = os.getenv('AWS_S3_ENDPOINT_URL', '')
-    if AWS_S3_ENDPOINT_URL.endswith('/storage/v1/object/public'):
-        AWS_S3_ENDPOINT_URL = AWS_S3_ENDPOINT_URL.replace('/storage/v1/object/public', '/storage/v1/s3')
     AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME', '')
     AWS_S3_ADDRESSING_STYLE = os.getenv('AWS_S3_ADDRESSING_STYLE', 'path')
     AWS_S3_SIGNATURE_VERSION = os.getenv('AWS_S3_SIGNATURE_VERSION', 's3v4')
-    AWS_S3_FILE_OVERWRITE = False
+    AWS_S3_FILE_OVERWRITE = True
     AWS_DEFAULT_ACL = None
     AWS_QUERYSTRING_AUTH = get_bool('AWS_QUERYSTRING_AUTH', False)
 
     AWS_S3_PUBLIC_URL = os.getenv('AWS_S3_PUBLIC_URL', '').strip().rstrip('/')
+    if AWS_S3_ENDPOINT_URL and '/storage/v1/object/' in AWS_S3_ENDPOINT_URL:
+        if not AWS_S3_PUBLIC_URL:
+            AWS_S3_PUBLIC_URL = AWS_S3_ENDPOINT_URL.strip().rstrip('/')
+        AWS_S3_ENDPOINT_URL = AWS_S3_ENDPOINT_URL.replace('/storage/v1/object/public', '/storage/v1/s3')
+        AWS_S3_ENDPOINT_URL = AWS_S3_ENDPOINT_URL.replace('/storage/v1/object', '/storage/v1/s3')
+    if AWS_S3_ENDPOINT_URL and not AWS_S3_PUBLIC_URL:
+        AWS_S3_PUBLIC_URL = AWS_S3_ENDPOINT_URL.strip().rstrip('/')
     if AWS_S3_PUBLIC_URL:
-        AWS_S3_CUSTOM_DOMAIN = AWS_S3_PUBLIC_URL.replace('https://', '').replace('http://', '')
+        custom_domain = AWS_S3_PUBLIC_URL.replace('https://', '').replace('http://', '')
+        if AWS_STORAGE_BUCKET_NAME:
+            custom_domain = f"{custom_domain.rstrip('/')}/{AWS_STORAGE_BUCKET_NAME}"
+        AWS_S3_CUSTOM_DOMAIN = custom_domain
 
     STORAGES = {
         'default': {
             'BACKEND': 'storages.backends.s3boto3.S3Boto3Storage',
+            'OPTIONS': {
+                'file_overwrite': True,
+            },
         },
         'staticfiles': {
             'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
         },
     }
 
-    MEDIA_URL = (AWS_S3_PUBLIC_URL + '/companies/') if AWS_S3_PUBLIC_URL else (
-        f"{AWS_S3_ENDPOINT_URL.rstrip('/')}/{AWS_STORAGE_BUCKET_NAME}/"
-        if AWS_S3_ENDPOINT_URL and AWS_STORAGE_BUCKET_NAME
-        else MEDIA_URL
+    MEDIA_URL = (
+        f"{AWS_S3_PUBLIC_URL}/{AWS_STORAGE_BUCKET_NAME}/"
+        if AWS_S3_PUBLIC_URL and AWS_STORAGE_BUCKET_NAME
+        else (
+            f"{AWS_S3_ENDPOINT_URL.rstrip('/')}/{AWS_STORAGE_BUCKET_NAME}/"
+            if AWS_S3_ENDPOINT_URL and AWS_STORAGE_BUCKET_NAME
+            else MEDIA_URL
+        )
     )
 
 INTERNAL_IPS = [
