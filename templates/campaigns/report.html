@@ -49,6 +49,78 @@
       font-size: 0.95rem;
       color: #334155;
     }
+    .toggle-switch {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 38px;
+      height: 20px;
+      background: #e2e8f0;
+      border-radius: 999px;
+      border: 1px solid #cbd5e1;
+      position: relative;
+      cursor: pointer;
+      transition: background 0.2s ease, border-color 0.2s ease;
+      outline: none;
+    }
+    .toggle-switch::after {
+      content: '';
+      position: absolute;
+      top: 1px;
+      left: 1px;
+      width: 16px;
+      height: 16px;
+      border-radius: 999px;
+      background: #ffffff;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.25);
+      transition: transform 0.2s ease;
+    }
+    .toggle-switch:checked {
+      background: #22c55e;
+      border-color: #16a34a;
+    }
+    .toggle-switch:checked::after {
+      transform: translateX(18px);
+    }
+    .action-recommendations {
+      display: grid;
+      gap: 8px;
+      margin-top: 8px;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      background: #f8fafc;
+      overflow: hidden;
+    }
+    .action-recommendation {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: center;
+      padding: 10px 12px;
+      border-bottom: 1px solid #e2e8f0;
+      background: #f8fafc;
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+    .action-recommendation:last-child {
+      border-bottom: 0;
+    }
+    .action-recommendation.is-active {
+      background: #eaf2ff;
+      border-color: #c7ddff;
+    }
+    .action-recommendation__text {
+      font-size: 0.82rem;
+      color: #334155;
+      line-height: 1.4;
+    }
+    .action-recommendation__controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #64748b;
+      white-space: nowrap;
+    }
   </style>
   <style media="print">
     @page {
@@ -325,17 +397,36 @@
             <div style="font-weight: 800; color: #92400e;">{{ domain.label|upper }}</div>
             <div style="display: grid; gap: 10px; margin-top: 8px;">
               {% for question in domain.questions %}
-                {% if question.avg < 4.3 %}
+                {% if question.avg_raw < 4.3 %}
                   <div style="border-radius: 10px; border: 1px solid #fed7aa; background: #ffffff; padding: 10px;" data-question-card data-question-text="{{ question.text|escape }}">
                     <div style="font-size: 0.9rem; font-weight: 700; color: #0f172a;">{{ question.text }}</div>
                     <div style="margin-top: 6px; font-size: 0.82rem; color: #7c2d12;">
                       Média: {{ question.avg }} | Nível de Risco: {{ question.zone }} |
-                      {% if question.avg < 4.0 %}
+                      {% if question.avg_raw < 4.0 %}
                         Zona Vermelha
                       {% else %}
                         Zona Amarela
                       {% endif %}
                     </div>
+                    {% if question.actions %}
+                      <div class="action-recommendations">
+                        {% for action in question.actions %}
+                          <div class="action-recommendation" data-action-row>
+                            <div class="action-recommendation__text">{{ action }}</div>
+                            <div class="action-recommendation__controls">
+                              <span data-toggle-label>Não se aplica</span>
+                              <input
+                                type="checkbox"
+                                class="toggle-switch"
+                                data-standard-action-toggle
+                                data-action-text="{{ action|escape }}"
+                                aria-label="Ativar ação"
+                              />
+                            </div>
+                          </div>
+                        {% endfor %}
+                      </div>
+                    {% endif %}
                     <div class="action-box" data-action-box style="margin-top: 6px;">
                       <button type="button" class="action-add" data-action-add style="font-size: 0.8rem; color: #1d4ed8; font-weight: 700; background: transparent; border: 0; padding: 0; cursor: pointer;">
                         + adicionar medida temporária
@@ -595,10 +686,28 @@
     });
   })();
 </script>
-<script>
-  (function () {
-    const saveBtn = document.getElementById('report-save-btn');
-    if (!saveBtn) return;
+  <script>
+    (function () {
+      const syncToggleRow = (input) => {
+        const row = input.closest('[data-action-row]');
+        const label = row ? row.querySelector('[data-toggle-label]') : null;
+        if (!row || !label) return;
+        if (input.checked) {
+          row.classList.add('is-active');
+          label.textContent = 'Aplica';
+        } else {
+          row.classList.remove('is-active');
+          label.textContent = 'Não se aplica';
+        }
+      };
+
+      document.querySelectorAll('[data-standard-action-toggle]').forEach((input) => {
+        syncToggleRow(input);
+        input.addEventListener('change', () => syncToggleRow(input));
+      });
+
+      const saveBtn = document.getElementById('report-save-btn');
+      if (!saveBtn) return;
 
     const csrfToken = document.cookie
       .split('; ')
@@ -636,24 +745,29 @@
           const measures = Array.from(card.querySelectorAll('.action-list input'))
             .map((i) => i.value.trim())
             .filter((v) => v.length > 0);
-        const whenBox = card.querySelector('[data-when-box]');
-        const months = whenBox
-          ? Array.from(whenBox.querySelectorAll('input[data-month]:checked')).map((i) => i.value)
-          : [];
-        const status = {};
-        if (whenBox) {
-          whenBox.querySelectorAll('input[data-status]').forEach((input) => {
-            status[input.getAttribute('data-status')] = input.checked;
-          });
-        }
-        const concludedOn = whenBox?.querySelector('.when-concluded')?.value?.trim() || '';
-        return {
-          question_text: questionText,
-          measures,
-          implantation_months: months,
-          status,
-          concluded_on: concludedOn,
-        };
+          const toggledMeasures = Array.from(card.querySelectorAll('[data-standard-action-toggle]'))
+            .filter((input) => input.checked)
+            .map((input) => (input.getAttribute('data-action-text') || '').trim())
+            .filter((v) => v.length > 0);
+          const merged = Array.from(new Set([...toggledMeasures, ...measures]));
+          const whenBox = card.querySelector('[data-when-box]');
+          const months = whenBox
+            ? Array.from(whenBox.querySelectorAll('input[data-month]:checked')).map((i) => i.value)
+            : [];
+          const status = {};
+          if (whenBox) {
+            whenBox.querySelectorAll('input[data-status]').forEach((input) => {
+              status[input.getAttribute('data-status')] = input.checked;
+            });
+          }
+          const concludedOn = whenBox?.querySelector('.when-concluded')?.value?.trim() || '';
+          return {
+            question_text: questionText,
+            measures: merged,
+            implantation_months: months,
+            status,
+            concluded_on: concludedOn,
+          };
         }),
         meta: { reevaluate_months: reevaluateMonths, attachments },
         files,
@@ -709,13 +823,29 @@
 
       const actionList = card.querySelector('.action-list');
       const template = card.querySelector('.action-template');
+      const toggles = Array.from(card.querySelectorAll('[data-standard-action-toggle]'));
       (item.measures || []).forEach((text) => {
+        const normalized = (text || '').trim();
+        if (!normalized) return;
+        const toggle = toggles.find(
+          (input) => (input.getAttribute('data-action-text') || '').trim() === normalized
+        );
+        if (toggle) {
+          toggle.checked = true;
+          const row = toggle.closest('[data-action-row]');
+          const label = row ? row.querySelector('[data-toggle-label]') : null;
+          if (row && label) {
+            row.classList.add('is-active');
+            label.textContent = 'Aplica';
+          }
+          return;
+        }
         const fragment = template.content.cloneNode(true);
         const row = fragment.querySelector('.action-row');
         const input = fragment.querySelector('input');
         const saveBtn = fragment.querySelector('.action-save');
         const removeBtn = fragment.querySelector('.action-remove');
-        input.value = text;
+        input.value = normalized;
         input.readOnly = true;
         input.style.background = '#f8fafc';
         input.style.borderColor = '#bbf7d0';

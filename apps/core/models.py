@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from decimal import Decimal
 from django.db.models import F, Q
 from uuid import uuid4
 
@@ -126,6 +127,13 @@ class CampaignResponse(TenantModel):
         blank=True,
         related_name='campaign_responses',
     )
+    job_function = models.ForeignKey(
+        'JobFunction',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='campaign_responses',
+    )
     responses = models.JSONField(default=dict, blank=True)
     comments = models.TextField(blank=True)
     completed_at = models.DateTimeField(auto_now_add=True)
@@ -179,6 +187,23 @@ class CampaignReportSettings(TenantModel):
                 name='core_campaign_report_settings_unique_campaign',
             ),
         ]
+
+
+class StandardActionPlan(TenantModel):
+    step = models.PositiveSmallIntegerField()
+    question_number = models.PositiveSmallIntegerField()
+    question_text = models.TextField()
+    actions = models.JSONField(default=list, blank=True)
+    trigger_score_lt = models.DecimalField(max_digits=4, decimal_places=2, default=Decimal('4.30'))
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        db_table = 'standard_action_plans'
+        ordering = ['step', 'question_number']
+        unique_together = (('company', 'question_number'),)
+
+    def __str__(self) -> str:
+        return f'{self.question_number}. {self.question_text}'
 
 
 

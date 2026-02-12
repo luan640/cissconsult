@@ -89,6 +89,10 @@
             loadScriptOnce("{% static 'js/master_technical_modals.js' %}");
             loadScriptOnce("{% static 'js/table_async.js' %}");
           }
+          if (page.includes('master-dashboard')) {
+            loadScriptOnce("https://cdn.jsdelivr.net/npm/chart.js");
+            loadScriptOnce("{% static 'js/master_dashboard_charts.js' %}");
+          }
           if (page.includes('dashboard')) {
             loadScriptOnce("{% static 'js/dashboard_charts.js' %}");
             loadScriptOnce("{% static 'js/dashboard_filters.js' %}");

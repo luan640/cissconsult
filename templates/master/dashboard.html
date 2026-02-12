@@ -19,6 +19,89 @@
         grid-template-columns: 1fr;
       }
     }
+    .master-charts {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 16px;
+      margin-top: 18px;
+    }
+    @media (max-width: 960px) {
+      .master-charts {
+        grid-template-columns: 1fr;
+      }
+    }
+    .master-chart-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06);
+      position: relative;
+      min-height: 220px;
+    }
+    .master-chart-title {
+      font-weight: 800;
+      color: #0f172a;
+      margin: 0 0 10px;
+      font-size: 0.98rem;
+    }
+    .master-segment-grid {
+      display: grid;
+      grid-template-columns: 160px 1fr;
+      gap: 12px;
+      align-items: center;
+    }
+    @media (max-width: 520px) {
+      .master-segment-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .master-segment-list {
+      display: grid;
+      gap: 8px;
+    }
+    .master-segment-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 0.82rem;
+      color: #334155;
+    }
+    .master-segment-chip {
+      width: 10px;
+      height: 10px;
+      border-radius: 999px;
+      display: inline-block;
+      margin-right: 8px;
+    }
+    .master-chart-loading {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 16px;
+      font-weight: 700;
+      color: #475569;
+      z-index: 2;
+    }
+    .master-chart-loading.is-visible {
+      display: flex;
+    }
+    .master-spinner {
+      width: 20px;
+      height: 20px;
+      border-radius: 999px;
+      border: 3px solid #cbd5e1;
+      border-top-color: #1d4ed8;
+      animation: masterSpin 0.8s linear infinite;
+    }
+    @keyframes masterSpin {
+      to { transform: rotate(360deg); }
+    }
   </style>
 {% endblock %}
 
@@ -26,7 +109,7 @@
 <div class="app-layout">
   {% include "partials/sidebar.html" with active_menu="master-dashboard" is_master=True %}
 
-  <main class="content">
+  <main class="content" data-page="master-dashboard" data-master-metrics-url="{% url 'master-metrics' %}">
     <header class="content__header">
       <div>
         <h1 class="content__title">Painel master</h1>
@@ -65,11 +148,6 @@
         <p class="card__value">{{ active_companies }}</p>
       </article>
       <article class="card">
-        <p class="card__label">Novas no periodo</p>
-        <p class="card__value">{{ new_companies_period }}</p>
-        <p class="help-inline">{{ period_start|date:"d/m/Y" }} - {{ period_end|date:"d/m/Y" }}</p>
-      </article>
-      <article class="card">
         <p class="card__label">Campanhas</p>
         <p class="card__value">{{ total_campaigns }}</p>
       </article>
@@ -88,6 +166,30 @@
       <article class="card">
         <p class="card__label">Campanhas encerradas</p>
         <p class="card__value">{{ finished_campaigns }}</p>
+      </article>
+    </section>
+
+    <section class="master-charts">
+      <article class="master-chart-card">
+        <div class="master-chart-loading" data-master-loading="history">
+          <span class="master-spinner" aria-hidden="true"></span>
+          Carregando...
+        </div>
+        <h2 class="master-chart-title">Histórico de avaliações</h2>
+        <canvas id="master-eval-history" height="120"></canvas>
+      </article>
+      <article class="master-chart-card">
+        <div class="master-chart-loading" data-master-loading="segments">
+          <span class="master-spinner" aria-hidden="true"></span>
+          Carregando...
+        </div>
+        <h2 class="master-chart-title">Distribuição por segmento</h2>
+        <div class="master-segment-grid">
+          <div>
+            <canvas id="master-segment-pie" width="160" height="160"></canvas>
+          </div>
+          <div class="master-segment-list" id="master-segment-list"></div>
+        </div>
       </article>
     </section>
   </main>

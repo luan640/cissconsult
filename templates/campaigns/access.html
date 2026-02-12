@@ -254,7 +254,7 @@
       </section>
     {% endif %}
 
-    <form method="post" class="form-grid campaign-form" data-cpf-check-url="{% url 'campaigns-cpf-check' campaign.uuid %}">
+    <form method="post" class="form-grid campaign-form" data-cpf-check-url="{% url 'campaigns-cpf-check' campaign.uuid %}" data-use-ghe="{% if use_ghe %}1{% else %}0{% endif %}">
       {% csrf_token %}
       <input type="hidden" name="step" value="1" />
       <div class="form-field">
@@ -282,21 +282,39 @@
           <option value="outro">Outro</option>
         </select>
       </div>
-      <div class="form-field">
-        <label for="ghe_id"><span class="label-required">GHE</span> <span class="label-meta">*</span></label>
-        <select id="ghe_id" name="ghe_id" required data-ghe-select data-departments-url="{% url 'campaigns-departments' campaign.uuid %}">
-          <option value="">Selecione</option>
-          {% for ghe in ghes %}
-            <option value="{{ ghe.id }}">{{ ghe.name }}</option>
-          {% endfor %}
-        </select>
-      </div>
-      <div class="form-field">
-        <label for="department_id"><span class="label-required">Cargo/Funcao</span> <span class="label-meta">*</span></label>
-        <select id="department_id" name="department_id" required disabled data-department-select>
-          <option value="">Selecione o GHE primeiro</option>
-        </select>
-      </div>
+      {% if use_ghe %}
+        <div class="form-field">
+          <label for="ghe_id"><span class="label-required">GHE</span> <span class="label-meta">*</span></label>
+          <select id="ghe_id" name="ghe_id" required data-ghe-select data-departments-url="{% url 'campaigns-departments' campaign.uuid %}">
+            <option value="">Selecione</option>
+            {% for ghe in ghes %}
+              <option value="{{ ghe.id }}">{{ ghe.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="department_id"><span class="label-required">Cargo/Funcao</span> <span class="label-meta">*</span></label>
+          <select id="department_id" name="department_id" required disabled data-department-select>
+            <option value="">Selecione o GHE primeiro</option>
+          </select>
+        </div>
+      {% else %}
+        <div class="form-field">
+          <label for="department_id"><span class="label-required">Setor</span> <span class="label-meta">*</span></label>
+          <select id="department_id" name="department_id" required data-department-select data-job-functions-url="{% url 'campaigns-job-functions' campaign.uuid %}">
+            <option value="">Selecione</option>
+            {% for dept in departments %}
+              <option value="{{ dept.id }}">{{ dept.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="job_function_id"><span class="label-required">Cargo/Funcao</span> <span class="label-meta">*</span></label>
+          <select id="job_function_id" name="job_function_id" required disabled data-job-function-select>
+            <option value="">Selecione o setor primeiro</option>
+          </select>
+        </div>
+      {% endif %}
       <div class="instructions-card">
         <strong>Instruções:</strong>
         <ul>
@@ -322,8 +340,10 @@
     (function () {
       const gheSelect = document.querySelector('[data-ghe-select]');
       const departmentSelect = document.querySelector('[data-department-select]');
+      const form = document.querySelector('form.campaign-form');
+      const useGhe = form?.getAttribute('data-use-ghe') === '1';
       const departmentsUrl = gheSelect ? gheSelect.getAttribute('data-departments-url') : '';
-      if (!gheSelect || !departmentSelect || !departmentsUrl) return;
+      if (!useGhe || !gheSelect || !departmentSelect || !departmentsUrl) return;
 
       const setDepartmentState = (state) => {
         departmentSelect.disabled = Boolean(state.disabled);
@@ -375,10 +395,70 @@
     (function () {
       const form = document.querySelector('form.campaign-form');
       if (!form) return;
+      const useGhe = form.getAttribute('data-use-ghe') === '1';
+      if (useGhe) return;
+
+      const departmentSelect = form.querySelector('[data-department-select]');
+      const jobFunctionSelect = form.querySelector('[data-job-function-select]');
+      const jobFunctionsUrl = departmentSelect ? departmentSelect.getAttribute('data-job-functions-url') : '';
+      if (!departmentSelect || !jobFunctionSelect || !jobFunctionsUrl) return;
+
+      const setJobFunctionState = (state) => {
+        jobFunctionSelect.disabled = Boolean(state.disabled);
+        jobFunctionSelect.innerHTML = `<option value="">${state.label}</option>`;
+      };
+
+      const loadJobFunctions = async (departmentId) => {
+        if (!departmentId) {
+          setJobFunctionState({ disabled: true, label: 'Selecione o setor primeiro' });
+          return;
+        }
+        setJobFunctionState({ disabled: true, label: 'Carregando...' });
+        let payload = null;
+        try {
+          const response = await fetch(`${jobFunctionsUrl}?department_id=${encodeURIComponent(departmentId)}`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+          });
+          if (!response.ok) throw new Error('request_failed');
+          payload = await response.json();
+        } catch (err) {
+          setJobFunctionState({ disabled: true, label: 'Não foi possível carregar' });
+          return;
+        }
+
+        const jobFunctions = Array.isArray(payload.job_functions) ? payload.job_functions : [];
+        if (!jobFunctions.length) {
+          setJobFunctionState({ disabled: true, label: 'Nenhuma função disponível' });
+          return;
+        }
+        jobFunctionSelect.disabled = false;
+        jobFunctionSelect.innerHTML = [
+          '<option value="">Selecione</option>',
+          ...jobFunctions.map((item) => `<option value="${item.id}">${item.name}</option>`),
+        ].join('');
+      };
+
+      departmentSelect.addEventListener('change', (event) => {
+        loadJobFunctions(event.target.value);
+      });
+
+      if (departmentSelect.value) {
+        loadJobFunctions(departmentSelect.value);
+      } else {
+        setJobFunctionState({ disabled: true, label: 'Selecione o setor primeiro' });
+      }
+    })();
+  </script>
+  <script>
+    (function () {
+      const form = document.querySelector('form.campaign-form');
+      if (!form) return;
+      const useGhe = form.getAttribute('data-use-ghe') === '1';
       const cpfInput = form.querySelector('#cpf');
       const ageInput = form.querySelector('#age');
       const gheSelect = form.querySelector('#ghe_id');
       const departmentSelect = form.querySelector('#department_id');
+      const jobFunctionSelect = form.querySelector('#job_function_id');
       const submitButton = form.querySelector('[data-start-button]');
       const errorEl = form.querySelector('[data-cpf-error]');
       const checkUrl = form.getAttribute('data-cpf-check-url') || '';
@@ -402,15 +482,16 @@
       const setButtonState = () => {
         const cpfDigits = (cpfInput.value || '').replace(/\D/g, '');
         const ageValue = Number(ageInput.value || 0);
-        const gheValue = gheSelect.value || '';
+        const gheValue = gheSelect ? (gheSelect.value || '') : '';
         const departmentValue = departmentSelect.value || '';
-        const basicsOk =
+        const jobFunctionValue = jobFunctionSelect ? (jobFunctionSelect.value || '') : '';
+        const basicsOkBase =
           cpfDigits.length === 11 &&
           Number.isFinite(ageValue) &&
-          ageValue > 0 &&
-          gheValue &&
-          departmentValue &&
-          !departmentSelect.disabled;
+          ageValue > 0;
+        const basicsOk = useGhe
+          ? basicsOkBase && gheValue && departmentValue && !departmentSelect.disabled
+          : basicsOkBase && departmentValue && jobFunctionValue && !jobFunctionSelect.disabled;
         const ready = basicsOk && cpfIsAvailable && !cpfCheckInFlight;
         submitButton.disabled = !ready;
       };
@@ -462,8 +543,13 @@
 
       cpfInput.addEventListener('input', scheduleCpfCheck);
       ageInput.addEventListener('input', setButtonState);
-      gheSelect.addEventListener('change', setButtonState);
+      if (gheSelect) {
+        gheSelect.addEventListener('change', setButtonState);
+      }
       departmentSelect.addEventListener('change', setButtonState);
+      if (jobFunctionSelect) {
+        jobFunctionSelect.addEventListener('change', setButtonState);
+      }
 
       setButtonState();
     })();

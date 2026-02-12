@@ -16,6 +16,7 @@ from django.core.mail import send_mail
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Count
+from django.db.models.functions import TruncMonth
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -59,6 +60,7 @@ from apps.core.models import (
     MoodRecord,
     MoodType,
     Report,
+    StandardActionPlan,
     TechnicalResponsible,
     Totem,
 )
@@ -669,10 +671,6 @@ class MasterRequiredMixin(LoginRequiredMixin):
 class MasterDashboardView(MasterRequiredMixin, View):
     template_name = 'master/dashboard.html'
 
-    @method_decorator(vary_on_headers('Cookie'))
-    @method_decorator(cache_page(30))
-    @method_decorator(vary_on_headers('Cookie'))
-    @method_decorator(cache_page(30))
     def get(self, request):
         return render(request, self.template_name, self._build_context())
 
@@ -694,12 +692,10 @@ class MasterDashboardView(MasterRequiredMixin, View):
     @staticmethod
     def _build_context():
         today = timezone.localdate()
-        period_start = today - timedelta(days=29)
         companies_qs = Company.objects.order_by('name')
         active_companies_qs = companies_qs.filter(is_active=True)
         total_companies = companies_qs.count()
         active_companies = companies_qs.filter(is_active=True).count()
-        new_companies_period = companies_qs.filter(created_at__date__gte=period_start).count()
         campaigns_qs = Campaign.all_objects.all()
         total_campaigns = campaigns_qs.count()
         active_campaigns = campaigns_qs.filter(status=Campaign.Status.ACTIVE).count()
@@ -712,15 +708,69 @@ class MasterDashboardView(MasterRequiredMixin, View):
             'companies': list(active_companies_qs.only('id', 'name')),
             'total_companies': total_companies,
             'active_companies': active_companies,
-            'new_companies_period': new_companies_period,
-            'period_start': period_start,
-            'period_end': today,
             'total_campaigns': total_campaigns,
             'active_campaigns': active_campaigns,
             'paused_campaigns': paused_campaigns,
             'planned_campaigns': planned_campaigns,
             'finished_campaigns': finished_campaigns,
         }
+
+
+class MasterCompanyMetricsView(MasterRequiredMixin, View):
+    def get(self, request):
+        raw_company_id = (request.GET.get('company_id') or '').strip()
+        try:
+            company_id = int(raw_company_id)
+        except (TypeError, ValueError):
+            return JsonResponse({'error': 'Empresa invalida.'}, status=400)
+
+        if not Company.objects.filter(id=company_id).exists():
+            return JsonResponse({'error': 'Empresa invalida.'}, status=404)
+
+        today = timezone.localdate()
+        start_month = _month_start_offset(today, -11)
+        month_cursor = start_month
+        month_labels = []
+        while month_cursor <= today.replace(day=1):
+            month_labels.append(month_cursor.strftime('%m/%Y'))
+            month_cursor = _month_start_offset(month_cursor, 1)
+
+        month_counts = {
+            item['month'].strftime('%m/%Y'): item['total']
+            for item in CampaignResponse.all_objects.filter(
+                company_id=company_id,
+                completed_at__date__gte=start_month,
+            )
+            .annotate(month=TruncMonth('completed_at'))
+            .values('month')
+            .annotate(total=Count('id'))
+        }
+        history_values = [month_counts.get(label, 0) for label in month_labels]
+
+        responses_qs = CampaignResponse.all_objects.filter(company_id=company_id)
+        results = CampaignReportView()._build_results(responses_qs, {}, {})
+        segment_labels = [item['label'] for item in results.get('domains', [])]
+        segment_values = [float(item['percent'] or 0) for item in results.get('domains', [])]
+
+        return JsonResponse(
+            {
+                'history': {
+                    'labels': month_labels,
+                    'values': history_values,
+                },
+                'segments': {
+                    'labels': segment_labels,
+                    'values': segment_values,
+                },
+            }
+        )
+
+
+def _month_start_offset(source_date, offset):
+    month = source_date.month - 1 + offset
+    year = source_date.year + month // 12
+    month = month % 12 + 1
+    return date(year, month, 1)
 
 
 class CompanySelectView(LoginRequiredMixin, View):
@@ -1270,8 +1320,11 @@ class CampaignAccessView(View):
             age = (request.POST.get('age') or '').strip()
             ghe_id = (request.POST.get('ghe_id') or '').strip()
             department_id = (request.POST.get('department_id') or '').strip()
+            job_function_id = (request.POST.get('job_function_id') or '').strip()
             first_name = (request.POST.get('first_name') or '').strip()
             sex = (request.POST.get('sex') or '').strip()
+            assessment_type = (campaign.company.assessment_type or '').strip().upper()
+            use_ghe = assessment_type != 'SETOR'
 
             cpf_digits = re.sub(r'\D', '', cpf)
             errors = []
@@ -1279,10 +1332,17 @@ class CampaignAccessView(View):
                 errors.append('CPF invalido.')
             if not age.isdigit() or int(age) <= 0:
                 errors.append('Idade invalida.')
-            if not ghe_id:
-                errors.append('Informe o GHE.')
-            if not department_id:
-                errors.append('Informe o cargo/funcao.')
+            if use_ghe:
+                if not ghe_id:
+                    errors.append('Informe o GHE.')
+                if not department_id:
+                    errors.append('Informe o cargo/funcao.')
+            else:
+                if not department_id:
+                    errors.append('Informe o setor.')
+                if not job_function_id:
+                    errors.append('Informe o cargo/funcao.')
+                ghe_id = ''
 
             cpf_hash = self._hash_cpf(campaign.uuid, cpf_digits) if cpf_digits else ''
             if cpf_hash and CampaignResponse.all_objects.filter(campaign=campaign, cpf_hash=cpf_hash).exists():
@@ -1300,8 +1360,9 @@ class CampaignAccessView(View):
                     'first_name': first_name,
                     'age': int(age),
                     'sex': sex,
-                    'ghe_id': int(ghe_id),
+                    'ghe_id': int(ghe_id) if ghe_id else None,
                     'department_id': int(department_id),
+                    'job_function_id': int(job_function_id) if job_function_id else None,
                     'responses': {},
                     'comments': '',
                 },
@@ -1341,6 +1402,7 @@ class CampaignAccessView(View):
                     sex=session_data.get('sex', ''),
                     ghe_id=session_data.get('ghe_id'),
                     department_id=session_data.get('department_id'),
+                    job_function_id=session_data.get('job_function_id'),
                     responses=session_data.get('responses', {}),
                     comments=session_data.get('comments', ''),
                 )
@@ -1360,11 +1422,15 @@ class CampaignAccessView(View):
             Campaign.all_objects.select_related('company'),
             uuid=campaign_uuid,
         )
+        assessment_type = (campaign.company.assessment_type or '').strip().upper()
+        use_ghe = assessment_type != 'SETOR'
         ghes = list(GHE.all_objects.filter(company_id=campaign.company_id, is_active=True).order_by('name'))
         departments = list(Department.all_objects.filter(company_id=campaign.company_id, is_active=True).order_by('name'))
         return {
             'campaign': campaign,
             'company': campaign.company,
+            'assessment_type': assessment_type,
+            'use_ghe': use_ghe,
             'ghes': ghes,
             'departments': departments,
         }
@@ -1609,6 +1675,34 @@ class CampaignDepartmentsView(View):
         )
 
 
+class CampaignJobFunctionsView(View):
+    def get(self, request, campaign_uuid):
+        campaign = get_object_or_404(
+            Campaign.all_objects.select_related('company'),
+            uuid=campaign_uuid,
+        )
+        department_id_raw = (request.GET.get('department_id') or '').strip()
+        try:
+            department_id = int(department_id_raw)
+        except (TypeError, ValueError):
+            return JsonResponse({'job_functions': []})
+
+        job_functions = list(
+            JobFunction.all_objects.filter(
+                company_id=campaign.company_id,
+                is_active=True,
+                departments__id=department_id,
+            )
+            .order_by('name')
+            .only('id', 'name')
+        )
+        return JsonResponse(
+            {
+                'job_functions': [{'id': item.id, 'name': item.name} for item in job_functions],
+            }
+        )
+
+
 class CampaignCpfCheckView(View):
     def get(self, request, campaign_uuid):
         campaign = get_object_or_404(
@@ -1695,6 +1789,15 @@ class CampaignReportView(MasterRequiredMixin, View):
             'Quando ha mudancas no trabalho, compreendo claramente como elas serao aplicadas na pratica?',
         ],
     }
+    STEP_OFFSETS = {
+        'step2': 0,
+        'step3': 8,
+        'step4': 14,
+        'step5': 19,
+        'step6': 23,
+        'step7': 27,
+        'step8': 32,
+    }
     DOMAIN_BY_STEP = {
         'step2': 'Demandas',
         'step3': 'Controle',
@@ -1722,7 +1825,14 @@ class CampaignReportView(MasterRequiredMixin, View):
         response_rate = (responses_qs.count() / total_workers * 100) if total_workers else 0
         response_label = self._response_rate_label(response_rate, total_workers)
         ghe_map = {ghe.id: ghe.name for ghe in ghes}
-        results = self._build_results(responses_qs, ghe_map)
+        standard_actions = {
+            item['question_number']: item['actions']
+            for item in StandardActionPlan.all_objects.filter(
+                company_id=campaign.company_id,
+                is_active=True,
+            ).values('question_number', 'actions')
+        }
+        results = self._build_results(responses_qs, ghe_map, standard_actions)
         saved_actions = CampaignReportAction.all_objects.filter(campaign=campaign).values(
             'question_text',
             'measures',
@@ -1752,7 +1862,7 @@ class CampaignReportView(MasterRequiredMixin, View):
         return render(request, self.template_name, context)
 
 
-    def _build_results(self, responses_qs, ghe_map):
+    def _build_results(self, responses_qs, ghe_map, standard_actions):
         domain_totals = {key: {'sum': 0, 'count': 0} for key in self.DOMAIN_BY_STEP.keys()}
         question_totals = {
             key: [{'sum': 0, 'count': 0} for _ in self.STEP_QUESTIONS.get(key, [])]
@@ -1823,6 +1933,7 @@ class CampaignReportView(MasterRequiredMixin, View):
                 )
                 ghe_questions = []
                 for idx, question in enumerate(self.STEP_QUESTIONS.get(step_key, [])):
+                    question_number = self.STEP_OFFSETS.get(step_key, 0) + idx + 1
                     q_count = ghe_question_totals[step_key][ghe_id][idx]['count']
                     q_avg = (
                         ghe_question_totals[step_key][ghe_id][idx]['sum'] / q_count
@@ -1833,10 +1944,13 @@ class CampaignReportView(MasterRequiredMixin, View):
                     ghe_questions.append(
                         {
                             'text': question,
+                            'question_number': question_number,
+                            'avg_raw': q_avg,
                             'avg': round(q_avg, 1) if q_count else 0,
                             'percent': round(q_percent, 1) if q_count else 0,
                             'percent_css': f'{q_percent:.1f}',
                             'zone': self._zone_label(q_percent) if q_count else 'Sem dados',
+                            'actions': standard_actions.get(question_number, []),
                         }
                     )
                 ghe_question_items.append(
@@ -1847,6 +1961,7 @@ class CampaignReportView(MasterRequiredMixin, View):
                 )
             questions = []
             for idx, question in enumerate(self.STEP_QUESTIONS.get(step_key, [])):
+                question_number = self.STEP_OFFSETS.get(step_key, 0) + idx + 1
                 q_count = question_totals[step_key][idx]['count']
                 q_avg = (
                     question_totals[step_key][idx]['sum'] / q_count
@@ -1857,10 +1972,13 @@ class CampaignReportView(MasterRequiredMixin, View):
                 questions.append(
                     {
                         'text': question,
+                        'question_number': question_number,
+                        'avg_raw': q_avg,
                         'avg': round(q_avg, 1) if q_count else 0,
                         'percent': round(q_percent, 1) if q_count else 0,
                         'percent_css': f'{q_percent:.1f}',
                         'zone': self._zone_label(q_percent) if q_count else 'Sem dados',
+                        'actions': standard_actions.get(question_number, []),
                     }
                 )
             domain_details.append(
@@ -2102,7 +2220,14 @@ class CampaignReportPdfView(MasterRequiredMixin, View):
         response_rate = (responses_qs.count() / total_workers * 100) if total_workers else 0
         response_label = CampaignReportView._response_rate_label(response_rate, total_workers)
         ghe_map = {ghe.id: ghe.name for ghe in ghes}
-        results = CampaignReportView()._build_results(responses_qs, ghe_map)
+        standard_actions = {
+            item['question_number']: item['actions']
+            for item in StandardActionPlan.all_objects.filter(
+                company_id=campaign.company_id,
+                is_active=True,
+            ).values('question_number', 'actions')
+        }
+        results = CampaignReportView()._build_results(responses_qs, ghe_map, standard_actions)
         technical_responsibles_qs = TechnicalResponsible.objects.filter(
             is_active=True,
         ).order_by('sort_order', 'name')

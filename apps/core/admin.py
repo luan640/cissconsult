@@ -9,6 +9,7 @@ from .models import (
     MoodRecord,
     Report,
     RiskIndicator,
+    StandardActionPlan,
     SupportAction,
     Totem,
     User,
@@ -91,6 +92,16 @@ class SupportActionAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         return SupportAction.all_objects.all()
+
+
+@admin.register(StandardActionPlan)
+class StandardActionPlanAdmin(admin.ModelAdmin):
+    list_display = ('id', 'question_number', 'step', 'company', 'trigger_score_lt', 'is_active')
+    list_filter = ('company', 'is_active')
+    search_fields = ('question_text',)
+
+    def get_queryset(self, request):
+        return StandardActionPlan.all_objects.all()
 
 
 @admin.register(Alert)
