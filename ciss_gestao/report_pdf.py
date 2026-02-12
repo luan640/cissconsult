@@ -1335,7 +1335,12 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
     ]
     month_label = month_names[today.month - 1]
     date_label = f"{today.day:02d} de {month_label} de {today.year}"
-    story.append(Paragraph(date_label, body_style))
+    location_label = (report_context.get("evaluation_representative_location") or "").strip()
+    if location_label and location_label != "-":
+        date_output = f"{location_label}, {date_label}"
+    else:
+        date_output = date_label
+    story.append(Paragraph(date_output, body_style))
     story.append(Spacer(1, 18))
 
     signature_name_style = ParagraphStyle(

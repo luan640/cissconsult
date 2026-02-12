@@ -1238,6 +1238,9 @@ class MasterReportSettingsUpdateView(MasterRequiredMixin, View):
         report_settings.evaluation_representative_name = (
             form.cleaned_data['evaluation_representative_name'] or ''
         ).strip()
+        report_settings.evaluation_representative_location = (
+            form.cleaned_data['evaluation_representative_location'] or ''
+        ).strip()
         report_settings.save()
         cache.clear()
         messages.success(request, 'Representante legal atualizado com sucesso.')
@@ -2249,6 +2252,7 @@ class CampaignReportPdfView(MasterRequiredMixin, View):
             'company_legal_representative_name': company.legal_representative_name or '-',
             'company_legal_representative_company': company.legal_name or company.name or '-',
             'evaluation_representative_name': ensure_master_report_settings().evaluation_representative_name or '-',
+            'evaluation_representative_location': ensure_master_report_settings().evaluation_representative_location or '-',
             'evaluation_company_name': 'CISS CONSULTORIA',
               'technical_responsibles': list(
                   technical_responsibles_qs.values('name', 'education', 'registration')
@@ -2356,7 +2360,10 @@ def ensure_alert_settings(company):
 
 def ensure_master_report_settings():
     return MasterReportSettings.objects.get_or_create(
-        defaults={'evaluation_representative_name': ''},
+        defaults={
+            'evaluation_representative_name': '',
+            'evaluation_representative_location': '',
+        },
     )[0]
 
 
@@ -2848,6 +2855,7 @@ class ComplaintTypeForm(forms.Form):
 
 class MasterReportSettingsForm(forms.Form):
     evaluation_representative_name = forms.CharField(max_length=255, required=True)
+    evaluation_representative_location = forms.CharField(max_length=255, required=False)
 
 
 class TechnicalResponsibleForm(forms.Form):

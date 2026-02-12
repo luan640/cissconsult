@@ -36,7 +36,17 @@
             value="{{ report_settings.evaluation_representative_name|default:'' }}"
           />
         </div>
-        <div class="form-actions">
+        <div class="form-field">
+          <label for="report_representative_location">Localização</label>
+          <input
+            id="report_representative_location"
+            name="evaluation_representative_location"
+            maxlength="255"
+            placeholder="Fortaleza - CE"
+            value="{{ report_settings.evaluation_representative_location|default:'' }}"
+          />
+        </div>
+        <div class="form-actions form-actions--right">
           <button class="btn btn--primary" type="submit" data-loading-text="Salvando...">Salvar</button>
         </div>
       </form>

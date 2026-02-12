@@ -19,24 +19,58 @@
   let requestToken = 0;
   let inFlight = false;
   let lastLoadStart = 0;
+  let chartReadyAttempts = 0;
+
+  const clearLoaders = () => {
+    const loaders = document.querySelectorAll('.master-chart-loading.is-visible');
+    loaders.forEach((loader) => loader.classList.remove('is-visible'));
+  };
 
   const initCharts = () => {
     const content = document.querySelector('.content[data-page="master-dashboard"]');
     if (!content) return;
-    if (content.dataset.masterChartsInit === '1') return;
-    content.dataset.masterChartsInit = '1';
+    clearLoaders();
+    if (activeController) {
+      try {
+        activeController.abort();
+      } catch (err) {
+        // ignore abort failures
+      }
+      activeController = null;
+      inFlight = false;
+    }
     const metricsUrl = content.getAttribute('data-master-metrics-url') || '';
     const select = document.getElementById('master_company_id');
-    if (!metricsUrl || !select) return;
+    if (!metricsUrl || !select) {
+      delete content.dataset.masterChartsInit;
+      return;
+    }
 
     const historyCanvas = document.getElementById('master-eval-history');
     const segmentCanvas = document.getElementById('master-segment-pie');
     const segmentList = document.getElementById('master-segment-list');
     const historyLoading = document.querySelector('[data-master-loading="history"]');
     const segmentsLoading = document.querySelector('[data-master-loading="segments"]');
-    if (!historyCanvas || !segmentCanvas || !segmentList) return;
+    if (!historyCanvas || !segmentCanvas || !segmentList) {
+      delete content.dataset.masterChartsInit;
+      return;
+    }
+
+    if (typeof Chart === 'undefined') {
+      chartReadyAttempts += 1;
+      if (chartReadyAttempts < 30) {
+        delete content.dataset.masterChartsInit;
+        setTimeout(initCharts, 300);
+      }
+      return;
+    }
+
+    if (content.dataset.masterChartsInit === '1') return;
+    content.dataset.masterChartsInit = '1';
+    chartReadyAttempts = 0;
 
     const hideLoading = () => {
+      clearLoaders();
       if (historyLoading) historyLoading.classList.remove('is-visible');
       if (segmentsLoading) segmentsLoading.classList.remove('is-visible');
     };
@@ -203,5 +237,22 @@
   document.addEventListener('DOMContentLoaded', onLoad);
   window.addEventListener('page:load', onLoad);
   document.addEventListener('htmx:afterSwap', onLoad);
+  document.addEventListener('htmx:beforeSwap', () => {
+    const content = document.querySelector('.content[data-page="master-dashboard"]');
+    if (content) {
+      delete content.dataset.masterChartsInit;
+    }
+    if (activeController) {
+      try {
+        activeController.abort();
+      } catch (err) {
+        // ignore abort failures
+      }
+      activeController = null;
+      inFlight = false;
+    }
+    clearLoaders();
+  });
   observeContent();
+  initCharts();
 })();
