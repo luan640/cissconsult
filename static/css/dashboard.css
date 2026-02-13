@@ -70,6 +70,26 @@ body {
   font-family: "Poppins", "Manrope", "Segoe UI", sans-serif;
 }
 
+.trend {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.trend--up {
+  color: #16a34a;
+}
+
+.trend--down {
+  color: #dc2626;
+}
+
+.trend--flat {
+  color: #f59e0b;
+}
+
 .brand {
   display: flex;
   align-items: center;
@@ -574,7 +594,7 @@ body {
 
 .master-segment-grid {
   display: grid;
-  grid-template-columns: 160px 1fr;
+  grid-template-columns: 280px 1fr;
   gap: 12px;
   align-items: center;
 }
@@ -700,8 +720,8 @@ body {
 
 .tooltip__text {
   position: absolute;
-  right: 0;
-  top: 120%;
+  left: 110%;
+  top: 50%;
   width: 260px;
   padding: 8px 10px;
   border-radius: 10px;
@@ -714,7 +734,7 @@ body {
   line-height: 1.35;
   opacity: 0;
   visibility: hidden;
-  transform: translateY(4px);
+  transform: translateY(-50%) translateX(4px);
   transition: 0.15s ease;
   z-index: 9999;
 }
@@ -722,13 +742,13 @@ body {
 .tooltip:hover .tooltip__text {
   opacity: 1;
   visibility: visible;
-  transform: translateY(0);
+  transform: translateY(-50%) translateX(0);
 }
 
 .tooltip:focus-within .tooltip__text {
   opacity: 1;
   visibility: visible;
-  transform: translateY(0);
+  transform: translateY(-50%) translateX(0);
 }
 
 .card__value {
@@ -872,7 +892,33 @@ body {
 .card--table,
 .card--form {
   padding: 0;
-  overflow: hidden;
+  overflow: visible;
+}
+
+.card--table .card__title {
+  margin: 0;
+  padding: 18px;
+  font-size: 1.18rem;
+  font-weight: 800;
+  color: var(--slate-900);
+  text-align: center;
+}
+
+.compare-stack {
+  display: grid;
+  gap: 16px;
+}
+
+.compare-form {
+  margin-bottom: 16px;
+}
+
+.compare-form__actions {
+  justify-content: flex-end;
+}
+
+.compare-company-card {
+  margin-bottom: 16px;
 }
 
 .company-cards {

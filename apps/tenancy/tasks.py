@@ -90,26 +90,37 @@ def seed_company_defaults(company_id: int) -> None:
         return
 
     with transaction.atomic():
-        for label, emoji, sentiment, score in DEFAULT_MOOD_TYPES:
-            MoodType.all_objects.get_or_create(
+        mood_labels = [label for label, _, _, _ in DEFAULT_MOOD_TYPES]
+        existing_moods = set(
+            MoodType.all_objects.filter(company=company, label__in=mood_labels)
+            .values_list('label', flat=True)
+        )
+        mood_to_create = [
+            MoodType(
                 company=company,
                 label=label,
-                defaults={
-                    'emoji': emoji,
-                    'sentiment': sentiment,
-                    'mood_score': score,
-                    'is_active': True,
-                },
+                emoji=emoji,
+                sentiment=sentiment,
+                mood_score=score,
+                is_active=True,
             )
+            for label, emoji, sentiment, score in DEFAULT_MOOD_TYPES
+            if label not in existing_moods
+        ]
+        if mood_to_create:
+            MoodType.all_objects.bulk_create(mood_to_create)
 
-        for label in DEFAULT_COMPLAINT_TYPES:
-            ComplaintType.all_objects.get_or_create(
-                company=company,
-                label=label,
-                defaults={
-                    'is_active': True,
-                },
-            )
+        existing_complaints = set(
+            ComplaintType.all_objects.filter(company=company, label__in=DEFAULT_COMPLAINT_TYPES)
+            .values_list('label', flat=True)
+        )
+        complaints_to_create = [
+            ComplaintType(company=company, label=label, is_active=True)
+            for label in DEFAULT_COMPLAINT_TYPES
+            if label not in existing_complaints
+        ]
+        if complaints_to_create:
+            ComplaintType.all_objects.bulk_create(complaints_to_create)
 
         AlertSetting.all_objects.get_or_create(
             company=company,
@@ -123,38 +134,119 @@ def seed_company_defaults(company_id: int) -> None:
             },
         )
 
-        ghe_cache = {}
-        department_cache = {}
+        ghe_names = {ghe_name for ghe_name, _, _ in DEFAULT_GHE_SECTOR_FUNCTIONS}
+        ghe_map = {
+            ghe.name: ghe
+            for ghe in GHE.all_objects.filter(company=company, name__in=ghe_names)
+        }
+        ghe_to_create = [
+            GHE(company=company, name=ghe_name, is_active=True)
+            for ghe_name in ghe_names
+            if ghe_name not in ghe_map
+        ]
+        if ghe_to_create:
+            GHE.all_objects.bulk_create(ghe_to_create)
+            ghe_map = {
+                ghe.name: ghe
+                for ghe in GHE.all_objects.filter(company=company, name__in=ghe_names)
+            }
 
-        for ghe_name, sector_name, function_name in DEFAULT_GHE_SECTOR_FUNCTIONS:
-            ghe_obj = ghe_cache.get(ghe_name)
+        department_names = {sector_name for _, sector_name, _ in DEFAULT_GHE_SECTOR_FUNCTIONS}
+        department_map = {
+            dept.name: dept
+            for dept in Department.all_objects.filter(company=company, name__in=department_names)
+        }
+        departments_to_create = []
+        for ghe_name, sector_name, _ in DEFAULT_GHE_SECTOR_FUNCTIONS:
+            if sector_name in department_map:
+                continue
+            ghe_obj = ghe_map.get(ghe_name)
             if ghe_obj is None:
-                ghe_obj, _ = GHE.all_objects.get_or_create(
-                    company=company,
-                    name=ghe_name,
-                    defaults={'is_active': True},
-                )
-                ghe_cache[ghe_name] = ghe_obj
-
-            department_obj = department_cache.get(sector_name)
-            if department_obj is None:
-                department_obj, created_department = Department.all_objects.get_or_create(
+                continue
+            departments_to_create.append(
+                Department(
                     company=company,
                     name=sector_name,
-                    defaults={
-                        'ghe': ghe_obj,
-                        'is_active': True,
-                    },
+                    ghe=ghe_obj,
+                    is_active=True,
                 )
-                if not created_department and department_obj.ghe_id is None:
-                    department_obj.ghe = ghe_obj
-                    department_obj.save(update_fields=['ghe', 'updated_at'])
-                department_cache[sector_name] = department_obj
-
-            job_function, _ = JobFunction.all_objects.get_or_create(
-                company=company,
-                name=function_name,
-                defaults={'is_active': True},
             )
-            job_function.ghes.add(ghe_obj)
-            job_function.departments.add(department_obj)
+            department_map[sector_name] = None
+        if departments_to_create:
+            Department.all_objects.bulk_create(departments_to_create)
+            department_map = {
+                dept.name: dept
+                for dept in Department.all_objects.filter(company=company, name__in=department_names)
+            }
+
+        departments_to_update = []
+        for ghe_name, sector_name, _ in DEFAULT_GHE_SECTOR_FUNCTIONS:
+            dept = department_map.get(sector_name)
+            if dept and dept.ghe_id is None:
+                ghe_obj = ghe_map.get(ghe_name)
+                if ghe_obj is not None:
+                    dept.ghe = ghe_obj
+                    departments_to_update.append(dept)
+        if departments_to_update:
+            Department.all_objects.bulk_update(departments_to_update, ['ghe', 'updated_at'])
+
+        function_names = {function_name for _, _, function_name in DEFAULT_GHE_SECTOR_FUNCTIONS}
+        function_map = {
+            jf.name: jf
+            for jf in JobFunction.all_objects.filter(company=company, name__in=function_names)
+        }
+        functions_to_create = [
+            JobFunction(company=company, name=function_name, is_active=True)
+            for function_name in function_names
+            if function_name not in function_map
+        ]
+        if functions_to_create:
+            JobFunction.all_objects.bulk_create(functions_to_create)
+            function_map = {
+                jf.name: jf
+                for jf in JobFunction.all_objects.filter(company=company, name__in=function_names)
+            }
+
+        ghe_through = JobFunction.ghes.through
+        dept_through = JobFunction.departments.through
+
+        ghe_relations = set()
+        dept_relations = set()
+        for ghe_name, sector_name, function_name in DEFAULT_GHE_SECTOR_FUNCTIONS:
+            ghe_obj = ghe_map.get(ghe_name)
+            dept_obj = department_map.get(sector_name)
+            func_obj = function_map.get(function_name)
+            if not ghe_obj or not dept_obj or not func_obj:
+                continue
+            ghe_relations.add((func_obj.id, ghe_obj.id))
+            dept_relations.add((func_obj.id, dept_obj.id))
+
+        if ghe_relations:
+            existing_ghe_relations = set(
+                ghe_through.objects.filter(
+                    jobfunction_id__in=[pair[0] for pair in ghe_relations],
+                    ghe_id__in=[pair[1] for pair in ghe_relations],
+                ).values_list('jobfunction_id', 'ghe_id')
+            )
+            ghe_relations_to_create = [
+                ghe_through(jobfunction_id=func_id, ghe_id=ghe_id)
+                for func_id, ghe_id in ghe_relations
+                if (func_id, ghe_id) not in existing_ghe_relations
+            ]
+            if ghe_relations_to_create:
+                ghe_through.objects.bulk_create(ghe_relations_to_create)
+
+        if dept_relations:
+            existing_dept_relations = set(
+                dept_through.objects.filter(
+                    jobfunction_id__in=[pair[0] for pair in dept_relations],
+                    department_id__in=[pair[1] for pair in dept_relations],
+                ).values_list('jobfunction_id', 'department_id')
+            )
+            dept_relations_to_create = [
+                dept_through(jobfunction_id=func_id, department_id=dept_id)
+                for func_id, dept_id in dept_relations
+                if (func_id, dept_id) not in existing_dept_relations
+            ]
+            if dept_relations_to_create:
+                dept_through.objects.bulk_create(dept_relations_to_create)

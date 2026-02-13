@@ -82,6 +82,18 @@
   </style>
 {% endblock %}
 
+{% block extra_scripts %}
+  <script>
+    (function () {
+      const key = `campaign:{{ campaign.uuid }}:responses`;
+      try {
+        localStorage.removeItem(key);
+      } catch (err) {
+        // ignore
+      }
+    })();
+  </script>
+{% endblock %}
 {% block content %}
 <main class="finish-step">
   <div class="finish-header">

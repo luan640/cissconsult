@@ -19,7 +19,10 @@
         <h1 class="content__title">Relatorios</h1>
         <p class="content__subtitle">Acompanhe o historico de relatorios gerados pela empresa.</p>
       </div>
-      <button class="btn btn--primary" type="button" data-open-modal="create-report-modal">Gerar relatorio</button>
+      <div class="stack-inline">
+        <a class="btn btn--light" href="{% url 'reports-compare' %}">Comparar relatorios</a>
+        <button class="btn btn--primary" type="button" data-open-modal="create-report-modal">Gerar relatorio</button>
+      </div>
     </header>
 
     {% include "reports/_table_container.html" %}

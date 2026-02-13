@@ -81,6 +81,359 @@ except ImportError:  # optional dependency in local setup
     qrcode = None
 
 
+def build_period_metrics(company_id, period_start, period_end, sentiment_labels):
+    mood_qs = MoodRecord.all_objects.filter(
+        company_id=company_id,
+        record_date__gte=period_start,
+        record_date__lte=period_end,
+    )
+    complaint_qs = Complaint.all_objects.filter(
+        company_id=company_id,
+        record_date__gte=period_start,
+        record_date__lte=period_end,
+    )
+    help_qs = HelpRequest.all_objects.filter(
+        company_id=company_id,
+        created_at__date__gte=period_start,
+        created_at__date__lte=period_end,
+    )
+
+    top_sentiment = (
+        mood_qs.values('sentiment')
+        .annotate(total=Count('id'))
+        .order_by('-total')
+        .first()
+    )
+    complaint_status = (
+        complaint_qs.values('complaint_status')
+        .annotate(total=Count('id'))
+        .order_by('-total')
+    )
+    mood_by_department = (
+        mood_qs.values('department__name')
+        .annotate(total=Count('id'))
+        .order_by('-total', 'department__name')
+    )
+    complaint_by_totem = (
+        complaint_qs.values('totem__name')
+        .annotate(total=Count('id'))
+        .order_by('-total', 'totem__name')
+    )
+    sentiment_order = ['very_good', 'good', 'neutral', 'bad', 'very_bad']
+    sentiment_totals = {key: 0 for key in sentiment_order}
+    for row in mood_qs.values('sentiment').annotate(total=Count('id')):
+        if row['sentiment'] in sentiment_totals:
+            sentiment_totals[row['sentiment']] = row['total']
+    mood_total_count = sum(sentiment_totals.values())
+    mood_distribution = []
+    for key in sentiment_order:
+        total = sentiment_totals[key]
+        if total <= 0:
+            continue
+        percent = round((total * 100 / mood_total_count), 2) if mood_total_count else 0
+        mood_distribution.append({
+            'label': sentiment_labels.get(key, key),
+            'total': total,
+            'percent': percent,
+        })
+    mood_distribution = sorted(
+        mood_distribution,
+        key=lambda item: (-item['total'], item['label']),
+    )
+
+    complaint_type_map = {
+        normalize_complaint_type_key(item.label): item.label
+        for item in ComplaintType.all_objects.filter(company_id=company_id).only('label')
+    }
+    complaint_counts = {}
+    for row in complaint_qs.values('category').annotate(total=Count('id')):
+        category_key = row['category'] or ''
+        label = complaint_type_map.get(
+            category_key,
+            complaint_type_display_name(category_key) or 'Nao informado',
+        )
+        complaint_counts[label] = complaint_counts.get(label, 0) + row['total']
+    complaint_total_count = sum(complaint_counts.values())
+    complaint_distribution = []
+    for label, total in sorted(complaint_counts.items(), key=lambda item: (-item[1], item[0])):
+        percent = round((total * 100 / complaint_total_count), 2) if complaint_total_count else 0
+        complaint_distribution.append({
+            'label': label,
+            'total': total,
+            'percent': percent,
+        })
+    complaint_distribution = sorted(
+        complaint_distribution,
+        key=lambda item: (-item['total'], item['label']),
+    )
+
+    return {
+        'mood_count': mood_qs.count(),
+        'complaint_count': complaint_qs.count(),
+        'help_count': help_qs.count(),
+        'top_sentiment': sentiment_labels.get(
+            top_sentiment['sentiment'],
+            'Sem registros',
+        ) if top_sentiment else 'Sem registros',
+        'complaint_status': complaint_status,
+        'mood_by_department': mood_by_department,
+        'complaint_by_totem': complaint_by_totem,
+        'mood_distribution': mood_distribution,
+        'complaint_distribution': complaint_distribution,
+    }
+
+
+def build_report_metrics(company_id, report, sentiment_labels):
+    return build_period_metrics(
+        company_id,
+        report.period_start,
+        report.period_end,
+        sentiment_labels,
+    )
+
+
+def _compare_counts(metrics_a, metrics_b, key):
+    a_val = int(metrics_a.get(key) or 0)
+    b_val = int(metrics_b.get(key) or 0)
+    delta = b_val - a_val
+    percent = None if a_val == 0 else round((delta * 100 / a_val), 2)
+    return {
+        'a': a_val,
+        'b': b_val,
+        'delta': delta,
+        'percent': percent,
+    }
+
+
+def build_report_comparison(metrics_a, metrics_b):
+    return {
+        'mood_count': _compare_counts(metrics_a, metrics_b, 'mood_count'),
+        'complaint_count': _compare_counts(metrics_a, metrics_b, 'complaint_count'),
+        'help_count': _compare_counts(metrics_a, metrics_b, 'help_count'),
+        'top_sentiment': {
+            'a': metrics_a.get('top_sentiment') or 'Sem registros',
+            'b': metrics_b.get('top_sentiment') or 'Sem registros',
+        },
+        'mood_distribution': {
+            'a': metrics_a.get('mood_distribution') or [],
+            'b': metrics_b.get('mood_distribution') or [],
+        },
+        'complaint_distribution': {
+            'a': metrics_a.get('complaint_distribution') or [],
+            'b': metrics_b.get('complaint_distribution') or [],
+        },
+    }
+
+
+def build_campaign_metrics(campaign):
+    responses_qs = CampaignResponse.all_objects.filter(campaign=campaign)
+    assessment_type = (campaign.company.assessment_type or '').strip().lower()
+    use_departments = assessment_type == 'setor'
+    group_label = 'Setores' if use_departments else 'GHE'
+    group_id_field = 'department_id' if use_departments else 'ghe_id'
+    group_name_map = {}
+    if use_departments:
+        department_ids = list(
+            responses_qs.exclude(department_id__isnull=True)
+            .values_list('department_id', flat=True)
+            .distinct()
+        )
+        group_name_map = {
+            department.id: department.name
+            for department in Department.all_objects.filter(id__in=department_ids)
+        }
+    else:
+        ghe_ids = list(
+            responses_qs.exclude(ghe_id__isnull=True)
+            .values_list('ghe_id', flat=True)
+            .distinct()
+        )
+        group_name_map = {
+            ghe.id: ghe.name for ghe in GHE.all_objects.filter(id__in=ghe_ids)
+        }
+    domain_totals = {
+        key: {'sum': 0, 'count': 0}
+        for key in CampaignReportView.DOMAIN_BY_STEP.keys()
+    }
+    group_totals = {}
+    question_totals = {}
+    overall_sum = 0
+    overall_count = 0
+
+    for response in responses_qs:
+        answers_by_step = response.responses or {}
+        for step_key, answers in answers_by_step.items():
+            if step_key not in CampaignReportView.DOMAIN_BY_STEP or not answers:
+                continue
+            question_offset = CampaignReportView.STEP_OFFSETS.get(step_key, 0)
+            question_texts = CampaignReportView.STEP_QUESTIONS.get(step_key, [])
+            for idx, question_text in enumerate(question_texts):
+                if idx >= len(answers):
+                    break
+                score = CampaignReportView.ANSWER_SCORE.get(answers[idx].get('answer', ''))
+                if not score:
+                    continue
+                domain_totals[step_key]['sum'] += score
+                domain_totals[step_key]['count'] += 1
+                overall_sum += score
+                overall_count += 1
+                group_id = getattr(response, group_id_field, None)
+                if group_id:
+                    group_totals.setdefault(group_id, {'sum': 0, 'count': 0})
+                    group_totals[group_id]['sum'] += score
+                    group_totals[group_id]['count'] += 1
+                question_number = question_offset + idx + 1
+                question_key = (
+                    question_number,
+                    question_text,
+                    CampaignReportView.DOMAIN_BY_STEP.get(step_key, ''),
+                )
+                question_totals.setdefault(question_key, {'sum': 0, 'count': 0})
+                question_totals[question_key]['sum'] += score
+                question_totals[question_key]['count'] += 1
+
+    domains = []
+    for step_key, label in CampaignReportView.DOMAIN_BY_STEP.items():
+        count = domain_totals[step_key]['count']
+        avg = (domain_totals[step_key]['sum'] / count) if count else 0
+        percent = (avg / 5) * 100 if count else 0
+        domains.append(
+            {
+                'label': label,
+                'avg': round(avg, 1) if count else 0,
+                'percent': round(percent, 1) if count else 0,
+            }
+        )
+
+    overall_avg = (overall_sum / overall_count) if overall_count else 0
+    overall_percent = (overall_avg / 5) * 100 if overall_count else 0
+    overall_label = CampaignReportView._score_label(overall_avg) if overall_count else 'Sem dados'
+
+    group_items = []
+    for group_id, totals in group_totals.items():
+        avg = (totals['sum'] / totals['count']) if totals['count'] else 0
+        percent = (avg / 5) * 100 if totals['count'] else 0
+        group_items.append(
+            {
+                'name': group_name_map.get(group_id, f'{group_label} {group_id}'),
+                'avg': round(avg, 1) if totals['count'] else 0,
+                'percent': round(percent, 1) if totals['count'] else 0,
+            }
+        )
+    group_items = sorted(group_items, key=lambda item: item['name'])
+
+    question_items = []
+    for (question_number, question_text, domain_label), totals in question_totals.items():
+        avg = (totals['sum'] / totals['count']) if totals['count'] else 0
+        percent = (avg / 5) * 100 if totals['count'] else 0
+        question_items.append(
+            {
+                'question_number': question_number,
+                'text': question_text,
+                'domain': domain_label,
+                'avg': round(avg, 1) if totals['count'] else 0,
+                'percent': round(percent, 1) if totals['count'] else 0,
+            }
+        )
+    question_items = sorted(question_items, key=lambda item: item['question_number'])
+
+    return {
+        'responses_count': responses_qs.count(),
+        'overall_avg': round(overall_avg, 1) if overall_count else 0,
+        'overall_percent': round(overall_percent, 1) if overall_count else 0,
+        'overall_label': overall_label,
+        'domains': domains,
+        'group_label': group_label,
+        'groups': group_items,
+        'questions': question_items,
+    }
+
+
+def build_campaign_comparison(metrics_a, metrics_b):
+    domain_map_a = {item['label']: item for item in (metrics_a.get('domains') or [])}
+    domain_map_b = {item['label']: item for item in (metrics_b.get('domains') or [])}
+    domain_labels = sorted(set(domain_map_a.keys()) | set(domain_map_b.keys()))
+    domain_rows = []
+    for label in domain_labels:
+        a_item = domain_map_a.get(label, {'avg': 0, 'percent': 0})
+        b_item = domain_map_b.get(label, {'avg': 0, 'percent': 0})
+        delta = round(b_item['percent'] - a_item['percent'], 1)
+        percent = None if a_item['percent'] == 0 else round((delta * 100 / a_item['percent']), 1)
+        domain_rows.append(
+            {
+                'label': label,
+                'a': a_item,
+                'b': b_item,
+                'delta': delta,
+                'percent': percent,
+            }
+        )
+
+    return {
+        'responses_count': _compare_counts(metrics_a, metrics_b, 'responses_count'),
+        'overall_avg': _compare_counts(metrics_a, metrics_b, 'overall_avg'),
+        'overall_percent': _compare_counts(metrics_a, metrics_b, 'overall_percent'),
+        'overall_label': {
+            'a': metrics_a.get('overall_label') or 'Sem dados',
+            'b': metrics_b.get('overall_label') or 'Sem dados',
+        },
+        'domains': domain_rows,
+        'group_label': metrics_a.get('group_label') or metrics_b.get('group_label') or 'GHE',
+        'groups': build_named_comparison(metrics_a.get('groups'), metrics_b.get('groups')),
+        'questions': build_question_comparison(metrics_a.get('questions'), metrics_b.get('questions')),
+    }
+
+
+def build_named_comparison(items_a, items_b):
+    items_a = items_a or []
+    items_b = items_b or []
+    map_a = {item['name']: item for item in items_a}
+    map_b = {item['name']: item for item in items_b}
+    labels = sorted(set(map_a.keys()) | set(map_b.keys()))
+    rows = []
+    for label in labels:
+        a_item = map_a.get(label, {'avg': 0, 'percent': 0})
+        b_item = map_b.get(label, {'avg': 0, 'percent': 0})
+        delta = round(b_item['percent'] - a_item['percent'], 1)
+        percent = None if a_item['percent'] == 0 else round((delta * 100 / a_item['percent']), 1)
+        rows.append(
+            {
+                'label': label,
+                'a': a_item,
+                'b': b_item,
+                'delta': delta,
+                'percent': percent,
+            }
+        )
+    return rows
+
+
+def build_question_comparison(items_a, items_b):
+    items_a = items_a or []
+    items_b = items_b or []
+    map_a = {item['question_number']: item for item in items_a}
+    map_b = {item['question_number']: item for item in items_b}
+    question_numbers = sorted(set(map_a.keys()) | set(map_b.keys()))
+    rows = []
+    for number in question_numbers:
+        a_item = map_a.get(number, {'avg': 0, 'percent': 0, 'text': '-', 'domain': '-'})
+        b_item = map_b.get(number, {'avg': 0, 'percent': 0, 'text': '-', 'domain': '-'})
+        delta = round(b_item['percent'] - a_item['percent'], 1)
+        percent = None if a_item['percent'] == 0 else round((delta * 100 / a_item['percent']), 1)
+        rows.append(
+            {
+                'question_number': number,
+                'text': a_item.get('text') or b_item.get('text') or '-',
+                'domain': a_item.get('domain') or b_item.get('domain') or '-',
+                'a': a_item,
+                'b': b_item,
+                'delta': delta,
+                'percent': percent,
+            }
+        )
+    return rows
+
+
 def healthz(request):
     return JsonResponse({'status': 'ok'})
 
@@ -1140,7 +1493,7 @@ class TechnicalResponsibleCreateView(MasterRequiredMixin, View):
         registration = (form.cleaned_data['registration'] or '').strip()
         sort_order = form.cleaned_data.get('sort_order') or 0
         if not name or not education or not registration:
-            messages.error(request, 'Preencha nome, formacao e registro.')
+            messages.error(request, 'Preencha nome, formação e registro.')
             if is_ajax_request(request):
                 return render_technical_responsibles_table(request)
             return redirect('master-settings')
@@ -1153,7 +1506,7 @@ class TechnicalResponsibleCreateView(MasterRequiredMixin, View):
             is_active=True,
         )
         cache.clear()
-        messages.success(request, 'Responsavel tecnico criado com sucesso.')
+        messages.success(request, 'Responsável técnico criado com sucesso.')
         if is_ajax_request(request):
             return render_technical_responsibles_table(request)
         return redirect('master-settings')
@@ -1177,7 +1530,7 @@ class TechnicalResponsibleUpdateView(MasterRequiredMixin, View):
         registration = (form.cleaned_data['registration'] or '').strip()
         sort_order = form.cleaned_data.get('sort_order') or 0
         if not name or not education or not registration:
-            messages.error(request, 'Preencha nome, formacao e registro.')
+            messages.error(request, 'Preencha nome, formação e registro.')
             if is_ajax_request(request):
                 return render_technical_responsibles_table(request)
             return redirect('master-settings')
@@ -1189,7 +1542,7 @@ class TechnicalResponsibleUpdateView(MasterRequiredMixin, View):
         responsible.is_active = form.cleaned_data['is_active']
         responsible.save()
         cache.clear()
-        messages.success(request, 'Responsavel tecnico atualizado com sucesso.')
+        messages.success(request, 'Responsável técnico atualizado com sucesso.')
         if is_ajax_request(request):
             return render_technical_responsibles_table(request)
         return redirect('master-settings')
@@ -1205,9 +1558,9 @@ class TechnicalResponsibleDeleteView(MasterRequiredMixin, View):
         responsible.save(update_fields=['is_active', 'updated_at'])
         cache.clear()
         if responsible.is_active:
-            messages.success(request, 'Responsavel tecnico ativado com sucesso.')
+            messages.success(request, 'Responsável técnico ativado com sucesso.')
         else:
-            messages.success(request, 'Responsavel tecnico desativado com sucesso.')
+            messages.success(request, 'Responsável técnico desativado com sucesso.')
         if is_ajax_request(request):
             return render_technical_responsibles_table(request)
         return redirect('master-settings')
@@ -1221,7 +1574,7 @@ class TechnicalResponsibleRemoveView(MasterRequiredMixin, View):
         )
         responsible.delete()
         cache.clear()
-        messages.success(request, 'Responsavel tecnico excluido com sucesso.')
+        messages.success(request, 'Responsável técnico excluído com sucesso.')
         if is_ajax_request(request):
             return render_technical_responsibles_table(request)
         return redirect('master-settings')
@@ -1391,7 +1744,20 @@ class CampaignAccessView(View):
             return redirect(f"{reverse('campaigns-access', args=[campaign.uuid])}?step={next_step}")
 
         if step == '9':
-            comments = (request.POST.get('comments') or '').strip()
+            local_payload = (request.POST.get('local_payload') or '').strip()
+            if local_payload:
+                try:
+                    payload = json.loads(local_payload)
+                except json.JSONDecodeError:
+                    payload = {}
+                responses_payload = payload.get('responses') if isinstance(payload, dict) else None
+                if isinstance(responses_payload, dict) and responses_payload:
+                    session_data['responses'] = responses_payload
+                if not (request.POST.get('comments') or '').strip():
+                    payload_comments = (payload.get('comments') if isinstance(payload, dict) else '') or ''
+                    session_data['comments'] = str(payload_comments).strip()
+
+            comments = (request.POST.get('comments') or session_data.get('comments') or '').strip()
             session_data['comments'] = comments
             self._store_session_data(request, campaign.uuid, session_data)
 
@@ -1515,19 +1881,19 @@ class CampaignAccessView(View):
     @staticmethod
     def _build_step2_context(base_context):
         questions = [
-            'Diferentes setores/areas no trabalho exigem coisas de mim que sao dificeis de conciliar?',
-            'Tenho prazos impossiveis de cumprir?',
+            'Diferentes setores/áreas no trabalho exigem coisas de mim que são difíceis de conciliar?',
+            'Tenho prazos impossíveis de cumprir?',
             'Preciso trabalhar com muita intensidade?',
             'Preciso deixar algumas tarefas de lado porque tenho muitas demandas?',
-            'Nao tenho possibilidade de fazer pausas suficientes?',
-            'Sofro pressao para trabalhar longas horas?',
-            'Preciso trabalhar muito rapido?',
-            'Tenho pausas temporarias impossiveis de cumprir?',
+            'Não tenho possibilidade de fazer pausas suficientes?',
+            'Sofro pressão para trabalhar longas horas?',
+            'Preciso trabalhar muito rápido?',
+            'Tenho pausas temporárias impossíveis de cumprir?',
         ]
         return {
             **base_context,
             'section_title': 'Demandas',
-            'section_description': 'Carga de trabalho, ritmos de tarefa e exigencias cognitivas.',
+            'section_description': 'Carga de trabalho, ritmos de tarefa e exigências cognitivas.',
             'questions': questions,
             'scale_options': ['Nunca', 'Raramente', 'As vezes', 'Frequentemente', 'Sempre'],
         }
@@ -1536,11 +1902,11 @@ class CampaignAccessView(View):
     def _build_step3_context(base_context):
         questions = [
             'Posso decidir quando fazer uma pausa?',
-            'Tenho voz para decidir a velocidade do meu proprio trabalho?',
-            'Tenho autonomia para decidir como faco meu trabalho?',
-            'Tenho autonomia para decidir o que faco no trabalho?',
-            'Tenho alguma influencia sobre a forma como realizo meu trabalho?',
-            'Meu horario de trabalho pode ser flexivel?',
+            'Tenho voz para decidir a velocidade do meu próprio trabalho?',
+            'Tenho autonomia para decidir como faço meu trabalho?',
+            'Tenho autonomia para decidir o que faço no trabalho?',
+            'Tenho alguma influência sobre a forma como realizo meu trabalho?',
+            'Meu horário de trabalho pode ser flexível?',
         ]
         return {
             **base_context,
@@ -1553,7 +1919,7 @@ class CampaignAccessView(View):
     @staticmethod
     def _build_step4_context(base_context):
         questions = [
-            'Recebo informacoes e suporte que me ajudam no trabalho que eu faco?',
+            'Recebo informações e suporte que me ajudam no trabalho que eu faço?',
             'Posso contar com meu supervisor direto para me ajudar com problemas no trabalho?',
             'Posso conversar com meu supervisor direto sobre algo que me incomodou no trabalho?',
             'Recebo apoio em trabalhos emocionalmente exigentes?',
@@ -1570,10 +1936,10 @@ class CampaignAccessView(View):
     @staticmethod
     def _build_step5_context(base_context):
         questions = [
-            'Se o trabalho ficar dificil, meus colegas podem me ajudar?',
+            'Se o trabalho ficar difícil, meus colegas podem me ajudar?',
             'Recebo o apoio de que preciso dos meus colegas?',
-            'Recebo o respeito que mereco dos meus colegas?',
-            'Meus colegas estao dispostos a ouvir meus problemas relacionados ao trabalho?',
+            'Recebo o respeito que mereço dos meus colegas?',
+            'Meus colegas estão dispostos a ouvir meus problemas relacionados ao trabalho?',
         ]
         return {
             **base_context,
@@ -1587,14 +1953,14 @@ class CampaignAccessView(View):
     def _build_step6_context(base_context):
         questions = [
             'Sou perseguido no trabalho?',
-            'Ha atritos ou desentendimentos entre colegas?',
+            'Há atritos ou desentendimentos entre colegas?',
             'Falam ou se comportam comigo de forma dura?',
-            'Os relacionamentos no trabalho estao desgastados?',
+            'Os relacionamentos no trabalho estão desgastados?',
         ]
         return {
             **base_context,
             'section_title': 'Relacionamentos',
-            'section_description': 'Respeito, assedio moral, conflitos e apoio entre colegas.',
+            'section_description': 'Respeito, assédio moral, conflitos e apoio entre colegas.',
             'questions': questions,
             'scale_options': ['Nunca', 'Raramente', 'As vezes', 'Frequentemente', 'Sempre'],
         }
@@ -1602,16 +1968,16 @@ class CampaignAccessView(View):
     @staticmethod
     def _build_step7_context(base_context):
         questions = [
-            'Eu entendo claramente o que e esperado de mim no trabalho?',
+            'Eu entendo claramente o que é esperado de mim no trabalho?',
             'Sei como realizar meu trabalho?',
-            'Sei claramente quais sao minhas funcoes e responsabilidades?',
+            'Sei claramente quais são minhas funções e responsabilidades?',
             'Compreendo os objetivos e metas do meu departamento?',
-            'Compreendo como o meu trabalho contribui para o objetivo geral da organizacao?',
+            'Compreendo como o meu trabalho contribui para o objetivo geral da organização?',
         ]
         return {
             **base_context,
-            'section_title': 'Clareza de Papel | Funcao',
-            'section_description': 'Compreensao clara do papel dentro da organizacao.',
+            'section_title': 'Clareza de Papel | Função',
+            'section_description': 'Compreensão clara do papel dentro da organização.',
             'questions': questions,
             'scale_options': ['Nunca', 'Raramente', 'As vezes', 'Frequentemente', 'Sempre'],
         }
@@ -1619,9 +1985,9 @@ class CampaignAccessView(View):
     @staticmethod
     def _build_step8_context(base_context):
         questions = [
-            'Tenho oportunidades suficientes para questionar os gestores sobre mudancas no trabalho?',
-            'Os funcionarios sao sempre consultados sobre mudancas no trabalho?',
-            'Quando ha mudancas no trabalho, compreendo claramente como elas serao aplicadas na pratica?',
+            'Tenho oportunidades suficientes para questionar os gestores sobre mudanças no trabalho?',
+            'Os funcionários são sempre consultados sobre mudanças no trabalho?',
+            'Quando há mudanças no trabalho, compreendo claramente como elas serão aplicadas na prática?',
         ]
         return {
             **base_context,
@@ -1635,10 +2001,10 @@ class CampaignAccessView(View):
     def _build_step9_context(base_context):
         return {
             **base_context,
-            'section_title': 'Comentarios Adicionais',
+            'section_title': 'Comentários Adicionais',
             'section_description': (
-                'Gostaria de compartilhar algum comentario adicional sobre sua experiencia de trabalho? '
-                'Este campo e opcional, mas suas observacoes podem ser muito valiosas para melhorar o ambiente de trabalho.'
+                'Gostaria de compartilhar algum comentário adicional sobre sua experiência de trabalho? '
+                'Este campo é opcional, mas suas observações podem ser muito valiosas para melhorar o ambiente de trabalho.'
             ),
         }
 
@@ -1743,53 +2109,53 @@ class CampaignReportView(MasterRequiredMixin, View):
     }
     STEP_QUESTIONS = {
         'step2': [
-            'Diferentes setores/areas no trabalho exigem coisas de mim que sao dificeis de conciliar?',
-            'Tenho prazos impossiveis de cumprir?',
+            'Diferentes setores/áreas no trabalho exigem coisas de mim que são difíceis de conciliar?',
+            'Tenho prazos impossíveis de cumprir?',
             'Preciso trabalhar com muita intensidade?',
             'Preciso deixar algumas tarefas de lado porque tenho muitas demandas?',
-            'Nao tenho possibilidade de fazer pausas suficientes?',
-            'Sofro pressao para trabalhar longas horas?',
-            'Preciso trabalhar muito rapido?',
-            'Tenho pausas temporarias impossiveis de cumprir?',
+            'Não tenho possibilidade de fazer pausas suficientes?',
+            'Sofro pressão para trabalhar longas horas?',
+            'Preciso trabalhar muito rápido?',
+            'Tenho pausas temporárias impossíveis de cumprir?',
         ],
         'step3': [
             'Posso decidir quando fazer uma pausa?',
-            'Tenho voz para decidir a velocidade do meu proprio trabalho?',
-            'Tenho autonomia para decidir como faco meu trabalho?',
-            'Tenho autonomia para decidir o que faco no trabalho?',
-            'Tenho alguma influencia sobre a forma como realizo meu trabalho?',
-            'Meu horario de trabalho pode ser flexivel?',
+            'Tenho voz para decidir a velocidade do meu próprio trabalho?',
+            'Tenho autonomia para decidir como faço meu trabalho?',
+            'Tenho autonomia para decidir o que faço no trabalho?',
+            'Tenho alguma influência sobre a forma como realizo meu trabalho?',
+            'Meu horário de trabalho pode ser flexível?',
         ],
         'step4': [
-            'Recebo informacoes e suporte que me ajudam no trabalho que eu faco?',
+            'Recebo informações e suporte que me ajudam no trabalho que eu faço?',
             'Posso contar com meu supervisor direto para me ajudar com problemas no trabalho?',
             'Posso conversar com meu supervisor direto sobre algo que me incomodou no trabalho?',
             'Recebo apoio em trabalhos emocionalmente exigentes?',
             'Meu supervisor direto me incentiva no trabalho?',
         ],
         'step5': [
-            'Se o trabalho ficar dificil, meus colegas podem me ajudar?',
+            'Se o trabalho ficar difícil, meus colegas podem me ajudar?',
             'Recebo o apoio de que preciso dos meus colegas?',
-            'Recebo o respeito que mereco dos meus colegas?',
-            'Meus colegas estao dispostos a ouvir meus problemas relacionados ao trabalho?',
+            'Recebo o respeito que mereço dos meus colegas?',
+            'Meus colegas estão dispostos a ouvir meus problemas relacionados ao trabalho?',
         ],
         'step6': [
             'Sou perseguido no trabalho?',
-            'Ha atritos ou desentendimentos entre colegas?',
+            'Há atritos ou desentendimentos entre colegas?',
             'Falam ou se comportam comigo de forma dura?',
-            'Os relacionamentos no trabalho estao desgastados?',
+            'Os relacionamentos no trabalho estão desgastados?',
         ],
         'step7': [
-            'Eu entendo claramente o que e esperado de mim no trabalho?',
+            'Eu entendo claramente o que é esperado de mim no trabalho?',
             'Sei como realizar meu trabalho?',
-            'Sei claramente quais sao minhas funcoes e responsabilidades?',
+            'Sei claramente quais são minhas funções e responsabilidades?',
             'Compreendo os objetivos e metas do meu departamento?',
-            'Compreendo como o meu trabalho contribui para o objetivo geral da organizacao?',
+            'Compreendo como o meu trabalho contribui para o objetivo geral da organização?',
         ],
         'step8': [
-            'Tenho oportunidades suficientes para questionar os gestores sobre mudancas no trabalho?',
-            'Os funcionarios sao sempre consultados sobre mudancas no trabalho?',
-            'Quando ha mudancas no trabalho, compreendo claramente como elas serao aplicadas na pratica?',
+            'Tenho oportunidades suficientes para questionar os gestores sobre mudanças no trabalho?',
+            'Os funcionários são sempre consultados sobre mudanças no trabalho?',
+            'Quando há mudanças no trabalho, compreendo claramente como elas serão aplicadas na prática?',
         ],
     }
     STEP_OFFSETS = {
@@ -1804,11 +2170,11 @@ class CampaignReportView(MasterRequiredMixin, View):
     DOMAIN_BY_STEP = {
         'step2': 'Demandas',
         'step3': 'Controle',
-        'step4': 'Apoio da Gestao',
+        'step4': 'Apoio da Gestão',
         'step5': 'Suporte dos Colegas',
         'step6': 'Relacionamentos',
-        'step7': 'Clareza de Papel | Funcao',
-        'step8': 'Gerenciamento de Mudancas',
+        'step7': 'Clareza de Papel | Função',
+        'step8': 'Gerenciamento de Mudanças',
     }
 
     def get(self, request, campaign_uuid):
@@ -1817,7 +2183,7 @@ class CampaignReportView(MasterRequiredMixin, View):
             uuid=campaign_uuid,
         )
         if campaign.status != Campaign.Status.FINISHED:
-            messages.error(request, 'Relatorio disponivel apenas para campanhas encerradas.')
+            messages.error(request, 'Relatório disponível apenas para campanhas encerradas.')
             return redirect('campaigns-list')
         responses_qs = CampaignResponse.all_objects.filter(campaign=campaign)
         ghe_ids = list(
@@ -3767,6 +4133,10 @@ class ReportDetailView(CompanyAdminRequiredMixin, View):
         'very_bad': 'Irritado',
     }
 
+    @staticmethod
+    def _build_metrics(company_id, report):
+        return build_report_metrics(company_id, report, ReportDetailView.SENTIMENT_LABELS)
+
     def get(self, request, report_id):
         report = get_object_or_404(
             Report.all_objects,
@@ -3892,102 +4262,93 @@ class ReportDetailView(CompanyAdminRequiredMixin, View):
         return redirect('reports-detail', report_id=report.id)
 
     def _build_metrics(self, company_id, report):
-        mood_qs = MoodRecord.all_objects.filter(
-            company_id=company_id,
-            record_date__gte=report.period_start,
-            record_date__lte=report.period_end,
-        )
-        complaint_qs = Complaint.all_objects.filter(
-            company_id=company_id,
-            record_date__gte=report.period_start,
-            record_date__lte=report.period_end,
-        )
-        help_qs = HelpRequest.all_objects.filter(
-            company_id=company_id,
-            created_at__date__gte=report.period_start,
-            created_at__date__lte=report.period_end,
-        )
+        return build_report_metrics(company_id, report, self.SENTIMENT_LABELS)
 
-        top_sentiment = (
-            mood_qs.values('sentiment')
-            .annotate(total=Count('id'))
-            .order_by('-total')
-            .first()
-        )
-        complaint_status = (
-            complaint_qs.values('complaint_status')
-            .annotate(total=Count('id'))
-            .order_by('-total')
-        )
-        mood_by_department = (
-            mood_qs.values('department__name')
-            .annotate(total=Count('id'))
-            .order_by('-total', 'department__name')
-        )
-        complaint_by_totem = (
-            complaint_qs.values('totem__name')
-            .annotate(total=Count('id'))
-            .order_by('-total', 'totem__name')
-        )
-        sentiment_order = ['very_good', 'good', 'neutral', 'bad', 'very_bad']
-        sentiment_totals = {key: 0 for key in sentiment_order}
-        for row in mood_qs.values('sentiment').annotate(total=Count('id')):
-            if row['sentiment'] in sentiment_totals:
-                sentiment_totals[row['sentiment']] = row['total']
-        mood_total_count = sum(sentiment_totals.values())
-        mood_distribution = []
-        for key in sentiment_order:
-            total = sentiment_totals[key]
-            if total <= 0:
-                continue
-            percent = round((total * 100 / mood_total_count), 2) if mood_total_count else 0
-            mood_distribution.append({
-                'label': self.SENTIMENT_LABELS[key],
-                'total': total,
-                'percent': percent,
-            })
-        mood_distribution = sorted(
-            mood_distribution,
-            key=lambda item: (-item['total'], item['label']),
-        )
 
-        complaint_type_map = {
-            normalize_complaint_type_key(item.label): item.label
-            for item in ComplaintType.all_objects.filter(company_id=company_id).only('label')
-        }
-        complaint_counts = {}
-        for row in complaint_qs.values('category').annotate(total=Count('id')):
-            category_key = row['category'] or ''
-            label = complaint_type_map.get(
-                category_key,
-                complaint_type_display_name(category_key) or 'Nao informado',
+class ReportCompareView(CompanyAdminRequiredMixin, View):
+    template_name = 'reports/compare.html'
+
+    def get(self, request):
+        is_master = request.user.is_superuser
+        companies = []
+        selected_company_id = request.current_company_id
+        selected_company = None
+
+        if is_master:
+            companies = list(Company.objects.order_by('name').only('id', 'name'))
+            raw_company_id = (request.GET.get('company_id') or '').strip()
+            if raw_company_id.isdigit():
+                candidate_id = int(raw_company_id)
+                if user_has_company_access(request.user, candidate_id):
+                    request.session['company_id'] = candidate_id
+                    request.current_company_id = candidate_id
+                    selected_company_id = candidate_id
+        selected_company = Company.objects.filter(pk=selected_company_id).first()
+        assessment_label = ''
+        if selected_company:
+            assessment_type = (selected_company.assessment_type or '').strip().lower()
+            assessment_label = {
+                'setor': 'Setor',
+                'ghe': 'GHE',
+            }.get(assessment_type, assessment_type.upper() if assessment_type else '')
+
+        campaigns_qs = Campaign.all_objects.filter(
+            company_id=selected_company_id,
+            status=Campaign.Status.FINISHED,
+        ).order_by('-end_date', '-created_at')
+        campaigns = list(campaigns_qs)
+
+        campaign_a_id = (request.GET.get('report_a') or '').strip()
+        campaign_b_id = (request.GET.get('report_b') or '').strip()
+        campaign_a = self._resolve_campaign(campaigns_qs, campaign_a_id)
+        campaign_b = self._resolve_campaign(campaigns_qs, campaign_b_id)
+
+        comparison = None
+        campaign_a_comments = []
+        campaign_b_comments = []
+        if campaign_a and campaign_b and campaign_a.id != campaign_b.id:
+            metrics_a = build_campaign_metrics(campaign_a)
+            metrics_b = build_campaign_metrics(campaign_b)
+            comparison = build_campaign_comparison(metrics_a, metrics_b)
+        if campaign_a:
+            comments = (
+                CampaignResponse.all_objects.filter(campaign=campaign_a)
+                .exclude(comments__isnull=True)
+                .exclude(comments__exact='')
+                .values_list('comments', flat=True)
             )
-            complaint_counts[label] = complaint_counts.get(label, 0) + row['total']
-        complaint_total_count = sum(complaint_counts.values())
-        complaint_distribution = []
-        for label, total in sorted(complaint_counts.items(), key=lambda item: (-item[1], item[0])):
-            percent = round((total * 100 / complaint_total_count), 2) if complaint_total_count else 0
-            complaint_distribution.append({
-                'label': label,
-                'total': total,
-                'percent': percent,
-            })
-        complaint_distribution = sorted(
-            complaint_distribution,
-            key=lambda item: (-item['total'], item['label']),
-        )
+            campaign_a_comments = [str(item).strip() for item in comments if str(item).strip()]
+        if campaign_b:
+            comments = (
+                CampaignResponse.all_objects.filter(campaign=campaign_b)
+                .exclude(comments__isnull=True)
+                .exclude(comments__exact='')
+                .values_list('comments', flat=True)
+            )
+            campaign_b_comments = [str(item).strip() for item in comments if str(item).strip()]
 
-        return {
-            'mood_count': mood_qs.count(),
-            'complaint_count': complaint_qs.count(),
-            'help_count': help_qs.count(),
-            'top_sentiment': self.SENTIMENT_LABELS.get(top_sentiment['sentiment'], 'Sem registros') if top_sentiment else 'Sem registros',
-            'complaint_status': complaint_status,
-            'mood_by_department': mood_by_department,
-            'complaint_by_totem': complaint_by_totem,
-            'mood_distribution': mood_distribution,
-            'complaint_distribution': complaint_distribution,
+        context = {
+            'campaigns': campaigns,
+            'campaign_a': campaign_a,
+            'campaign_b': campaign_b,
+            'comparison': comparison,
+            'campaign_a_comments': campaign_a_comments,
+            'campaign_b_comments': campaign_b_comments,
+            'companies': companies,
+            'selected_company_id': selected_company_id,
+            'selected_company': selected_company,
+            'assessment_label': assessment_label,
+            'company_id': request.current_company_id,
+            'active_menu': 'reports',
+            'can_manage_access': True,
         }
+        return render(request, self.template_name, context)
+
+    @staticmethod
+    def _resolve_campaign(campaigns_qs, campaign_id):
+        if not campaign_id or not campaign_id.isdigit():
+            return None
+        return campaigns_qs.filter(pk=int(campaign_id)).first()
 
     def _generate_content_with_gemini(self, report, metrics):
         mood_distribution = metrics.get('mood_distribution') or []
@@ -4762,7 +5123,7 @@ class AlertSettingsUpdateView(CompanyAdminRequiredMixin, View):
         if settings_obj.is_active and settings_obj.auto_alerts_enabled:
             evaluate_automatic_alerts(company)
         cache.clear()
-        messages.success(request, 'Configuracoes de alerta atualizadas com sucesso.')
+        messages.success(request, 'Configurações de alerta atualizadas com sucesso.')
         if is_ajax_request(request):
             return render_alert_settings_container(request, request.current_company_id)
         return redirect('settings-alerts')
