@@ -3124,10 +3124,16 @@ class TotemHelpRequestSubmitView(View):
 
 
 class CompanyAdminRequiredMixin(LoginRequiredMixin):
+    allow_superuser_without_company = False
+
     def dispatch(self, request, *args, **kwargs):
         if request.user.is_superuser:
             company_id = request.session.get('company_id')
             if not company_id:
+                if self.allow_superuser_without_company:
+                    request.current_company_id = None
+                    request.current_membership = None
+                    return super().dispatch(request, *args, **kwargs)
                 return redirect('company-select')
             try:
                 company_id = int(company_id)
@@ -4351,6 +4357,7 @@ class ReportDetailView(CompanyAdminRequiredMixin, View):
 
 class ReportCompareView(CompanyAdminRequiredMixin, View):
     template_name = 'reports/compare.html'
+    allow_superuser_without_company = True
 
     def get(self, request):
         is_master = request.user.is_superuser

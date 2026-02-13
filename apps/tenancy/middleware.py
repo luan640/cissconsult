@@ -29,6 +29,13 @@ class CompanyContextMiddleware:
         company_id = self._resolve_company_id(request)
         if company_id is None:
             if request.user.is_authenticated:
+                if request.user.is_superuser:
+                    token = set_current_company_id(None)
+                    try:
+                        request.company_id = None
+                        return self.get_response(request)
+                    finally:
+                        reset_current_company_id(token)
                 if (not request.user.is_superuser) and (
                     not get_active_memberships_for_user(request.user).exists()
                 ):
