@@ -391,6 +391,22 @@ body {
   transition: background-color 0.24s ease, border-color 0.24s ease, transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), border-radius 0.32s ease;
 }
 
+.sidebar-mobile-trigger {
+  display: none;
+  width: 40px;
+  height: 40px;
+  background: #111111;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--sidebar-text);
+  border-radius: 12px;
+  padding: 0;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.28);
+  z-index: 220;
+}
+
 .sidebar__toggle:hover {
   background: #151515;
   border-color: rgba(124, 58, 237, 0.5);
@@ -2030,6 +2046,31 @@ body {
 @media (max-width: 980px) {
   .app-layout {
     grid-template-columns: 1fr;
+    position: relative;
+  }
+  .app-layout::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.48);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.24s ease;
+    z-index: 199;
+  }
+  .layout-mobile-sidebar-open .app-layout::before {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .sidebar-mobile-trigger {
+    display: inline-flex;
+    position: fixed;
+    left: 14px;
+    top: 14px;
+  }
+  .layout-mobile-sidebar-open .sidebar-mobile-trigger {
+    opacity: 0;
+    pointer-events: none;
   }
   .company-cards {
     grid-template-columns: 1fr;
@@ -2042,9 +2083,21 @@ body {
     justify-content: flex-start;
   }
   .sidebar {
-    position: sticky;
+    position: fixed;
     top: 0;
-    z-index: 10;
+    left: 0;
+    bottom: 0;
+    width: min(86vw, 320px);
+    height: 100vh;
+    transform: translateX(-102%);
+    transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    z-index: 210;
+  }
+  .layout-mobile-sidebar-open .sidebar {
+    transform: translateX(0);
+  }
+  .layout-mobile-sidebar-open body {
+    overflow: hidden;
   }
   .grid {
     grid-template-columns: 1fr;
