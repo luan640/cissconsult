@@ -391,22 +391,6 @@ body {
   transition: background-color 0.24s ease, border-color 0.24s ease, transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), border-radius 0.32s ease;
 }
 
-.sidebar-mobile-trigger {
-  display: none;
-  width: 40px;
-  height: 40px;
-  background: #111111;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: var(--sidebar-text);
-  border-radius: 12px;
-  padding: 0;
-  cursor: pointer;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.28);
-  z-index: 220;
-}
-
 .sidebar__toggle:hover {
   background: #151515;
   border-color: rgba(124, 58, 237, 0.5);
@@ -2062,16 +2046,6 @@ body {
     opacity: 1;
     pointer-events: auto;
   }
-  .sidebar-mobile-trigger {
-    display: inline-flex;
-    position: fixed;
-    left: 14px;
-    top: 14px;
-  }
-  .layout-mobile-sidebar-open .sidebar-mobile-trigger {
-    opacity: 0;
-    pointer-events: none;
-  }
   .company-cards {
     grid-template-columns: 1fr;
   }
@@ -2106,14 +2080,100 @@ body {
     grid-column: span 1;
   }
   .content {
-    padding: 22px 16px;
+    padding: 74px 16px 20px;
+  }
+  .content__header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .master-company-form {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .master-company-form .form-field,
+  .master-company-form select {
+    min-width: 0;
+    width: 100%;
+  }
+  .company-card {
+    padding: 16px;
+  }
+  .company-card__header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .company-card__meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .company-card__actions {
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+  }
+  .table-pagination {
+    justify-content: flex-start;
+    flex-wrap: wrap;
   }
   .form-grid {
     grid-template-columns: 1fr;
+  }
+  .form-actions {
+    flex-wrap: wrap;
   }
   .table {
     display: block;
     overflow-x: auto;
     white-space: nowrap;
+  }
+  .modal-backdrop {
+    padding: 10px;
+  }
+  .modal-card {
+    width: 100%;
+    max-height: 88vh;
+  }
+  .company-wizard__options--grid-2 {
+    grid-template-columns: 1fr;
+  }
+  .floating-toast-stack {
+    left: 10px;
+    right: 10px;
+    top: 10px;
+  }
+  .floating-toast {
+    min-width: 0;
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  .content {
+    padding: 72px 12px 16px;
+  }
+  .sidebar {
+    width: min(92vw, 320px);
+  }
+  .hero {
+    padding: 14px;
+  }
+  .company-card__meta {
+    grid-template-columns: 1fr;
+  }
+  .quick-actions .btn,
+  .company-card__actions .btn,
+  .company-card__actions .icon-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  .campaign-row {
+    padding: 12px;
+  }
+  .table th,
+  .table td {
+    padding: 10px 11px;
   }
 }

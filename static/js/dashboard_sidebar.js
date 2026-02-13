@@ -8,7 +8,6 @@
   const mobileQuery = window.matchMedia(MOBILE_BREAKPOINT);
   const mobileOpenClass = 'layout-mobile-sidebar-open';
   const toggleButton = document.querySelector('[data-sidebar-toggle]');
-  const mobileTriggerButton = document.querySelector('[data-sidebar-mobile-trigger]');
   const layoutRoot = document.documentElement;
   const sidebarStateKey = 'nr1_sidebar_collapsed';
   const menuLinks = document.querySelectorAll('.menu__item[data-match-path]');
@@ -79,13 +78,6 @@
           isOpen ? 'Fechar menu lateral' : 'Abrir menu lateral'
         );
       }
-      if (mobileTriggerButton) {
-        mobileTriggerButton.setAttribute('aria-expanded', String(isOpen));
-        mobileTriggerButton.setAttribute(
-          'aria-label',
-          isOpen ? 'Fechar menu lateral' : 'Abrir menu lateral'
-        );
-      }
       return;
     }
 
@@ -131,16 +123,6 @@
         closeAllMenuGroups();
       }
       persistSidebarState(layoutRoot.classList.contains('layout-collapsed'));
-      syncSidebarToggleState();
-    });
-  }
-
-  if (mobileTriggerButton) {
-    mobileTriggerButton.addEventListener('click', function () {
-      if (!isMobileViewport()) {
-        return;
-      }
-      setMobileSidebarState(!isMobileSidebarOpen());
       syncSidebarToggleState();
     });
   }
@@ -209,10 +191,7 @@
     }
 
     if (isMobileViewport() && isMobileSidebarOpen()) {
-      if (
-        !event.target.closest('.sidebar') &&
-        !event.target.closest('[data-sidebar-mobile-trigger]')
-      ) {
+      if (!event.target.closest('.sidebar')) {
         setMobileSidebarState(false);
         closeAllMenuGroups();
         syncSidebarToggleState();
