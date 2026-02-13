@@ -1,10 +1,16 @@
+from urllib.parse import quote
+
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.shortcuts import redirect, render
 from django.urls import reverse
 
 from .context import reset_current_company_id, set_current_company_id
-from .session import resolve_default_company_id, user_has_company_access
+from .session import (
+    get_active_memberships_for_user,
+    resolve_default_company_id,
+    user_has_company_access,
+)
 
 
 class CompanyContextMiddleware:
@@ -23,7 +29,11 @@ class CompanyContextMiddleware:
         company_id = self._resolve_company_id(request)
         if company_id is None:
             if request.user.is_authenticated:
-                return render(request, 'errors/inactive_company.html', status=403)
+                if (not request.user.is_superuser) and (
+                    not get_active_memberships_for_user(request.user).exists()
+                ):
+                    return render(request, 'errors/inactive_company.html', status=403)
+                return self._redirect_to_company_select(request)
             token = set_current_company_id(None)
             try:
                 request.company_id = None
@@ -79,3 +89,12 @@ class CompanyContextMiddleware:
             path.startswith(prefix)
             for prefix in settings.TENANCY_EXEMPT_PATH_PREFIXES
         )
+
+    @staticmethod
+    def _redirect_to_company_select(request):
+        next_url = request.get_full_path()
+        target = f"{reverse('company-select')}?next={quote(next_url, safe='/?:=&')}"
+        response = redirect(target)
+        if request.headers.get('HX-Request') == 'true':
+            response.headers['HX-Redirect'] = target
+        return response
