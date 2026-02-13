@@ -235,31 +235,11 @@ def build_report_comparison(metrics_a, metrics_b):
 
 
 def build_campaign_metrics(campaign):
-    responses_qs = CampaignResponse.all_objects.filter(campaign=campaign)
+    responses_qs = CampaignResponse.all_objects.filter(campaign_id=campaign.id)
     assessment_type = (campaign.company.assessment_type or '').strip().lower()
     use_departments = assessment_type == 'setor'
     group_label = 'Setores' if use_departments else 'GHE'
     group_id_field = 'department_id' if use_departments else 'ghe_id'
-    group_name_map = {}
-    if use_departments:
-        department_ids = list(
-            responses_qs.exclude(department_id__isnull=True)
-            .values_list('department_id', flat=True)
-            .distinct()
-        )
-        group_name_map = {
-            department.id: department.name
-            for department in Department.all_objects.filter(id__in=department_ids)
-        }
-    else:
-        ghe_ids = list(
-            responses_qs.exclude(ghe_id__isnull=True)
-            .values_list('ghe_id', flat=True)
-            .distinct()
-        )
-        group_name_map = {
-            ghe.id: ghe.name for ghe in GHE.all_objects.filter(id__in=ghe_ids)
-        }
     domain_totals = {
         key: {'sum': 0, 'count': 0}
         for key in CampaignReportView.DOMAIN_BY_STEP.keys()
@@ -268,25 +248,32 @@ def build_campaign_metrics(campaign):
     question_totals = {}
     overall_sum = 0
     overall_count = 0
+    responses_count = 0
+    score_by_answer = CampaignReportView.ANSWER_SCORE
+    domain_by_step = CampaignReportView.DOMAIN_BY_STEP
+    step_offsets = CampaignReportView.STEP_OFFSETS
+    step_questions = CampaignReportView.STEP_QUESTIONS
 
-    for response in responses_qs:
-        answers_by_step = response.responses or {}
+    response_rows = responses_qs.values('responses', group_id_field).iterator(chunk_size=500)
+    for response in response_rows:
+        responses_count += 1
+        answers_by_step = response.get('responses') or {}
+        group_id = response.get(group_id_field)
         for step_key, answers in answers_by_step.items():
-            if step_key not in CampaignReportView.DOMAIN_BY_STEP or not answers:
+            if step_key not in domain_by_step or not answers:
                 continue
-            question_offset = CampaignReportView.STEP_OFFSETS.get(step_key, 0)
-            question_texts = CampaignReportView.STEP_QUESTIONS.get(step_key, [])
+            question_offset = step_offsets.get(step_key, 0)
+            question_texts = step_questions.get(step_key, [])
             for idx, question_text in enumerate(question_texts):
                 if idx >= len(answers):
                     break
-                score = CampaignReportView.ANSWER_SCORE.get(answers[idx].get('answer', ''))
+                score = score_by_answer.get(answers[idx].get('answer', ''))
                 if not score:
                     continue
                 domain_totals[step_key]['sum'] += score
                 domain_totals[step_key]['count'] += 1
                 overall_sum += score
                 overall_count += 1
-                group_id = getattr(response, group_id_field, None)
                 if group_id:
                     group_totals.setdefault(group_id, {'sum': 0, 'count': 0})
                     group_totals[group_id]['sum'] += score
@@ -295,11 +282,25 @@ def build_campaign_metrics(campaign):
                 question_key = (
                     question_number,
                     question_text,
-                    CampaignReportView.DOMAIN_BY_STEP.get(step_key, ''),
+                    domain_by_step.get(step_key, ''),
                 )
                 question_totals.setdefault(question_key, {'sum': 0, 'count': 0})
                 question_totals[question_key]['sum'] += score
                 question_totals[question_key]['count'] += 1
+
+    group_name_map = {}
+    group_ids = list(group_totals.keys())
+    if group_ids:
+        if use_departments:
+            group_name_map = {
+                department.id: department.name
+                for department in Department.all_objects.filter(id__in=group_ids).only('id', 'name')
+            }
+        else:
+            group_name_map = {
+                ghe.id: ghe.name
+                for ghe in GHE.all_objects.filter(id__in=group_ids).only('id', 'name')
+            }
 
     domains = []
     for step_key, label in CampaignReportView.DOMAIN_BY_STEP.items():
@@ -347,7 +348,7 @@ def build_campaign_metrics(campaign):
     question_items = sorted(question_items, key=lambda item: item['question_number'])
 
     return {
-        'responses_count': responses_qs.count(),
+        'responses_count': responses_count,
         'overall_avg': round(overall_avg, 1) if overall_count else 0,
         'overall_percent': round(overall_percent, 1) if overall_count else 0,
         'overall_label': overall_label,
@@ -4378,6 +4379,13 @@ class ReportCompareView(CompanyAdminRequiredMixin, View):
         campaigns_qs = Campaign.all_objects.filter(
             company_id=selected_company_id,
             status=Campaign.Status.FINISHED,
+        ).select_related('company').only(
+            'id',
+            'title',
+            'start_date',
+            'end_date',
+            'company_id',
+            'company__assessment_type',
         ).order_by('-end_date', '-created_at')
         campaigns = list(campaigns_qs)
 
