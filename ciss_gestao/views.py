@@ -1,5 +1,6 @@
 import hashlib
 import json
+import logging
 import os
 import re
 from pathlib import Path
@@ -79,6 +80,14 @@ try:
     import qrcode
 except ImportError:  # optional dependency in local setup
     qrcode = None
+
+try:
+    import django_rq
+except ImportError:  # optional dependency in local setup
+    django_rq = None
+
+
+logger = logging.getLogger(__name__)
 
 
 def build_period_metrics(company_id, period_start, period_end, sentiment_labels):
@@ -1721,12 +1730,12 @@ class CampaignAccessView(View):
             )
             return redirect(f"{reverse('campaigns-access', args=[campaign.uuid])}?step=2")
 
-        session_data = self._get_session_data(request, campaign.uuid)
-        if not session_data:
-            messages.error(request, 'Inicie a avaliacao novamente.')
-            return redirect(reverse('campaigns-access', args=[campaign.uuid]))
-
         if step in {'2', '3', '4', '5', '6', '7', '8'}:
+            session_data = self._get_session_data(request, campaign.uuid)
+            if not session_data:
+                messages.error(request, 'Inicie a avaliacao novamente.')
+                return redirect(reverse('campaigns-access', args=[campaign.uuid]))
+
             step_info = self._get_step_context(step, context)
             questions = step_info['context']['questions']
             answers = self._collect_answers(request, questions)
@@ -1740,23 +1749,31 @@ class CampaignAccessView(View):
             return redirect(f"{reverse('campaigns-access', args=[campaign.uuid])}?step={next_step}")
 
         if step == '9':
+            session_data = self._get_session_data(request, campaign.uuid)
             local_payload = (request.POST.get('local_payload') or '').strip()
+            payload = {}
             if local_payload:
                 try:
                     payload = json.loads(local_payload)
                 except json.JSONDecodeError:
                     payload = {}
+
+                if not session_data:
+                    session_data = self._build_session_from_payload(payload, campaign)
+                    if session_data is None:
+                        messages.error(request, 'Inicie a avaliacao novamente.')
+                        return redirect(reverse('campaigns-access', args=[campaign.uuid]))
+
                 responses_payload = payload.get('responses') if isinstance(payload, dict) else None
                 if isinstance(responses_payload, dict) and responses_payload:
                     session_data['responses'] = responses_payload
                 if not (request.POST.get('comments') or '').strip():
                     payload_comments = (payload.get('comments') if isinstance(payload, dict) else '') or ''
                     session_data['comments'] = str(payload_comments).strip()
-                if not session_data:
-                    session_data = self._build_session_from_payload(payload, campaign)
-                    if session_data is None:
-                        messages.error(request, 'Inicie a avaliacao novamente.')
-                        return redirect(reverse('campaigns-access', args=[campaign.uuid]))
+
+            if not session_data:
+                messages.error(request, 'Inicie a avaliacao novamente.')
+                return redirect(reverse('campaigns-access', args=[campaign.uuid]))
 
             comments = (request.POST.get('comments') or session_data.get('comments') or '').strip()
             session_data['comments'] = comments
@@ -2897,6 +2914,24 @@ def evaluate_automatic_alerts(company):
         )
 
 
+def _evaluate_automatic_alerts_job(company_id):
+    company = Company.all_objects.filter(id=company_id, is_active=True).first()
+    if company is None:
+        return
+    evaluate_automatic_alerts(company)
+
+
+def enqueue_automatic_alerts_evaluation(company):
+    if django_rq is None:
+        logger.warning('django_rq indisponivel; avaliacao automatica de alertas nao foi enfileirada.')
+        return
+    try:
+        queue = django_rq.get_queue('default')
+        queue.enqueue(_evaluate_automatic_alerts_job, company.id)
+    except Exception:
+        logger.exception('Falha ao enfileirar avaliacao automatica de alertas.')
+
+
 class TotemView(View):
     template_name = 'totem/index.html'
 
@@ -2988,7 +3023,7 @@ class TotemMoodSubmitView(View):
             channel='totem',
         )
         cache.clear()
-        evaluate_automatic_alerts(company)
+        enqueue_automatic_alerts_evaluation(company)
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'ok': True, 'message': 'Humor registrado com sucesso.'})
         messages.success(request, 'Humor registrado com sucesso.')
@@ -3052,7 +3087,7 @@ class TotemComplaintSubmitView(View):
             action_note='Denuncia recebida via totem.',
         )
         cache.clear()
-        evaluate_automatic_alerts(company)
+        enqueue_automatic_alerts_evaluation(company)
         messages.success(request, 'Denuncia registrada com sucesso.')
         return redirect('totem-home', company_slug=company.slug, totem_slug=totem.slug)
 
@@ -3082,7 +3117,7 @@ class TotemHelpRequestSubmitView(View):
             status=HelpRequest.Status.OPEN,
         )
         cache.clear()
-        evaluate_automatic_alerts(company)
+        enqueue_automatic_alerts_evaluation(company)
         messages.success(request, 'Pedido de ajuda registrado. Nossa equipe vai ate voce.')
         return redirect('totem-home', company_slug=company.slug, totem_slug=totem.slug)
 
