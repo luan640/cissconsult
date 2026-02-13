@@ -74,6 +74,7 @@ INSTALLED_APPS = [
     'masterdata.apps.MasterdataConfig',
     'apps.tenancy.apps.TenancyConfig',
     'apps.core.apps.CoreConfig',
+    'django_rq',
 ]
 
 if DEBUG:
@@ -96,6 +97,14 @@ MIDDLEWARE = [
 
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 WHITENOISE_MANIFEST_STRICT = False
+
+REDIS_URL = os.getenv('REDIS_URL', '').strip()
+RQ_QUEUES = {
+    'default': {
+        'URL': REDIS_URL or 'redis://localhost:6379/0',
+        'DEFAULT_TIMEOUT': 300,
+    }
+}
 
 if DEBUG:
     MIDDLEWARE.insert(0, 'debug_toolbar.middleware.DebugToolbarMiddleware')
