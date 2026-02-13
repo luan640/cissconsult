@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Configuracoes | PLATAFORMA NR-1{% endblock %}
+{% block title %}Configurações | PLATAFORMA NR-1{% endblock %}
 
 {% block extra_head %}
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -16,14 +16,14 @@
   <main class="content" data-page="master-settings">
     <header class="content__header">
       <div>
-        <h1 class="content__title">Configuracoes</h1>
-        <p class="content__subtitle">Defina os responsaveis e assinaturas exibidos no relatorio PDF.</p>
+        <h1 class="content__title">Configurações</h1>
+        <p class="content__subtitle">Defina os responsáveis e assinaturas exibidos no relatório PDF.</p>
       </div>
-      <button class="btn btn--primary" type="button" data-open-modal="create-technical-modal">Novo responsavel</button>
+      <button class="btn btn--primary" type="button" data-open-modal="create-technical-modal">Novo responsável</button>
     </header>
 
     <section class="card" style="margin-bottom: 16px;">
-      <p class="card__label">Assinatura do responsavel pela avaliacao</p>
+      <p class="card__label">Assinatura do responsável pela avaliação</p>
       <form method="post" action="{% url 'master-settings-report-update' %}" class="form-grid">
         {% csrf_token %}
         <div class="form-field">
@@ -57,13 +57,13 @@
     <div class="modal-backdrop" data-modal="create-technical-modal" aria-hidden="true">
       <div class="modal-card modal-card--lg">
         <div class="modal-card__header">
-          <h2>Novo responsavel tecnico</h2>
+          <h2>Novo responsável técnico</h2>
           <button type="button" class="modal-close" data-close-modal>&times;</button>
         </div>
         <form method="post" action="{% url 'master-settings-technical-create' %}" class="form-grid modal-form" data-technical-create-form>
           {% csrf_token %}
           <div class="form-field"><label for="create_tech_name">Nome</label><input id="create_tech_name" name="name" required maxlength="150" /></div>
-          <div class="form-field"><label for="create_tech_education">Formacao</label><input id="create_tech_education" name="education" required maxlength="255" /></div>
+          <div class="form-field"><label for="create_tech_education">Formação</label><input id="create_tech_education" name="education" required maxlength="255" /></div>
           <div class="form-field"><label for="create_tech_registration">Registro</label><input id="create_tech_registration" name="registration" required maxlength="80" /></div>
           <div class="form-field"><label for="create_tech_order">Ordem</label><input id="create_tech_order" name="sort_order" type="number" min="0" value="0" /></div>
           <div class="form-actions">
@@ -77,13 +77,13 @@
     <div class="modal-backdrop" data-modal="edit-technical-modal" aria-hidden="true">
       <div class="modal-card modal-card--lg">
         <div class="modal-card__header">
-          <h2>Editar responsavel tecnico</h2>
+          <h2>Editar responsável técnico</h2>
           <button type="button" class="modal-close" data-close-modal>&times;</button>
         </div>
         <form method="post" action="" class="form-grid modal-form" data-technical-edit-form>
           {% csrf_token %}
           <div class="form-field"><label for="edit_tech_name">Nome</label><input id="edit_tech_name" name="name" required maxlength="150" /></div>
-          <div class="form-field"><label for="edit_tech_education">Formacao</label><input id="edit_tech_education" name="education" required maxlength="255" /></div>
+          <div class="form-field"><label for="edit_tech_education">Formação</label><input id="edit_tech_education" name="education" required maxlength="255" /></div>
           <div class="form-field"><label for="edit_tech_registration">Registro</label><input id="edit_tech_registration" name="registration" required maxlength="80" /></div>
           <div class="form-field"><label for="edit_tech_order">Ordem</label><input id="edit_tech_order" name="sort_order" type="number" min="0" /></div>
           <div class="form-field form-field--inline">

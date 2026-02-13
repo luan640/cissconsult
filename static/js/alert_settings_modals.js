@@ -82,7 +82,7 @@
       },
     });
     if (!response.ok) {
-      throw new Error('Falha ao atualizar configuracoes de alerta.');
+      throw new Error('Falha ao atualizar configurações de alerta.');
     }
     replaceContainer(await response.text());
   };

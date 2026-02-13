@@ -207,7 +207,7 @@
       </p>
     </div>
 
-    <form id="step-form" method="post" action="{% url 'campaigns-access' campaign.uuid %}">
+    <form id="step-form" method="post" action="{% url 'campaigns-access' campaign.uuid %}" data-campaign-uuid="{{ campaign.uuid }}" data-step="8">
       {% csrf_token %}
       <input type="hidden" name="step" value="8" />
       {% if question_items %}
@@ -256,33 +256,5 @@
 {% endblock %}
 
 {% block extra_scripts %}
-  <script>
-    (function () {
-      const form = document.getElementById('step-form');
-      const nextLink = form ? form.querySelector('[data-next-step]') : null;
-      if (!form || !nextLink) return;
-
-      form.addEventListener('submit', function (event) {
-        const groups = Array.from(form.querySelectorAll('.question-card'));
-        let firstInvalid = null;
-        for (const group of groups) {
-          const radios = group.querySelectorAll('input[type="radio"]');
-          const checked = Array.from(radios).some((radio) => radio.checked);
-          if (!checked && !firstInvalid) {
-            firstInvalid = group;
-          }
-        }
-
-        if (firstInvalid) {
-          event.preventDefault();
-          firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          firstInvalid.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.25)';
-          setTimeout(() => {
-            firstInvalid.style.boxShadow = '';
-          }, 1200);
-          alert('Responda todas as perguntas para continuar.');
-        }
-      });
-    })();
-  </script>
+  <script src="{% static 'js/campaign_localstorage.js' %}"></script>
 {% endblock %}

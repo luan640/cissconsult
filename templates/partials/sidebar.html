@@ -40,6 +40,10 @@
         <svg class="menu__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 21h16V9L12 3 4 9v12Zm4-8h8v2H8v-2Zm0 4h8v2H8v-2Z" fill="currentColor"/></svg>
         <span class="menu__text">Empresas</span>
       </a>
+      <a class="menu__item{% if active_menu == 'reports' %} is-active{% endif %}" href="{% url 'reports-compare' %}" data-match-path="/relatorios/comparar/">
+        <svg class="menu__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 3h8v8H3V3Zm10 0h8v4h-8V3ZM3 13h8v8H3v-8Zm10 6h8v2h-8v-2Zm0-4h8v2h-8v-2Z" fill="currentColor"/></svg>
+        <span class="menu__text">Comparar campanhas</span>
+      </a>
       <a class="menu__item{% if active_menu == 'campaigns' %} is-active{% endif %}" href="{% url 'campaigns-list' %}" data-match-path="/campaigns/">
         <svg class="menu__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 11h8V3H3v8Zm10 10h8V5h-8v16ZM3 21h8v-8H3v8Zm2-6h4v4H5v-4Zm10-8h4v10h-4V7Z" fill="currentColor"/></svg>
         <span class="menu__text">Campanhas</span>

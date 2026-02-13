@@ -189,7 +189,7 @@
       </p>
     </div>
 
-    <form id="step-form" method="post" action="{% url 'campaigns-access' campaign.uuid %}">
+    <form id="step-form" method="post" action="{% url 'campaigns-access' campaign.uuid %}" data-campaign-uuid="{{ campaign.uuid }}" data-step="9" data-final-step="1">
       {% csrf_token %}
       <input type="hidden" name="step" value="9" />
       <div class="comment-card">
@@ -208,6 +208,7 @@
 {% endblock %}
 
 {% block extra_scripts %}
+  <script src="{% static 'js/campaign_localstorage.js' %}"></script>
   <script>
     (function () {
       const textarea = document.getElementById('comments');

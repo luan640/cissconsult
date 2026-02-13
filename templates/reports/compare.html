@@ -1,0 +1,439 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Comparar Relatorios | PLATAFORMA NR-1{% endblock %}
+
+{% block extra_head %}
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{% static 'css/dashboard.css' %}" />
+{% endblock %}
+
+{% block content %}
+<div class="app-layout">
+  {% include "partials/sidebar.html" with active_menu="reports" can_manage_access=True %}
+  <main class="content">
+    <header class="content__header">
+      <div>
+        <h1 class="content__title">Comparar campanhas</h1>
+        <p class="content__subtitle">Selecione duas campanhas da mesma empresa para comparar.</p>
+      </div>
+    </header>
+
+    <section class="card card--form compare-form">
+      <form method="get" class="form-grid compare-form__grid">
+        {% if is_master %}
+          <div class="form-field">
+            <label for="company_id">Empresa</label>
+          <select id="company_id" name="company_id" required onchange="this.form.submit()" data-company-select>
+              <option value="">Selecione</option>
+              {% for company in companies %}
+                <option value="{{ company.id }}" {% if selected_company_id and company.id == selected_company_id %}selected{% endif %}>
+                  {{ company.name }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+        {% endif %}
+        <div class="form-field">
+          <label for="report_a">Campanha A</label>
+          <select id="report_a" name="report_a" required data-report-select>
+            <option value="">Selecione</option>
+            {% for campaign in campaigns %}
+              <option value="{{ campaign.id }}" {% if campaign_a and campaign.id == campaign_a.id %}selected{% endif %}>
+                {{ campaign.title }} ({{ campaign.start_date|date:"d/m/Y" }} - {{ campaign.end_date|date:"d/m/Y" }})
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="report_b">Campanha B</label>
+          <select id="report_b" name="report_b" required data-report-select>
+            <option value="">Selecione</option>
+            {% for campaign in campaigns %}
+              <option value="{{ campaign.id }}" {% if campaign_b and campaign.id == campaign_b.id %}selected{% endif %}>
+                {{ campaign.title }} ({{ campaign.start_date|date:"d/m/Y" }} - {{ campaign.end_date|date:"d/m/Y" }})
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-actions compare-form__actions">
+          <button class="btn btn--primary" type="submit" data-compare-submit>Comparar</button>
+        </div>
+      </form>
+    </section>
+
+    {% if comparison %}
+      {% if selected_company %}
+        <section class="card card--table compare-company-card">
+          <h2 class="card__title">Dados da empresa</h2>
+          <table class="table">
+            <tbody>
+              <tr>
+                <td><strong>Empresa</strong></td>
+                <td>{{ selected_company.name }}</td>
+                <td><strong>Tipo de avaliação</strong></td>
+                <td>{{ assessment_label|default:"-" }}</td>
+              </tr>
+              <tr>
+                <td><strong>Quantidade de funcionários</strong></td>
+                <td>{{ selected_company.employee_count|default:"0" }}</td>
+                <td><strong>Representante legal</strong></td>
+                <td>{{ selected_company.legal_representative_name|default:"-" }}</td>
+              </tr>
+              <tr>
+                <td><strong>Campanha A</strong></td>
+                <td>
+                  {% if campaign_a %}
+                    {{ campaign_a.start_date|date:"d/m/Y" }} - {{ campaign_a.end_date|date:"d/m/Y" }}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+                <td><strong>Campanha B</strong></td>
+                <td>
+                  {% if campaign_b %}
+                    {{ campaign_b.start_date|date:"d/m/Y" }} - {{ campaign_b.end_date|date:"d/m/Y" }}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </section>
+      {% endif %}
+      {% if campaign_a_comments or campaign_b_comments %}
+        <section class="card card--table compare-company-card">
+          <h2 class="card__title">Comentários das campanhas</h2>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Campanha</th>
+                <th>Comentários</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if campaign_a %}
+                <tr>
+                  <td>{{ campaign_a.title }}</td>
+                  <td>
+                    {% if campaign_a_comments %}
+                      <ul class="comments-list">
+                        {% for comment in campaign_a_comments %}
+                          <li>{{ comment }}</li>
+                        {% endfor %}
+                      </ul>
+                    {% else %}
+                      -
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endif %}
+              {% if campaign_b %}
+                <tr>
+                  <td>{{ campaign_b.title }}</td>
+                  <td>
+                    {% if campaign_b_comments %}
+                      <ul class="comments-list">
+                        {% for comment in campaign_b_comments %}
+                          <li>{{ comment }}</li>
+                        {% endfor %}
+                      </ul>
+                    {% else %}
+                      -
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </section>
+      {% endif %}
+      <div class="compare-stack">
+        <section class="card card--table">
+          <h2 class="card__title">Resumo comparativo da campanha</h2>
+          <table class="table">
+          <thead>
+            <tr>
+              <th>Métrica</th>
+              <th>Campanha A</th>
+              <th>Campanha B</th>
+              <th>Variação (%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>
+                Respostas
+                <span class="tooltip" aria-label="Número total de respostas coletadas na campanha.">i
+                  <span class="tooltip__text">Total de respostas registradas na campanha.</span>
+                </span>
+              </td>
+              <td>{{ comparison.responses_count.a }}</td>
+              <td>{{ comparison.responses_count.b }}</td>
+              <td>
+                {% if comparison.responses_count.percent != None %}
+                  {{ comparison.responses_count.percent }}%
+                  {% if comparison.responses_count.percent > 0 %}
+                    <span class="trend trend--up">&#9650;</span>
+                  {% elif comparison.responses_count.percent < 0 %}
+                    <span class="trend trend--down">&#9660;</span>
+                  {% else %}
+                    <span class="trend trend--flat">&#9679;</span>
+                  {% endif %}
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+            </tr>
+            <tr>
+              <td>
+                Média geral
+                <span class="tooltip" aria-label="Média das notas das perguntas (escala 1 a 5).">i
+                  <span class="tooltip__text">Média das respostas (escala 1 a 5) em todas as perguntas da campanha.</span>
+                </span>
+              </td>
+              <td>{{ comparison.overall_avg.a }}</td>
+              <td>{{ comparison.overall_avg.b }}</td>
+              <td>
+                {% if comparison.overall_avg.percent != None %}
+                  {{ comparison.overall_avg.percent }}%
+                  {% if comparison.overall_avg.percent > 0 %}
+                    <span class="trend trend--up">&#9650;</span>
+                  {% elif comparison.overall_avg.percent < 0 %}
+                    <span class="trend trend--down">&#9660;</span>
+                  {% else %}
+                    <span class="trend trend--flat">&#9679;</span>
+                  {% endif %}
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+            </tr>
+            <tr>
+              <td>
+                Percentual geral
+                <span class="tooltip" aria-label="Média geral convertida em percentual.">i
+                  <span class="tooltip__text">Média geral convertida para percentual (média ÷ 5 × 100).</span>
+                </span>
+              </td>
+              <td>{{ comparison.overall_percent.a }}%</td>
+              <td>{{ comparison.overall_percent.b }}%</td>
+              <td>
+                {% if comparison.overall_percent.percent != None %}
+                  {{ comparison.overall_percent.percent }}%
+                  {% if comparison.overall_percent.percent > 0 %}
+                    <span class="trend trend--up">&#9650;</span>
+                  {% elif comparison.overall_percent.percent < 0 %}
+                    <span class="trend trend--down">&#9660;</span>
+                  {% else %}
+                    <span class="trend trend--flat">&#9679;</span>
+                  {% endif %}
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+            </tr>
+            <tr>
+              <td>
+                Classificação
+                <span class="tooltip" aria-label="Classificação da média geral.">i
+                  <span class="tooltip__text">Classificação baseada na média geral: Adequado (>= 4), Moderado (>= 3), Crítico (&lt; 3).</span>
+                </span>
+              </td>
+              <td>{{ comparison.overall_label.a }}</td>
+              <td>{{ comparison.overall_label.b }}</td>
+              <td colspan="2">-</td>
+            </tr>
+          </tbody>
+          </table>
+        </section>
+
+        <section class="card card--table">
+          <h2 class="card__title">Domínios</h2>
+          <table class="table">
+          <thead>
+            <tr>
+              <th>Domínio</th>
+              <th>Campanha A</th>
+              <th>Campanha B</th>
+              <th>Variação (%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in comparison.domains %}
+              <tr>
+                <td>{{ item.label }}</td>
+                <td>{{ item.a.percent }}% ({{ item.a.avg }})</td>
+                <td>{{ item.b.percent }}% ({{ item.b.avg }})</td>
+                <td>
+                  {% if item.percent != None %}
+                    {{ item.percent }}%
+                    {% if item.percent > 0 %}
+                      <span class="trend trend--up">&#9650;</span>
+                    {% elif item.percent < 0 %}
+                      <span class="trend trend--down">&#9660;</span>
+                    {% else %}
+                      <span class="trend trend--flat">&#9679;</span>
+                    {% endif %}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+          </table>
+        </section>
+
+      <section class="card card--table">
+        <h2 class="card__title">{{ comparison.group_label }}</h2>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>{{ comparison.group_label }}</th>
+              <th>Campanha A</th>
+              <th>Campanha B</th>
+              <th>Variacao (%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in comparison.groups %}
+              <tr>
+                <td>{{ item.label }}</td>
+                <td>{{ item.a.percent }}% ({{ item.a.avg }})</td>
+                <td>{{ item.b.percent }}% ({{ item.b.avg }})</td>
+                <td>
+                  {% if item.percent != None %}
+                    {{ item.percent }}%
+                    {% if item.percent > 0 %}
+                      <span class="trend trend--up">&#9650;</span>
+                    {% elif item.percent < 0 %}
+                      <span class="trend trend--down">&#9660;</span>
+                    {% else %}
+                      <span class="trend trend--flat">&#9679;</span>
+                    {% endif %}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+
+      <section class="card card--table">
+        <h2 class="card__title">Funções</h2>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Função</th>
+              <th>Campanha A</th>
+              <th>Campanha B</th>
+              <th>Variação (%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in comparison.functions %}
+              <tr>
+                <td>{{ item.label }}</td>
+                <td>{{ item.a.percent }}% ({{ item.a.avg }})</td>
+                <td>{{ item.b.percent }}% ({{ item.b.avg }})</td>
+                <td>
+                  {% if item.percent != None %}
+                    {{ item.percent }}%
+                    {% if item.percent > 0 %}
+                      <span class="trend trend--up">&#9650;</span>
+                    {% elif item.percent < 0 %}
+                      <span class="trend trend--down">&#9660;</span>
+                    {% else %}
+                      <span class="trend trend--flat">&#9679;</span>
+                    {% endif %}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+
+        <section class="card card--table">
+          <h2 class="card__title">Perguntas</h2>
+          <table class="table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Domínio</th>
+              <th>Pergunta</th>
+              <th>Campanha A</th>
+              <th>Campanha B</th>
+              <th>Variação (%)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in comparison.questions %}
+              <tr>
+                <td>{{ item.question_number }}</td>
+                <td>{{ item.domain }}</td>
+                <td>{{ item.text }}</td>
+                <td>{{ item.a.percent }}% ({{ item.a.avg }})</td>
+                <td>{{ item.b.percent }}% ({{ item.b.avg }})</td>
+                <td>
+                  {% if item.percent != None %}
+                    {{ item.percent }}%
+                    {% if item.percent > 0 %}
+                      <span class="trend trend--up">&#9650;</span>
+                    {% elif item.percent < 0 %}
+                      <span class="trend trend--down">&#9660;</span>
+                    {% else %}
+                      <span class="trend trend--flat">&#9679;</span>
+                    {% endif %}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+          </table>
+        </section>
+      </div>
+    {% elif campaign_a or campaign_b %}
+      <section class="notice notice--warning">Selecione duas campanhas diferentes para comparar.</section>
+    {% endif %}
+  </main>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+  <script src="{% static 'js/dashboard_sidebar.js' %}"></script>
+  <script>
+    (function () {
+      var companySelect = document.querySelector('[data-company-select]');
+      if (!companySelect) return;
+      companySelect.addEventListener('change', function () {
+        var reportSelects = document.querySelectorAll('[data-report-select]');
+        reportSelects.forEach(function (select) {
+          select.innerHTML = '<option value="">Carregando...</option>';
+          select.disabled = true;
+        });
+      });
+
+      var form = companySelect.closest('form');
+      if (form) {
+        form.addEventListener('submit', function () {
+          var submitBtn = form.querySelector('[data-compare-submit]');
+          if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Carregando...';
+          }
+        });
+      }
+    })();
+  </script>
+{% endblock %}
