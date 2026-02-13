@@ -77,10 +77,10 @@ INSTALLED_APPS = [
     'django_rq',
 ]
 
-if DEBUG:
-    INSTALLED_APPS += [
-        'debug_toolbar',
-    ]
+# if DEBUG:
+#     INSTALLED_APPS += [
+#         'debug_toolbar',
+#     ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -107,7 +107,7 @@ RQ_QUEUES = {
 }
 
 if DEBUG:
-    MIDDLEWARE.insert(0, 'debug_toolbar.middleware.DebugToolbarMiddleware')
+    # MIDDLEWARE.insert(0, 'debug_toolbar.middleware.DebugToolbarMiddleware')
     MIDDLEWARE.append('ciss_gestao.middleware.RequestTimingMiddleware')
 
 ROOT_URLCONF = 'ciss_gestao.urls'

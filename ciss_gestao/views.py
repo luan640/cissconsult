@@ -1623,41 +1623,37 @@ class CampaignAccessView(View):
         if status == Campaign.Status.FINISHED:
             return render(request, 'campaigns/finished.html', context)
         step = (request.GET.get('step') or '').strip()
-        if step == '2':
-            step_context = self._build_step2_context(context)
-            step_context = self._attach_saved_answers(request, campaign_uuid, step, step_context)
-            return render(request, self.questions_template_name, step_context)
-        if step == '3':
-            step_context = self._build_step3_context(context)
-            step_context = self._attach_saved_answers(request, campaign_uuid, step, step_context)
-            return render(request, self.questions_step3_template_name, step_context)
-        if step == '4':
-            step_context = self._build_step4_context(context)
-            step_context = self._attach_saved_answers(request, campaign_uuid, step, step_context)
-            return render(request, self.questions_step4_template_name, step_context)
-        if step == '5':
-            step_context = self._build_step5_context(context)
-            step_context = self._attach_saved_answers(request, campaign_uuid, step, step_context)
-            return render(request, self.questions_step5_template_name, step_context)
-        if step == '6':
-            step_context = self._build_step6_context(context)
-            step_context = self._attach_saved_answers(request, campaign_uuid, step, step_context)
-            return render(request, self.questions_step6_template_name, step_context)
-        if step == '7':
-            step_context = self._build_step7_context(context)
-            step_context = self._attach_saved_answers(request, campaign_uuid, step, step_context)
-            return render(request, self.questions_step7_template_name, step_context)
-        if step == '8':
-            step_context = self._build_step8_context(context)
-            step_context = self._attach_saved_answers(request, campaign_uuid, step, step_context)
-            return render(request, self.questions_step8_template_name, step_context)
-        if step == '9':
-            step_context = self._build_step9_context(context)
-            step_context = self._attach_saved_comment(request, campaign_uuid, step_context)
-            return render(request, self.questions_step9_template_name, step_context)
         if step == '10':
             return render(request, self.questions_step10_template_name, self._build_step10_context(context))
-        return render(request, self.template_name, context)
+
+        wizard_context = self._build_wizard_context(context)
+        wizard_context['initial_step'] = int(step) if step.isdigit() and 1 <= int(step) <= 9 else 1
+        return render(request, 'campaigns/wizard.html', wizard_context)
+
+    def _build_wizard_context(self, base_context):
+        steps = []
+        step2 = self._build_step2_context(base_context)
+        step3 = self._build_step3_context(base_context)
+        step4 = self._build_step4_context(base_context)
+        step5 = self._build_step5_context(base_context)
+        step6 = self._build_step6_context(base_context)
+        step7 = self._build_step7_context(base_context)
+        step8 = self._build_step8_context(base_context)
+        step9 = self._build_step9_context(base_context)
+
+        steps.append({'step': 2, **step2})
+        steps.append({'step': 3, **step3})
+        steps.append({'step': 4, **step4})
+        steps.append({'step': 5, **step5})
+        steps.append({'step': 6, **step6})
+        steps.append({'step': 7, **step7})
+        steps.append({'step': 8, **step8})
+
+        return {
+            **base_context,
+            'steps': steps,
+            'step9': step9,
+        }
 
     def post(self, request, campaign_uuid):
         context = self._build_context(campaign_uuid)
@@ -1756,6 +1752,11 @@ class CampaignAccessView(View):
                 if not (request.POST.get('comments') or '').strip():
                     payload_comments = (payload.get('comments') if isinstance(payload, dict) else '') or ''
                     session_data['comments'] = str(payload_comments).strip()
+                if not session_data:
+                    session_data = self._build_session_from_payload(payload, campaign)
+                    if session_data is None:
+                        messages.error(request, 'Inicie a avaliacao novamente.')
+                        return redirect(reverse('campaigns-access', args=[campaign.uuid]))
 
             comments = (request.POST.get('comments') or session_data.get('comments') or '').strip()
             session_data['comments'] = comments
@@ -1860,6 +1861,53 @@ class CampaignAccessView(View):
     def _hash_cpf(campaign_uuid, cpf_digits):
         payload = f'{campaign_uuid}:{cpf_digits}'.encode('utf-8')
         return hashlib.sha256(payload).hexdigest()
+
+    @staticmethod
+    def _build_session_from_payload(payload, campaign):
+        if not isinstance(payload, dict):
+            return None
+        meta = payload.get('meta') or {}
+        cpf = str(meta.get('cpf') or '').strip()
+        age = str(meta.get('age') or '').strip()
+        ghe_id = str(meta.get('ghe_id') or '').strip()
+        department_id = str(meta.get('department_id') or '').strip()
+        job_function_id = str(meta.get('job_function_id') or '').strip()
+        first_name = str(meta.get('first_name') or '').strip()
+        sex = str(meta.get('sex') or '').strip()
+
+        cpf_digits = re.sub(r'\D', '', cpf)
+        if len(cpf_digits) != 11:
+            return None
+        if not age.isdigit() or int(age) <= 0:
+            return None
+
+        assessment_type = (campaign.company.assessment_type or '').strip().upper()
+        use_ghe = assessment_type != 'SETOR'
+        if use_ghe:
+            if not ghe_id or not department_id:
+                return None
+            job_function_id = ''
+        else:
+            if not department_id or not job_function_id:
+                return None
+            ghe_id = ''
+
+        cpf_hash = CampaignAccessView._hash_cpf(campaign.uuid, cpf_digits)
+        if cpf_hash and CampaignResponse.all_objects.filter(campaign=campaign, cpf_hash=cpf_hash).exists():
+            return None
+
+        responses_payload = payload.get('responses') if isinstance(payload.get('responses'), dict) else {}
+        return {
+            'cpf_hash': cpf_hash,
+            'first_name': first_name,
+            'age': int(age),
+            'sex': sex,
+            'ghe_id': int(ghe_id) if ghe_id else None,
+            'department_id': int(department_id) if department_id else None,
+            'job_function_id': int(job_function_id) if job_function_id else None,
+            'responses': responses_payload,
+            'comments': str(payload.get('comments') or '').strip(),
+        }
 
     def _get_session_data(self, request, campaign_uuid):
         data = request.session.get(self.SESSION_KEY, {})

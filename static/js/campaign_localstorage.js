@@ -26,6 +26,51 @@
 
   const restoreAnswers = () => {
     const state = loadState();
+    if (step === 1) {
+      const meta = state.meta || {};
+      const cpfInput = form.querySelector('#cpf');
+      const ageInput = form.querySelector('#age');
+      const firstNameInput = form.querySelector('#first_name');
+      const sexSelect = form.querySelector('#sex');
+      const gheSelect = form.querySelector('#ghe_id');
+      const departmentSelect = form.querySelector('#department_id');
+      const jobFunctionSelect = form.querySelector('#job_function_id');
+
+      if (cpfInput && meta.cpf) cpfInput.value = meta.cpf;
+      if (ageInput && meta.age) ageInput.value = meta.age;
+      if (firstNameInput && meta.first_name) firstNameInput.value = meta.first_name;
+      if (sexSelect && meta.sex) sexSelect.value = meta.sex;
+
+      const waitForOption = (select, value, attempts = 15) => {
+        if (!select || !value) return;
+        const trySet = () => {
+          const option = select.querySelector(`option[value="${value}"]`);
+          if (option) {
+            select.value = value;
+            return true;
+          }
+          return false;
+        };
+        let tries = 0;
+        const timer = setInterval(() => {
+          tries += 1;
+          if (trySet() || tries >= attempts) {
+            clearInterval(timer);
+          }
+        }, 200);
+      };
+
+      if (gheSelect && meta.ghe_id) {
+        gheSelect.value = String(meta.ghe_id);
+        gheSelect.dispatchEvent(new Event('change'));
+        waitForOption(departmentSelect, String(meta.department_id));
+      } else if (departmentSelect && meta.department_id) {
+        departmentSelect.value = String(meta.department_id);
+        departmentSelect.dispatchEvent(new Event('change'));
+        waitForOption(jobFunctionSelect, String(meta.job_function_id));
+      }
+      return;
+    }
     if (step >= 2 && step <= 8) {
       const stepKey = `step${step}`;
       const saved = (state.responses || {})[stepKey] || [];
@@ -109,6 +154,52 @@
   form.addEventListener('submit', function (event) {
     const state = loadState();
     state.responses = state.responses || {};
+    state.meta = state.meta || {};
+
+    if (step === 1) {
+      const cpfInput = form.querySelector('#cpf');
+      const ageInput = form.querySelector('#age');
+      const firstNameInput = form.querySelector('#first_name');
+      const sexSelect = form.querySelector('#sex');
+      const gheSelect = form.querySelector('#ghe_id');
+      const departmentSelect = form.querySelector('#department_id');
+      const jobFunctionSelect = form.querySelector('#job_function_id');
+      const startButton = form.querySelector('[data-start-button]');
+
+      const cpf = (cpfInput?.value || '').trim();
+      const cpfDigits = cpf.replace(/\D/g, '');
+      const ageValue = parseInt(ageInput?.value || '0', 10);
+      const gheValue = gheSelect ? (gheSelect.value || '').trim() : '';
+      const departmentValue = departmentSelect ? (departmentSelect.value || '').trim() : '';
+      const jobFunctionValue = jobFunctionSelect ? (jobFunctionSelect.value || '').trim() : '';
+      const useGhe = form.getAttribute('data-use-ghe') === '1';
+
+      const validBasics = cpfDigits.length === 11 && Number.isFinite(ageValue) && ageValue > 0;
+      const validSelections = useGhe
+        ? gheValue && departmentValue && !departmentSelect?.disabled
+        : departmentValue && jobFunctionValue && !jobFunctionSelect?.disabled;
+
+      if (!validBasics || !validSelections || (startButton && startButton.disabled)) {
+        event.preventDefault();
+        alert('Preencha os campos obrigatorios para continuar.');
+        return;
+      }
+
+      state.meta = {
+        cpf: cpf,
+        age: ageValue,
+        first_name: (firstNameInput?.value || '').trim(),
+        sex: (sexSelect?.value || '').trim(),
+        ghe_id: gheValue ? Number(gheValue) : null,
+        department_id: departmentValue ? Number(departmentValue) : null,
+        job_function_id: jobFunctionValue ? Number(jobFunctionValue) : null,
+      };
+      saveState(state);
+      event.preventDefault();
+      window.location.href = `${form.action}?step=2`;
+      return;
+    }
+
     if (step >= 2 && step <= 8) {
       if (!validateStep()) {
         event.preventDefault();

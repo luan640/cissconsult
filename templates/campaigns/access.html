@@ -254,7 +254,7 @@
       </section>
     {% endif %}
 
-    <form method="post" class="form-grid campaign-form" data-cpf-check-url="{% url 'campaigns-cpf-check' campaign.uuid %}" data-use-ghe="{% if use_ghe %}1{% else %}0{% endif %}">
+    <form id="step-form" method="post" class="form-grid campaign-form" data-cpf-check-url="{% url 'campaigns-cpf-check' campaign.uuid %}" data-use-ghe="{% if use_ghe %}1{% else %}0{% endif %}" data-campaign-uuid="{{ campaign.uuid }}" data-step="1">
       {% csrf_token %}
       <input type="hidden" name="step" value="1" />
       <div class="form-field">
@@ -336,6 +336,7 @@
 {% endblock %}
 
 {% block extra_scripts %}
+  <script src="{% static 'js/campaign_localstorage.js' %}"></script>
   <script>
     (function () {
       const gheSelect = document.querySelector('[data-ghe-select]');
