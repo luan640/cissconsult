@@ -1,4 +1,10 @@
 (function () {
+  const showAlert = (message) => {
+    if (window.PlatformDialog && typeof window.PlatformDialog.alert === 'function') {
+      window.PlatformDialog.alert(message);
+    }
+  };
+
   const panels = document.querySelectorAll('[data-step]');
   const openStepButtons = document.querySelectorAll('[data-open-step]');
   const backButtons = document.querySelectorAll('[data-back-home]');
@@ -169,7 +175,7 @@
     complaintSubmitButton.addEventListener('click', () => {
       const selectedComplaint = complaintInput ? complaintInput.value : '';
       if (!selectedComplaint) {
-        window.alert('Selecione uma opcao para continuar.');
+        showAlert('Selecione uma opcao para continuar.');
         return;
       }
       openComplaintModal();
@@ -190,11 +196,11 @@
       const departmentValue = complaintDepartmentSelect ? complaintDepartmentSelect.value.trim() : '';
       const extraValue = complaintExtraInput ? complaintExtraInput.value.trim() : '';
       if (!departmentValue) {
-        window.alert('Selecione o setor.');
+        showAlert('Selecione o setor.');
         return;
       }
       if (!extraValue) {
-        window.alert('Informe detalhes do ocorrido.');
+        showAlert('Informe detalhes do ocorrido.');
         return;
       }
       if (complaintDepartmentHiddenInput) {
@@ -239,7 +245,7 @@
   if (openMoodDepartmentModalButton) {
     openMoodDepartmentModalButton.addEventListener('click', () => {
       if (!moodInput || !moodInput.value) {
-        window.alert('Selecione uma opcao de humor antes de seguir.');
+        showAlert('Selecione uma opcao de humor antes de seguir.');
         return;
       }
       openMoodDepartmentModal();
@@ -255,7 +261,7 @@
   if (confirmMoodSubmitButton) {
     confirmMoodSubmitButton.addEventListener('click', async () => {
       if (!moodDepartmentSelect || !moodDepartmentSelect.value) {
-        window.alert('Selecione um setor para confirmar.');
+        showAlert('Selecione um setor para confirmar.');
         return;
       }
       if (moodDepartmentInput) {
@@ -287,7 +293,7 @@
           }
           showStep('intro');
         } catch (error) {
-          window.alert(error.message || 'Nao foi possivel registrar o humor.');
+          showAlert(error.message || 'Nao foi possivel registrar o humor.');
         } finally {
           setButtonLoading(confirmMoodSubmitButton, false);
         }

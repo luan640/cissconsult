@@ -41,7 +41,7 @@
                 method="post"
                 action="{% url 'departments-delete' department.id %}"
                 data-department-toggle-form
-                onsubmit="return confirm('{% if department.is_active %}Desativar{% else %}Ativar{% endif %} este setor?');"
+                data-platform-confirm="{% if department.is_active %}Desativar{% else %}Ativar{% endif %} este setor?"
               >
                 {% csrf_token %}
                 <button class="icon-btn" type="submit" title="{% if department.is_active %}Desativar{% else %}Ativar{% endif %}" aria-label="{% if department.is_active %}Desativar{% else %}Ativar{% endif %}">

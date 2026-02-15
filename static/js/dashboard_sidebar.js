@@ -152,7 +152,7 @@
     }
   });
 
-  // Guarantee Cadastros group stays open for GHE/Funcoes routes.
+  // Guarantee Cadastros group stays open for GHE/ routes.
   if (path.startsWith('/ghes/') || path.startsWith('/job-functions/')) {
     const group = document.querySelector('[data-menu-group]');
     if (group) {

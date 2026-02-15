@@ -95,7 +95,7 @@
           >
             <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 17.25V20h2.75l8.11-8.11-2.75-2.75L4 17.25Zm13.71-8.04a1 1 0 0 0 0-1.42l-1.5-1.5a1 1 0 0 0-1.42 0l-1.17 1.17 2.75 2.75 1.34-1.3Z" fill="currentColor"/></svg>
           </button>
-          <form method="post" action="{% url 'companies-delete' company.id %}" data-company-id="{{ company.id }}" onsubmit="return confirm('{% if company.is_active %}Desativar{% else %}Ativar{% endif %} esta empresa?');">
+          <form method="post" action="{% url 'companies-delete' company.id %}" data-company-id="{{ company.id }}" data-platform-confirm="{% if company.is_active %}Desativar{% else %}Ativar{% endif %} esta empresa?">
             {% csrf_token %}
             <button class="icon-btn" type="submit" title="{% if company.is_active %}Desativar{% else %}Ativar{% endif %}" aria-label="{% if company.is_active %}Desativar{% else %}Ativar{% endif %}">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2Zm-5 9h10v2H7v-2Z" fill="currentColor"/></svg>

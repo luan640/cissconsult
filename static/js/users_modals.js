@@ -39,7 +39,6 @@
       }
 
       editForm.action = editButton.dataset.updateUrl || '';
-      editForm.querySelector('#edit_username').value = editButton.dataset.username || '';
       editForm.querySelector('#edit_first_name').value = editButton.dataset.firstName || '';
       editForm.querySelector('#edit_last_name').value = editButton.dataset.lastName || '';
       editForm.querySelector('#edit_email').value = editButton.dataset.email || '';

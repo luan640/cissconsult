@@ -40,14 +40,17 @@
         <svg class="menu__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 21h16V9L12 3 4 9v12Zm4-8h8v2H8v-2Zm0 4h8v2H8v-2Z" fill="currentColor"/></svg>
         <span class="menu__text">Empresas</span>
       </a>
-      <a class="menu__item{% if active_menu == 'reports' %} is-active{% endif %}" href="{% url 'reports-compare' %}" data-match-path="/relatorios/comparar/">
-        <svg class="menu__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 3h8v8H3V3Zm10 0h8v4h-8V3ZM3 13h8v8H3v-8Zm10 6h8v2h-8v-2Zm0-4h8v2h-8v-2Z" fill="currentColor"/></svg>
-        <span class="menu__text">Comparar campanhas</span>
-      </a>
-      <a class="menu__item{% if active_menu == 'campaigns' %} is-active{% endif %}" href="{% url 'campaigns-list' %}" data-match-path="/campaigns/">
-        <svg class="menu__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 11h8V3H3v8Zm10 10h8V5h-8v16ZM3 21h8v-8H3v8Zm2-6h4v4H5v-4Zm10-8h4v10h-4V7Z" fill="currentColor"/></svg>
-        <span class="menu__text">Campanhas</span>
-      </a>
+      <div class="menu__group{% if active_menu == 'campaigns' or active_menu == 'reports' %} is-open{% endif %}" data-menu-group>
+        <button class="menu__item menu__item--toggle{% if active_menu == 'campaigns' or active_menu == 'reports' %} is-active{% endif %}" type="button" data-menu-group-toggle>
+          <svg class="menu__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 11h8V3H3v8Zm10 10h8V5h-8v16ZM3 21h8v-8H3v8Zm2-6h4v4H5v-4Zm10-8h4v10h-4V7Z" fill="currentColor"/></svg>
+          <span class="menu__text">Campanhas</span>
+          <span class="menu__caret" aria-hidden="true">&#9662;</span>
+        </button>
+        <div class="menu__children">
+          <a class="menu__subitem{% if active_menu == 'campaigns' %} is-active{% endif %}" href="{% url 'campaigns-list' %}" data-match-path="/campaigns/">Gerenciar</a>
+          <a class="menu__subitem{% if active_menu == 'reports' %} is-active{% endif %}" href="{% url 'reports-compare' %}" data-match-path="/relatorios/comparar/">Comparar campanhas</a>
+        </div>
+      </div>
       <a class="menu__item{% if active_menu == 'master-settings' %} is-active{% endif %}" href="{% url 'master-settings' %}" data-match-path="/master/settings/">
         <svg class="menu__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M19.14 12.94a7.48 7.48 0 0 0 .05-.94 7.48 7.48 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.42 7.42 0 0 0-1.63-.94l-.36-2.54A.5.5 0 0 0 13.9 2h-3.8a.5.5 0 0 0-.49.42l-.36 2.54c-.58.23-1.13.54-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.48a.5.5 0 0 0 .12.64l2.03 1.58a7.48 7.48 0 0 0-.05.94c0 .32.02.63.05.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.5.4 1.05.71 1.63.94l.36 2.54a.5.5 0 0 0 .49.42h3.8a.5.5 0 0 0 .49-.42l.36-2.54c.58-.23 1.13-.54 1.63-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58ZM12 15.5A3.5 3.5 0 1 1 12 8a3.5 3.5 0 0 1 0 7.5Z" fill="currentColor"/></svg>
         <span class="menu__text">Configurações</span>
@@ -96,7 +99,7 @@
           <a class="menu__subitem{% if active_menu == 'users' %} is-active{% endif %}" href="{% url 'users-list' %}">Usuarios</a>
           <a class="menu__subitem{% if active_menu == 'departments' %} is-active{% endif %}" href="{% url 'departments-list' %}">Setores</a>
           <a class="menu__subitem{% if active_menu == 'ghes' %} is-active{% endif %}" href="{% url 'ghes-list' %}" data-match-path="/ghes/">GHE</a>
-          <a class="menu__subitem{% if active_menu == 'job_functions' %} is-active{% endif %}" href="{% url 'job-functions-list' %}" data-match-path="/job-functions/">Funcoes</a>
+          <a class="menu__subitem{% if active_menu == 'job_functions' %} is-active{% endif %}" href="{% url 'job-functions-list' %}" data-match-path="/job-functions/">Funções</a>
         </div>
       </div>
       <a class="menu__item{% if active_menu == 'help_requests' %} is-active{% endif %}" href="{% url 'help-requests-list' %}" data-match-path="/help-requests/">

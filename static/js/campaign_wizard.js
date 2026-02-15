@@ -1,4 +1,10 @@
 (function () {
+  const showAlert = (message) => {
+    if (window.PlatformDialog && typeof window.PlatformDialog.alert === 'function') {
+      window.PlatformDialog.alert(message);
+    }
+  };
+
   const root = document.querySelector('.campaign-step');
   const form = document.getElementById('wizard-form');
   if (!root || !form) return;
@@ -114,24 +120,24 @@
     const jobFunctionSelect = form.querySelector('#job_function_id');
     const useGhe = form.getAttribute('data-use-ghe') === '1';
     if (cpfCheckInFlight || !cpfIsAvailable) {
-      alert('CPF ja utilizado ou nao validado.');
+      showAlert('CPF ja utilizado ou nao validado.');
       return false;
     }
 
     const cpfDigits = (cpfInput?.value || '').replace(/\D/g, '');
     const ageValue = parseInt(ageInput?.value || '0', 10);
     if (cpfDigits.length !== 11 || !Number.isFinite(ageValue) || ageValue <= 0) {
-      alert('Preencha CPF e idade corretamente.');
+      showAlert('Preencha CPF e idade corretamente.');
       return false;
     }
     if (useGhe) {
       if (!gheSelect?.value || !departmentSelect?.value) {
-        alert('Selecione GHE e Cargo/Funcao.');
+        showAlert('Selecione GHE e Cargo/Funcao.');
         return false;
       }
     } else {
       if (!departmentSelect?.value || !jobFunctionSelect?.value) {
-        alert('Selecione Setor e Cargo/Funcao.');
+        showAlert('Selecione Setor e Cargo/Funcao.');
         return false;
       }
     }
@@ -156,7 +162,7 @@
       setTimeout(() => {
         firstInvalid.style.boxShadow = '';
       }, 1200);
-      alert('Responda todas as perguntas para continuar.');
+      showAlert('Responda todas as perguntas para continuar.');
       return false;
     }
     return true;

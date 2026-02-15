@@ -236,6 +236,8 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
     company_cnae = report_context.get("company_cnae", "-")
     company_risk = report_context.get("company_risk", "-")
     ghes = report_context.get("company_ghes", "-")
+    company_group_list_label = report_context.get("company_group_list_label", "GHEs")
+    company_group_list = report_context.get("company_group_list", ghes)
     responses_count = report_context.get("responses_count", "-")
     evaluation_date = report_context.get("evaluation_date", "-")
 
@@ -287,7 +289,7 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
     story.append(Paragraph(f"<b>Endereço:</b> {company_address}", body_style))
     story.append(Paragraph(f"<b>CNAE:</b> {company_cnae}", body_style))
     story.append(Paragraph(f"<b>Classe de risco:</b> {company_risk}", body_style))
-    story.append(Paragraph(f"<b>GHEs avaliados:</b> {ghes}", body_style))
+    story.append(Paragraph(f"<b>{company_group_list_label} avaliados:</b> {company_group_list}", body_style))
     story.append(Paragraph(f"<b>Número de trabalhadores avaliados:</b> {responses_count}", body_style))
     story.append(Paragraph(f"<b>Data da avaliação:</b> {evaluation_date}", body_style))
     story.append(Paragraph("<b>Reavaliação recomendada:</b> 3 meses", body_style))

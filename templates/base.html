@@ -9,12 +9,51 @@
       html {
         font-size: 80%;
       }
+      .platform-dialog-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.55);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 12000;
+        padding: 16px;
+      }
+      .platform-dialog-backdrop.is-open {
+        display: flex;
+      }
+      .platform-dialog-card {
+        width: min(460px, 100%);
+        background: #fff;
+        border-radius: 14px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 18px 50px rgba(2, 6, 23, 0.22);
+        padding: 18px;
+        display: grid;
+        gap: 10px;
+      }
+      .platform-dialog-title {
+        margin: 0;
+        font-size: 1.2rem;
+        color: #0f172a;
+      }
+      .platform-dialog-message {
+        margin: 0;
+        color: #334155;
+        line-height: 1.45;
+      }
+      .platform-dialog-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
     </style>
     {% block extra_head %}{% endblock %}
   </head>
   <body>
     <div id="htmx-indicator" style="position: fixed; top: 0; left: 0; right: 0; height: 3px; background: #1d4ed8; opacity: 0; transition: opacity 0.2s ease; z-index: 9999;"></div>
     {% block content %}{% endblock %}
+    <script src="{% static 'js/platform_dialog.js' %}"></script>
     {% block extra_scripts %}{% endblock %}
     <script src="https://unpkg.com/htmx.org@1.9.12"></script>
     <script>

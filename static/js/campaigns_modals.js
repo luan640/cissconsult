@@ -1,4 +1,11 @@
 (function () {
+  const confirmDialog = (message) => {
+    if (window.PlatformDialog && typeof window.PlatformDialog.confirm === 'function') {
+      return window.PlatformDialog.confirm(message);
+    }
+    return Promise.resolve(false);
+  };
+
   const containerId = 'campaigns-table-container';
   const toastStackId = 'floating-toast-stack';
 
@@ -158,6 +165,12 @@
       editForm.querySelector('#edit_campaign_start').value = editButton.dataset.startDate || '';
       editForm.querySelector('#edit_campaign_end').value = editButton.dataset.endDate || '';
       editForm.querySelector('#edit_campaign_status').value = editButton.dataset.status || '';
+      editForm.dataset.responseCount = editButton.dataset.responseCount || '0';
+      editForm.dataset.employeeCount = editButton.dataset.employeeCount || '0';
+      const forceField = editForm.querySelector('input[name="force_finish"]');
+      if (forceField) {
+        forceField.value = '';
+      }
       openModal('edit-campaign-modal');
       return;
     }
@@ -185,6 +198,31 @@
     if (event.defaultPrevented) return;
 
     event.preventDefault();
+
+    if (form.matches('[data-edit-campaign-form]')) {
+      const statusField = form.querySelector('#edit_campaign_status');
+      const statusValue = (statusField?.value || '').toUpperCase();
+      const responsesCount = Number.parseInt(form.dataset.responseCount || '0', 10) || 0;
+      const employeeCount = Number.parseInt(form.dataset.employeeCount || '0', 10) || 0;
+      const hasPendingResponses = responsesCount !== employeeCount;
+      const forceField = form.querySelector('input[name="force_finish"]');
+
+      if (forceField) {
+        forceField.value = '';
+      }
+
+      if (statusValue === 'FINISHED' && hasPendingResponses) {
+        const confirmed = await confirmDialog(
+          'Ainda faltam funcionario responder o questionario, deseja encerrar mesmo assim?'
+        );
+        if (!confirmed) {
+          return;
+        }
+        if (forceField) {
+          forceField.value = '1';
+        }
+      }
+    }
     const restoreButton = setButtonLoading(event.submitter);
     try {
       await submitAjaxForm(form);

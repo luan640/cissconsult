@@ -89,6 +89,7 @@
         <div class="modal-card__header"><h2>Editar campanha</h2><button type="button" class="modal-close" data-close-modal>&times;</button></div>
         <form method="post" action="" class="form-grid modal-form" data-edit-campaign-form>
           {% csrf_token %}
+          <input type="hidden" name="force_finish" value="" />
           <div class="form-field"><label for="edit_campaign_title">Titulo</label><input id="edit_campaign_title" name="title" required maxlength="255" /></div>
           <div class="form-field">
             <label for="edit_campaign_company">Empresa</label>

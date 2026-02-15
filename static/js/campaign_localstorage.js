@@ -1,4 +1,10 @@
 (function () {
+  const showAlert = (message) => {
+    if (window.PlatformDialog && typeof window.PlatformDialog.alert === 'function') {
+      window.PlatformDialog.alert(message);
+    }
+  };
+
   const form = document.getElementById('step-form');
   if (!form) return;
 
@@ -119,7 +125,7 @@
       setTimeout(() => {
         firstInvalid.style.boxShadow = '';
       }, 1200);
-      alert('Responda todas as perguntas para continuar.');
+      showAlert('Responda todas as perguntas para continuar.');
       return false;
     }
     return true;
@@ -181,7 +187,7 @@
 
       if (!validBasics || !validSelections || (startButton && startButton.disabled)) {
         event.preventDefault();
-        alert('Preencha os campos obrigatorios para continuar.');
+        showAlert('Preencha os campos obrigatorios para continuar.');
         return;
       }
 

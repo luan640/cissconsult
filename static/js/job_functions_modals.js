@@ -93,7 +93,7 @@
       },
     });
     if (!response.ok) {
-      throw new Error('Falha ao atualizar funcoes.');
+      throw new Error('Falha ao atualizar funções.');
     }
     return await response.text();
   };
@@ -139,7 +139,7 @@
       },
     });
     if (!response.ok) {
-      throw new Error('Falha ao filtrar funcoes.');
+      throw new Error('Falha ao filtrar funções.');
     }
     replaceTable(await response.text());
     syncBrowserUrlFromFilterForm(form);

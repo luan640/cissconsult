@@ -15,6 +15,7 @@
           <div class="campaign-row__meta">
             <span>{{ campaign.start_date|date:"d/m/Y" }} - {{ campaign.end_date|date:"d/m/Y" }}</span>
             <span>Criado em {{ campaign.created_at|date:"d/m/Y H:i" }}</span>
+            <span>{{ campaign.responses_count|default:0 }}/{{ campaign.company.employee_count|default:0 }} respondido</span>
           </div>
         </div>
         <div class="campaign-row__status">
@@ -54,6 +55,8 @@
             data-update-url="{% url 'campaigns-update' campaign.id %}"
             data-title="{{ campaign.title }}"
             data-company-id="{{ campaign.company_id }}"
+            data-response-count="{{ campaign.responses_count|default:0 }}"
+            data-employee-count="{{ campaign.company.employee_count|default:0 }}"
             data-start-date="{{ campaign.start_date|date:'Y-m-d' }}"
             data-end-date="{{ campaign.end_date|date:'Y-m-d' }}"
             data-status="{{ campaign.status }}">

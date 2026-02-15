@@ -34,12 +34,8 @@
         <form method="post" action="{% url 'users-create' %}" class="form-grid modal-form">
           {% csrf_token %}
           <div class="form-field">
-            <label for="create_username">Username</label>
-            <input id="create_username" name="username" required maxlength="150" />
-          </div>
-          <div class="form-field">
             <label for="create_email">Email</label>
-            <input id="create_email" type="email" name="email" />
+            <input id="create_email" type="email" name="email" required />
           </div>
           <div class="form-field">
             <label for="create_first_name">Nome</label>
@@ -78,12 +74,8 @@
         <form method="post" action="" class="form-grid modal-form" data-edit-form>
           {% csrf_token %}
           <div class="form-field">
-            <label for="edit_username">Username</label>
-            <input id="edit_username" name="username" required maxlength="150" />
-          </div>
-          <div class="form-field">
             <label for="edit_email">Email</label>
-            <input id="edit_email" type="email" name="email" />
+            <input id="edit_email" type="email" name="email" required />
           </div>
           <div class="form-field">
             <label for="edit_first_name">Nome</label>

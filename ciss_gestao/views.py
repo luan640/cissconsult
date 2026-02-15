@@ -507,7 +507,11 @@ def get_campaigns_filters(request):
 
 
 def get_campaigns_queryset(filters):
-    campaigns_qs = Campaign.all_objects.select_related('company').order_by('-start_date')
+    campaigns_qs = (
+        Campaign.all_objects.select_related('company')
+        .annotate(responses_count=Count('responses'))
+        .order_by('-start_date')
+    )
     company_id = filters.get('company_id') or ''
     if company_id.isdigit():
         campaigns_qs = campaigns_qs.filter(company_id=int(company_id))
@@ -1439,11 +1443,32 @@ class CampaignUpdateView(MasterRequiredMixin, View):
             return redirect('campaigns-list')
 
         company = get_object_or_404(Company, pk=form.cleaned_data['company_id'])
+        new_status = form.cleaned_data['status']
+        should_finish = new_status == Campaign.Status.FINISHED
+        force_finish = (request.POST.get('force_finish') or '').strip() == '1'
+        responses_count = CampaignResponse.all_objects.filter(campaign=campaign).count()
+        total_workers = company.employee_count or 0
+        has_pending_responses = responses_count != total_workers
+
+        if should_finish and has_pending_responses and not force_finish:
+            missing = max(total_workers - responses_count, 0)
+            messages.error(
+                request,
+                (
+                    'Ainda faltam funcionarios responder o questionario '
+                    f'({responses_count}/{total_workers}, faltam {missing}). '
+                    'Confirme o encerramento para salvar mesmo assim.'
+                ),
+            )
+            if is_ajax_request(request):
+                return render_campaigns_table(request)
+            return redirect('campaigns-list')
+
         campaign.company = company
         campaign.title = (form.cleaned_data['title'] or '').strip()
         campaign.start_date = form.cleaned_data['start_date']
         campaign.end_date = form.cleaned_data['end_date']
-        campaign.status = form.cleaned_data['status']
+        campaign.status = new_status
         campaign.save()
         cache.clear()
         messages.success(request, 'Campanha atualizada com sucesso.')
@@ -2645,11 +2670,25 @@ class CampaignReportPdfView(MasterRequiredMixin, View):
         company_address = ' - '.join(address_parts) if address_parts else '-'
 
         responses_qs = CampaignResponse.all_objects.filter(campaign=campaign)
+        assessment_type = (company.assessment_type or '').strip().lower()
+        use_departments = assessment_type == 'setor'
+
         ghe_ids = list(
             responses_qs.exclude(ghe_id__isnull=True).values_list('ghe_id', flat=True).distinct()
         )
         ghes = list(GHE.all_objects.filter(id__in=ghe_ids).order_by('name'))
         ghes_label = ', '.join([ghe.name for ghe in ghes]) if ghes else '-'
+
+        if use_departments:
+            department_ids = list(
+                responses_qs.exclude(department_id__isnull=True).values_list('department_id', flat=True).distinct()
+            )
+            departments = list(Department.all_objects.filter(id__in=department_ids).order_by('name'))
+            company_group_list_label = 'Setores'
+            company_group_list = ', '.join([department.name for department in departments]) if departments else '-'
+        else:
+            company_group_list_label = 'GHEs'
+            company_group_list = ghes_label
         evaluation_date = campaign.end_date.strftime('%d/%m/%Y') if campaign.end_date else '-'
         total_workers = company.employee_count or 0
         response_rate = (responses_qs.count() / total_workers * 100) if total_workers else 0
@@ -2675,6 +2714,8 @@ class CampaignReportPdfView(MasterRequiredMixin, View):
             'company_cnae': company.cnae or '-',
             'company_risk': f"Grau {company.risk_level}" if company.risk_level else '-',
             'company_ghes': ghes_label,
+            'company_group_list_label': company_group_list_label,
+            'company_group_list': company_group_list,
             'responses_count': responses_qs.count(),
             'evaluation_date': evaluation_date,
             'total_workers': total_workers,
@@ -3371,16 +3412,18 @@ class InternalUserBaseForm(forms.Form):
         (CompanyMembership.Role.COLABORADOR, 'Colaborador'),
     ]
 
-    username = forms.CharField(max_length=150)
     first_name = forms.CharField(max_length=150, required=False)
     last_name = forms.CharField(max_length=150, required=False)
-    email = forms.EmailField(required=False)
+    email = forms.EmailField(required=True)
     role = forms.ChoiceField(choices=ROLE_CHOICES)
     is_active = forms.BooleanField(required=False, initial=True)
 
 
 class InternalUserCreateForm(InternalUserBaseForm):
     password = forms.CharField(widget=forms.PasswordInput, min_length=8)
+
+    def clean_is_active(self):
+        return True
 
 
 class InternalUserUpdateForm(InternalUserBaseForm):
@@ -5455,30 +5498,43 @@ class InternalUserCreateView(CompanyAdminRequiredMixin, View):
                 return redirect('users-list')
 
         user_model = get_user_model()
-        username = form.cleaned_data['username']
-        if user_model.objects.filter(username=username).exists():
-            messages.error(request, 'Ja existe usuario com este username.')
+        email = (form.cleaned_data['email'] or '').strip().lower()
+        if user_model.objects.filter(email__iexact=email).exists():
+            messages.error(request, 'Ja existe usuario com este e-mail.')
             return redirect('users-list')
+        username = self._build_username_from_email(user_model, email)
 
         with transaction.atomic():
             user = user_model.objects.create_user(
                 username=username,
                 password=form.cleaned_data['password'],
-                email=form.cleaned_data['email'],
+                email=email,
                 first_name=form.cleaned_data['first_name'],
                 last_name=form.cleaned_data['last_name'],
-                is_active=form.cleaned_data['is_active'],
+                is_active=True,
             )
             CompanyMembership.objects.create(
                 user=user,
                 company_id=request.current_company_id,
                 role=form.cleaned_data['role'],
-                is_active=form.cleaned_data['is_active'],
+                is_active=True,
             )
 
         cache.clear()
         messages.success(request, 'Usuario criado com sucesso.')
         return redirect('users-list')
+
+    @staticmethod
+    def _build_username_from_email(user_model, email):
+        local = (email.split('@', 1)[0] if '@' in email else email).strip().lower()
+        base = re.sub(r'[^a-z0-9._-]+', '', local)[:130] or 'usuario'
+        username = base
+        suffix = 1
+        while user_model.objects.filter(username=username).exists():
+            suffix += 1
+            token = str(suffix)
+            username = f"{base[:150 - len(token) - 1]}-{token}"
+        return username
 
 
 class InternalUserUpdateView(CompanyAdminRequiredMixin, View):
@@ -5493,12 +5549,12 @@ class InternalUserUpdateView(CompanyAdminRequiredMixin, View):
             return redirect('users-list')
 
         user_model = get_user_model()
-        username = form.cleaned_data['username']
+        email = (form.cleaned_data['email'] or '').strip().lower()
         if (
-            username != membership.user.username
-            and user_model.objects.filter(username=username).exists()
+            email.lower() != (membership.user.email or '').strip().lower()
+            and user_model.objects.filter(email__iexact=email).exists()
         ):
-            messages.error(request, 'Ja existe usuario com este username.')
+            messages.error(request, 'Ja existe usuario com este e-mail.')
             return redirect('users-list')
 
         if membership.user_id == request.user.id and not form.cleaned_data['is_active']:
@@ -5507,10 +5563,9 @@ class InternalUserUpdateView(CompanyAdminRequiredMixin, View):
 
         with transaction.atomic():
             user = membership.user
-            user.username = username
             user.first_name = form.cleaned_data['first_name']
             user.last_name = form.cleaned_data['last_name']
-            user.email = form.cleaned_data['email']
+            user.email = email
             user.is_active = form.cleaned_data['is_active']
             if form.cleaned_data['password']:
                 user.set_password(form.cleaned_data['password'])

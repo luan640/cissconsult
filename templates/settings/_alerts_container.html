@@ -162,7 +162,7 @@
                 method="post"
                 action="{% url 'settings-alerts-recipients-delete' recipient.id %}"
                 data-alert-recipient-toggle-form
-                onsubmit="return confirm('{% if recipient.is_active %}Desativar{% else %}Ativar{% endif %} este destinatario?');"
+                data-platform-confirm="{% if recipient.is_active %}Desativar{% else %}Ativar{% endif %} este destinatario?"
               >
                 {% csrf_token %}
                 <button class="btn {% if recipient.is_active %}btn--danger{% else %}btn--primary{% endif %} btn--sm" type="submit">
