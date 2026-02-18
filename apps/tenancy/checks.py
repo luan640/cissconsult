@@ -12,7 +12,12 @@ def validate_company_field(app_configs=None, **kwargs):
             continue
         if model._meta.abstract or model._meta.proxy:
             continue
-        if model._meta.app_label == 'tenancy' and model.__name__ == 'Company':
+        if model._meta.app_label == 'tenancy' and model.__name__ in {
+            'Company',
+            'Consultancy',
+            'ConsultancyMembership',
+            'CompanyMembership',
+        }:
             continue
         if model._meta.app_label == 'core' and model.__name__ == 'TechnicalResponsible':
             continue

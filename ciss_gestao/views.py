@@ -572,16 +572,25 @@ class TenantLoginView(LoginView):
 
     def get_success_url(self):
         user = self.request.user
+        consultancy_id = getattr(self.request, 'consultancy_id', None)
         if user.is_superuser:
             return reverse('master-dashboard')
-        memberships = list(get_active_memberships_for_user(user))
+        memberships = list(
+            get_active_memberships_for_user(
+                user,
+                consultancy_id=consultancy_id,
+            )
+        )
         if not memberships:
             return reverse('company-select')
         if len(memberships) == 1:
             self.request.session['company_id'] = memberships[0].company_id
             return reverse('dashboard')
 
-        default_company_id = resolve_default_company_id(user)
+        default_company_id = resolve_default_company_id(
+            user,
+            consultancy_id=consultancy_id,
+        )
         if default_company_id is not None:
             self.request.session['company_id'] = default_company_id
             return reverse('dashboard')
@@ -654,7 +663,11 @@ class DashboardView(LoginRequiredMixin, View):
             'selected_department_id': selected_department_id or '',
             'selected_ghe_id': selected_ghe_id or '',
             'can_manage_access': bool(
-                company_id and user_is_company_admin(request.user, int(company_id))
+                company_id and user_is_company_admin(
+                    request.user,
+                    int(company_id),
+                    consultancy_id=getattr(request, 'consultancy_id', None),
+                )
             ),
             'is_master': request.user.is_superuser,
         }
@@ -1039,7 +1052,7 @@ class MasterDashboardView(MasterRequiredMixin, View):
     template_name = 'master/dashboard.html'
 
     def get(self, request):
-        return render(request, self.template_name, self._build_context())
+        return render(request, self.template_name, self._build_context(request))
 
     def post(self, request):
         selected_company_id = request.POST.get('company_id')
@@ -1047,23 +1060,42 @@ class MasterDashboardView(MasterRequiredMixin, View):
             selected_company_id = int(selected_company_id)
         except (TypeError, ValueError):
             messages.error(request, 'Empresa invalida.')
-            return render(request, self.template_name, self._build_context(), status=400)
+            return render(
+                request,
+                self.template_name,
+                self._build_context(request),
+                status=400,
+            )
 
-        if not user_has_company_access(request.user, selected_company_id):
+        if not user_has_company_access(
+            request.user,
+            selected_company_id,
+            consultancy_id=getattr(request, 'consultancy_id', None),
+        ):
             messages.error(request, 'Voce nao possui acesso a esta empresa.')
-            return render(request, self.template_name, self._build_context(), status=403)
+            return render(
+                request,
+                self.template_name,
+                self._build_context(request),
+                status=403,
+            )
 
         request.session['company_id'] = selected_company_id
         return redirect(reverse('dashboard'))
 
     @staticmethod
-    def _build_context():
+    def _build_context(request):
+        consultancy_id = getattr(request, 'consultancy_id', None)
         today = timezone.localdate()
         companies_qs = Company.objects.order_by('name')
+        if consultancy_id is not None:
+            companies_qs = companies_qs.filter(consultancy_id=consultancy_id)
         active_companies_qs = companies_qs.filter(is_active=True)
         total_companies = companies_qs.count()
         active_companies = companies_qs.filter(is_active=True).count()
         campaigns_qs = Campaign.all_objects.all()
+        if consultancy_id is not None:
+            campaigns_qs = campaigns_qs.filter(company__consultancy_id=consultancy_id)
         total_campaigns = campaigns_qs.count()
         active_campaigns = campaigns_qs.filter(status=Campaign.Status.ACTIVE).count()
         paused_campaigns = campaigns_qs.filter(status=Campaign.Status.PAUSED).count()
@@ -1085,13 +1117,17 @@ class MasterDashboardView(MasterRequiredMixin, View):
 
 class MasterCompanyMetricsView(MasterRequiredMixin, View):
     def get(self, request):
+        consultancy_id = getattr(request, 'consultancy_id', None)
         raw_company_id = (request.GET.get('company_id') or '').strip()
         try:
             company_id = int(raw_company_id)
         except (TypeError, ValueError):
             return JsonResponse({'error': 'Empresa invalida.'}, status=400)
 
-        if not Company.objects.filter(id=company_id).exists():
+        company_qs = Company.objects.filter(id=company_id)
+        if consultancy_id is not None:
+            company_qs = company_qs.filter(consultancy_id=consultancy_id)
+        if not company_qs.exists():
             return JsonResponse({'error': 'Empresa invalida.'}, status=404)
 
         today = timezone.localdate()
@@ -1144,9 +1180,13 @@ class CompanySelectView(LoginRequiredMixin, View):
     template_name = 'auth/company_select.html'
 
     def get(self, request):
+        consultancy_id = getattr(request, 'consultancy_id', None)
         if request.user.is_superuser:
+            companies_qs = Company.objects.filter(is_active=True)
+            if consultancy_id is not None:
+                companies_qs = companies_qs.filter(consultancy_id=consultancy_id)
             companies = list(
-                Company.objects.filter(is_active=True).order_by('name').only('id', 'name')
+                companies_qs.order_by('name').only('id', 'name')
             )
             return render(
                 request,
@@ -1157,7 +1197,12 @@ class CompanySelectView(LoginRequiredMixin, View):
                     'next_url': request.GET.get('next') or reverse('dashboard'),
                 },
             )
-        memberships = list(get_active_memberships_for_user(request.user))
+        memberships = list(
+            get_active_memberships_for_user(
+                request.user,
+                consultancy_id=consultancy_id,
+            )
+        )
         return render(
             request,
             self.template_name,
@@ -1169,13 +1214,18 @@ class CompanySelectView(LoginRequiredMixin, View):
         )
 
     def post(self, request):
+        consultancy_id = getattr(request, 'consultancy_id', None)
         selected_company_id = request.POST.get('company_id')
         try:
             selected_company_id = int(selected_company_id)
         except (TypeError, ValueError):
             return self._render_with_error(request, 'Empresa invalida.')
 
-        if not user_has_company_access(request.user, selected_company_id):
+        if not user_has_company_access(
+            request.user,
+            selected_company_id,
+            consultancy_id=consultancy_id,
+        ):
             return render(request, 'errors/inactive_company.html', status=403)
 
         request.session['company_id'] = selected_company_id
@@ -1183,9 +1233,13 @@ class CompanySelectView(LoginRequiredMixin, View):
         return redirect(next_url)
 
     def _render_with_error(self, request, message):
+        consultancy_id = getattr(request, 'consultancy_id', None)
         if request.user.is_superuser:
+            companies_qs = Company.objects.filter(is_active=True)
+            if consultancy_id is not None:
+                companies_qs = companies_qs.filter(consultancy_id=consultancy_id)
             companies = list(
-                Company.objects.filter(is_active=True).order_by('name').only('id', 'name')
+                companies_qs.order_by('name').only('id', 'name')
             )
             if not companies:
                 return render(request, 'errors/inactive_company.html', status=403)
@@ -1200,7 +1254,12 @@ class CompanySelectView(LoginRequiredMixin, View):
                 },
                 status=400,
             )
-        memberships = list(get_active_memberships_for_user(request.user))
+        memberships = list(
+            get_active_memberships_for_user(
+                request.user,
+                consultancy_id=consultancy_id,
+            )
+        )
         return render(
             request,
             self.template_name,
@@ -1220,7 +1279,10 @@ class CompanyListView(MasterRequiredMixin, View):
     @method_decorator(vary_on_headers('Cookie'))
     @method_decorator(cache_page(30))
     def get(self, request):
+        consultancy_id = getattr(request, 'consultancy_id', None)
         companies_qs = Company.objects.order_by('name')
+        if consultancy_id is not None:
+            companies_qs = companies_qs.filter(consultancy_id=consultancy_id)
         search_name = (request.GET.get('name') or '').strip()
         selected_status = (request.GET.get('status') or '').strip().lower()
         if search_name:
@@ -1230,7 +1292,10 @@ class CompanyListView(MasterRequiredMixin, View):
         elif selected_status == 'inactive':
             companies_qs = companies_qs.filter(is_active=False)
         page_obj = paginate_queryset(request, companies_qs)
-        companies_filter_options = list(Company.objects.order_by('name').only('id', 'name'))
+        companies_filter_qs = Company.objects.order_by('name')
+        if consultancy_id is not None:
+            companies_filter_qs = companies_filter_qs.filter(consultancy_id=consultancy_id)
+        companies_filter_options = list(companies_filter_qs.only('id', 'name'))
         context = {
             'companies': page_obj.object_list,
             'page_obj': page_obj,
@@ -1248,6 +1313,7 @@ class CompanyListView(MasterRequiredMixin, View):
 
 class CompanyCreateView(MasterRequiredMixin, View):
     def post(self, request):
+        consultancy_id = getattr(request, 'consultancy_id', None)
         form = CompanyForm(request.POST, request.FILES)
         if not form.is_valid():
             messages.error(request, collect_form_errors(form))
@@ -1281,6 +1347,7 @@ class CompanyCreateView(MasterRequiredMixin, View):
             create_is_active = form.cleaned_data.get('is_active', False)
 
         Company.objects.create(
+            consultancy_id=consultancy_id,
             name=name,
             legal_name=(form.cleaned_data['legal_name'] or '').strip(),
             legal_representative_name=(form.cleaned_data['legal_representative_name'] or '').strip(),
@@ -1314,7 +1381,11 @@ class CompanyCreateView(MasterRequiredMixin, View):
 
 class CompanyUpdateView(MasterRequiredMixin, View):
     def post(self, request, company_id):
-        company = get_object_or_404(Company, pk=company_id)
+        consultancy_id = getattr(request, 'consultancy_id', None)
+        company_qs = Company.objects.filter(pk=company_id)
+        if consultancy_id is not None:
+            company_qs = company_qs.filter(consultancy_id=consultancy_id)
+        company = get_object_or_404(company_qs)
         form = CompanyForm(request.POST, request.FILES)
         if not form.is_valid():
             messages.error(request, collect_form_errors(form))
@@ -1370,7 +1441,11 @@ class CompanyUpdateView(MasterRequiredMixin, View):
 
 class CompanyDeleteView(MasterRequiredMixin, View):
     def post(self, request, company_id):
-        company = get_object_or_404(Company, pk=company_id)
+        consultancy_id = getattr(request, 'consultancy_id', None)
+        company_qs = Company.objects.filter(pk=company_id)
+        if consultancy_id is not None:
+            company_qs = company_qs.filter(consultancy_id=consultancy_id)
+        company = get_object_or_404(company_qs)
         company.is_active = not company.is_active
         company.save(update_fields=['is_active', 'updated_at'])
         cache.clear()
@@ -1387,10 +1462,16 @@ class CampaignListView(MasterRequiredMixin, View):
     @method_decorator(vary_on_headers('Cookie'))
     @method_decorator(cache_page(30))
     def get(self, request):
+        consultancy_id = getattr(request, 'consultancy_id', None)
         filters = get_campaigns_filters(request)
         campaigns_qs = get_campaigns_queryset(filters)
+        if consultancy_id is not None:
+            campaigns_qs = campaigns_qs.filter(company__consultancy_id=consultancy_id)
         page_obj = paginate_queryset(request, campaigns_qs, per_page=15)
-        companies = list(Company.objects.order_by('name').only('id', 'name'))
+        companies_qs = Company.objects.order_by('name')
+        if consultancy_id is not None:
+            companies_qs = companies_qs.filter(consultancy_id=consultancy_id)
+        companies = list(companies_qs.only('id', 'name'))
         context = {
             'campaigns': page_obj.object_list,
             'page_obj': page_obj,
@@ -1409,6 +1490,7 @@ class CampaignListView(MasterRequiredMixin, View):
 
 class CampaignCreateView(MasterRequiredMixin, View):
     def post(self, request):
+        consultancy_id = getattr(request, 'consultancy_id', None)
         form = CampaignForm(request.POST)
         if not form.is_valid():
             messages.error(request, collect_form_errors(form))
@@ -1416,7 +1498,10 @@ class CampaignCreateView(MasterRequiredMixin, View):
                 return render_campaigns_table(request)
             return redirect('campaigns-list')
 
-        company = get_object_or_404(Company, pk=form.cleaned_data['company_id'])
+        company_qs = Company.objects.filter(pk=form.cleaned_data['company_id'])
+        if consultancy_id is not None:
+            company_qs = company_qs.filter(consultancy_id=consultancy_id)
+        company = get_object_or_404(company_qs)
         Campaign.all_objects.create(
             company=company,
             title=(form.cleaned_data['title'] or '').strip(),
@@ -1434,7 +1519,10 @@ class CampaignCreateView(MasterRequiredMixin, View):
 
 class CampaignUpdateView(MasterRequiredMixin, View):
     def post(self, request, campaign_id):
+        consultancy_id = getattr(request, 'consultancy_id', None)
         campaign = get_object_or_404(Campaign.all_objects.select_related('company'), pk=campaign_id)
+        if consultancy_id is not None and campaign.company.consultancy_id != consultancy_id:
+            raise PermissionDenied('Campanha fora da consultoria ativa.')
         form = CampaignForm(request.POST)
         if not form.is_valid():
             messages.error(request, collect_form_errors(form))
@@ -1442,7 +1530,10 @@ class CampaignUpdateView(MasterRequiredMixin, View):
                 return render_campaigns_table(request)
             return redirect('campaigns-list')
 
-        company = get_object_or_404(Company, pk=form.cleaned_data['company_id'])
+        company_qs = Company.objects.filter(pk=form.cleaned_data['company_id'])
+        if consultancy_id is not None:
+            company_qs = company_qs.filter(consultancy_id=consultancy_id)
+        company = get_object_or_404(company_qs)
         new_status = form.cleaned_data['status']
         should_finish = new_status == Campaign.Status.FINISHED
         force_finish = (request.POST.get('force_finish') or '').strip() == '1'
@@ -1479,7 +1570,10 @@ class CampaignUpdateView(MasterRequiredMixin, View):
 
 class CampaignDeleteView(MasterRequiredMixin, View):
     def post(self, request, campaign_id):
+        consultancy_id = getattr(request, 'consultancy_id', None)
         campaign = get_object_or_404(Campaign, pk=campaign_id)
+        if consultancy_id is not None and campaign.company.consultancy_id != consultancy_id:
+            raise PermissionDenied('Campanha fora da consultoria ativa.')
         campaign.delete()
         cache.clear()
         messages.success(request, 'Campanha removida com sucesso.')
@@ -3208,6 +3302,12 @@ class CompanyAdminRequiredMixin(LoginRequiredMixin):
                 company_id = int(company_id)
             except (TypeError, ValueError) as exc:
                 raise PermissionDenied('Empresa de sessao invalida.') from exc
+            consultancy_id = getattr(request, 'consultancy_id', None)
+            if consultancy_id is not None and not Company.objects.filter(
+                id=company_id,
+                consultancy_id=consultancy_id,
+            ).exists():
+                raise PermissionDenied('Empresa fora da consultoria ativa.')
             request.current_company_id = company_id
             request.current_membership = None
             return super().dispatch(request, *args, **kwargs)
@@ -3220,7 +3320,11 @@ class CompanyAdminRequiredMixin(LoginRequiredMixin):
         except (TypeError, ValueError) as exc:
             raise PermissionDenied('Empresa de sessao invalida.') from exc
 
-        membership = get_membership_for_company(request.user, company_id)
+        membership = get_membership_for_company(
+            request.user,
+            company_id,
+            consultancy_id=getattr(request, 'consultancy_id', None),
+        )
         if membership is None:
             raise PermissionDenied('Usuario sem acesso a empresa da sessao.')
         if membership.role not in CompanyMembership.ADMIN_ROLES:
@@ -3900,7 +4004,10 @@ def render_job_functions_table(request, company_id):
 
 
 def render_companies_table(request):
+    consultancy_id = getattr(request, 'consultancy_id', None)
     companies_qs = Company.objects.order_by('name')
+    if consultancy_id is not None:
+        companies_qs = companies_qs.filter(consultancy_id=consultancy_id)
     search_name = (request.GET.get('name') or '').strip()
     selected_status = (request.GET.get('status') or '').strip().lower()
     if search_name:
@@ -4440,15 +4547,28 @@ class ReportCompareView(CompanyAdminRequiredMixin, View):
         selected_company = None
 
         if is_master:
-            companies = list(Company.objects.order_by('name').only('id', 'name'))
+            companies_qs = Company.objects.order_by('name')
+            consultancy_id = getattr(request, 'consultancy_id', None)
+            if consultancy_id is not None:
+                companies_qs = companies_qs.filter(consultancy_id=consultancy_id)
+            companies = list(companies_qs.only('id', 'name'))
             raw_company_id = (request.GET.get('company_id') or '').strip()
             if raw_company_id.isdigit():
                 candidate_id = int(raw_company_id)
-                if user_has_company_access(request.user, candidate_id):
+                if user_has_company_access(
+                    request.user,
+                    candidate_id,
+                    consultancy_id=getattr(request, 'consultancy_id', None),
+                ):
                     request.session['company_id'] = candidate_id
                     request.current_company_id = candidate_id
                     selected_company_id = candidate_id
-        selected_company = Company.objects.filter(pk=selected_company_id).first()
+        selected_company_qs = Company.objects.filter(pk=selected_company_id)
+        if getattr(request, 'consultancy_id', None) is not None:
+            selected_company_qs = selected_company_qs.filter(
+                consultancy_id=request.consultancy_id,
+            )
+        selected_company = selected_company_qs.first()
         assessment_label = ''
         if selected_company:
             assessment_type = (selected_company.assessment_type or '').strip().lower()
@@ -4528,7 +4648,11 @@ class ReportCompareView(CompanyAdminRequiredMixin, View):
             return JsonResponse({'campaigns': []})
 
         company_id = int(raw_company_id)
-        if not user_has_company_access(request.user, company_id):
+        if not user_has_company_access(
+            request.user,
+            company_id,
+            consultancy_id=getattr(request, 'consultancy_id', None),
+        ):
             return JsonResponse({'campaigns': []}, status=403)
 
         campaigns_qs = (
