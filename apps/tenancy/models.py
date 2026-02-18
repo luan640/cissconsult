@@ -23,13 +23,6 @@ def company_logo_upload_to(instance, filename):
 
 
 class Company(models.Model):
-    consultancy = models.ForeignKey(
-        'tenancy.Consultancy',
-        on_delete=models.PROTECT,
-        related_name='companies',
-        blank=True,
-        null=True,
-    )
     name = models.CharField(max_length=255)
     legal_name = models.CharField(max_length=255, blank=True)
     legal_representative_name = models.CharField(max_length=255, blank=True)
@@ -72,21 +65,6 @@ class Company(models.Model):
 
     class Meta:
         db_table = 'companies'
-        ordering = ['name']
-
-    def __str__(self) -> str:
-        return self.name
-
-
-class Consultancy(models.Model):
-    name = models.CharField(max_length=255)
-    slug = models.SlugField(max_length=80, unique=True)
-    is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        db_table = 'consultancies'
         ordering = ['name']
 
     def __str__(self) -> str:
@@ -140,51 +118,6 @@ class CompanyMembership(models.Model):
 
     def __str__(self) -> str:
         return f'{self.user} -> {self.company}'
-
-
-class ConsultancyMembership(models.Model):
-    class Role(models.TextChoices):
-        OWNER = 'OWNER', 'Owner'
-        MEMBER = 'MEMBER', 'Member'
-
-    OWNER_ROLES = {Role.OWNER}
-
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name='consultancy_memberships',
-    )
-    consultancy = models.ForeignKey(
-        Consultancy,
-        on_delete=models.CASCADE,
-        related_name='memberships',
-    )
-    role = models.CharField(
-        max_length=30,
-        choices=Role.choices,
-        default=Role.MEMBER,
-    )
-    is_default = models.BooleanField(default=False)
-    is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        db_table = 'consultancy_memberships'
-        constraints = [
-            models.UniqueConstraint(
-                fields=['user', 'consultancy'],
-                name='tenancy_membership_unique_user_consultancy',
-            ),
-            models.UniqueConstraint(
-                fields=['user'],
-                condition=Q(is_default=True),
-                name='tenancy_membership_single_default_consultancy',
-            ),
-        ]
-
-    def __str__(self) -> str:
-        return f'{self.user} -> {self.consultancy}'
 
 
 class TenantModel(models.Model):
