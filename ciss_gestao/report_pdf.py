@@ -220,6 +220,29 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
 
     story = []
 
+    company_logo = (report_context.get("company_logo") or "").strip()
+    if company_logo:
+        try:
+            logo_img = None
+            if os.path.exists(company_logo):
+                logo_img = Image(company_logo)
+            else:
+                with default_storage.open(company_logo, "rb") as logo_handle:
+                    logo_img = Image(BytesIO(logo_handle.read()))
+            if logo_img is not None:
+                max_width = doc.width * 0.34
+                max_height = 22 * mm
+                img_width, img_height = logo_img.imageWidth, logo_img.imageHeight
+                if img_width and img_height:
+                    scale = min(max_width / img_width, max_height / img_height, 1.0)
+                    logo_img.drawWidth = img_width * scale
+                    logo_img.drawHeight = img_height * scale
+                logo_img.hAlign = "CENTER"
+                story.append(logo_img)
+                story.append(Spacer(1, 6))
+        except Exception:
+            pass
+
     story.append(Paragraph("RELATÓRIO DE SAÚDE ORGANIZACIONAL", title_style))
     story.append(
         Paragraph(
@@ -342,16 +365,16 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
     add_section_header(2, "OBJETIVO")
     story.append(
         Paragraph(
-            "Esta Avaliação Ergonômica Preliminar (AEP) tem como objetivo identificar e analisar de forma técnica os "
-            "fatores de riscos psicossociais presentes no ambiente laboral, que podem contribuir para o estresse "
-            "ocupacional e impactar a saúde, o bem-estar e a produtividade dos trabalhadores. Este relatório está em "
-            "estrita conformidade com a NR-17 e NR-1 (GRO e PGR), atendendo ao Guia de Informações sobre Fatores de "
-            "Riscos Psicossociais Relacionados ao Trabalho (MTE) e HSE-SIT-UK, garantindo alinhamento com as melhores "
-            "práticas nacionais e internacionais em saúde e segurança do trabalho. Além de cumprir os requisitos "
-            "legais, este AEP-FRPRT oferece subsídios técnicos robustos para a tomada de decisão quanto à necessidade "
-            "de aprofundamento por meio de Análise Ergonômica do Trabalho (AET), priorização de medidas de controle e "
-            "definição de planos de ação alinhados ao PGR, visando ambientes de trabalho mais seguros, saudáveis e "
-            "produtivos.",
+            "Esta Avaliação Ergonômica Preliminar (AEP) tem por finalidade identificar e examinar tecnicamente os "
+            "fatores de riscos psicossociais existentes no contexto de trabalho, que possam contribuir para o estresse "
+            "ocupacional e afetar a saúde, o bem-estar e o desempenho dos colaboradores. O presente relatório encontra-se "
+            "em plena conformidade com a NR-17 e a NR-1 (GRO e PGR), observando o Guia de Informações sobre Fatores de "
+            "Riscos Psicossociais Relacionados ao Trabalho (MTE) e as diretrizes do HSE-SIT-UK, assegurando alinhamento "
+            "com as melhores práticas nacionais e internacionais em saúde e segurança do trabalho. Além de atender às "
+            "exigências legais, este AEP-FRPRT fornece fundamentos técnicos consistentes para subsidiar decisões quanto "
+            "à necessidade de aprofundamento por meio da Análise Ergonômica do Trabalho (AET), à priorização de medidas "
+            "de controle e à definição de planos de ação integrados ao PGR, com o propósito de promover ambientes laborais "
+            "mais seguros, saudáveis e produtivos.",
             body_style,
         )
     )
@@ -360,67 +383,68 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
     add_section_header(3, "METODOLOGIA")
     story.append(
         Paragraph(
-            "Para a realização desta Avaliação Ergonômica Preliminar (AEP), foi utilizado o Stress Indicator Tool "
-            "(SIT), instrumento de avaliação psicossocial internacionalmente validado pelo Health and Safety "
-            "Executive (HSE) do Reino Unido (UK) e devidamente adaptado ao contexto organizacional brasileiro, em "
-            "consonância com as exigências da NR-01, da NR-07 e do Guia de Fatores Psicossociais Relacionados ao "
+            "Para a condução desta Avaliação Ergonômica Preliminar (AEP), foi empregado o Stress Indicator Tool "
+            "(SIT), instrumento de avaliação psicossocial reconhecido internacionalmente e validado pelo Health and "
+            "Safety Executive (HSE) do Reino Unido (UK), devidamente adaptado à realidade organizacional brasileira, "
+            "em conformidade com as disposições da NR-01, da NR-07 e do Guia de Fatores Psicossociais Relacionados ao "
             "Trabalho, elaborado pelo Ministério do Trabalho e Emprego (MTE).",
             body_style,
         )
     )
     story.append(
         Paragraph(
-            "O instrumento e composto por 35 perguntas estruturadas, distribuidas nos dominios Demandas, Controle, "
-            "Apoio, Relacionamentos, Papel e Mudanças, reconhecidos pela literatura cientifica e pelas normas "
-            "tecnicas como determinantes relevantes para a saude mental e o bem-estar dos trabalhadores.",
+            "O instrumento é composto por 35 questões estruturadas, organizadas nos domínios Demandas, Controle, "
+            "Apoio, Relacionamentos, Papel e Mudanças, reconhecidos pela literatura científica e pelas normas "
+            "técnicas como fatores determinantes relevantes para a saúde mental e o bem-estar dos trabalhadores.",
             body_style,
         )
     )
     story.append(
         Paragraph(
-            "A aplicação do método possibilita uma análise técnica aprofundada dos fatores críticos do ambiente de "
-            "trabalho, contemplando as seguintes etapas:",
+            "A aplicação da metodologia permite a realização de uma análise técnica detalhada dos fatores críticos "
+            "presentes no ambiente laboral, contemplando as seguintes etapas:",
             body_style,
         )
     )
-    story.append(Paragraph("- Coleta sistemática e anônima das percepções dos trabalhadores, assegurando a confidencialidade e a fidedignidade das respostas;", body_style))
-    story.append(Paragraph("- Categorização, tabulação e análise estatística dos dados coletados, permitindo a identificação de áreas críticas e pontos prioritários de atenção;", body_style))
-    story.append(Paragraph("- Interpretação técnica dos resultados, alinhada aos dispositivos legais vigentes e as boas práticas nacionais e internacionais de Saúde e Segurança do Trabalho, garantindo rastreabilidade das informações e subsidiando o planejamento de ações integradas ao GRO e ao PGR.", body_style))
+
+    story.append(Paragraph("• Realização de coleta estruturada e sigilosa das percepções dos trabalhadores, garantindo confidencialidade e confiabilidade das respostas;", body_style))
+    story.append(Paragraph("• Classificação, consolidação e análise estatística das informações obtidas, possibilitando a identificação de áreas sensíveis e pontos prioritários de intervenção;", body_style))
+    story.append(Paragraph("• Avaliação técnica dos resultados em conformidade com a legislação vigente e com as melhores práticas nacionais e internacionais de Saúde e Segurança do Trabalho, assegurando a rastreabilidade dos dados e subsidiando a elaboração de ações integradas ao GRO e ao PGR.", body_style))
 
     story.append(
         Paragraph(
-            "O uso do Stress Indicator Tool (SIT) neste processo possibilita a identificacao consistente dos riscos "
-            "psicossociais presentes no ambiente de trabalho, constituindo-se como ponto de partida para a "
-            "priorizacao de medidas corretivas e preventivas, alem de viabilizar o monitoramento continuo da "
+            "A utilização do Stress Indicator Tool (SIT) neste processo permite a identificação estruturada e confiável "
+            "dos riscos psicossociais existentes no ambiente laboral, configurando-se como base para a definição e "
+            "priorização de medidas preventivas e corretivas, além de possibilitar o acompanhamento contínuo da "
             "evolução das condições psicossociais ao longo do tempo.",
             body_style,
         )
     )
     story.append(
         Paragraph(
-            "Destaca-se que o SIT é uma das ferramentas recomendadas pelo Health and Safety Executive (HSE-UK) em "
-            "razão de sua eficácia na coleta estruturada e prática das percepções dos trabalhadores, sendo relevante "
-            "ressaltar que os resultados obtidos representam a percepção dos colaboradores em um determinado "
-            "contexto e período, o que reforça a necessidade de reavaliações periódicas, em consonância com o ciclo "
-            "de monitoramento do GRO e do PGR.",
+            "Ressalta-se que o SIT é uma das ferramentas indicadas pelo Health and Safety Executive (HSE-UK), "
+            "em virtude de sua efetividade na coleta estruturada e objetiva das percepções dos trabalhadores. "
+            "Cabe destacar que os resultados obtidos refletem a percepção dos colaboradores em um contexto "
+            "e período específicos, o que reforça a importância de reavaliações periódicas, em alinhamento "
+            "com o ciclo de monitoramento previsto no GRO e no PGR.",
             body_style,
         )
     )
     story.append(
         Paragraph(
-            "A efetividade da metodologia adotada esta diretamente relacionada ao comprometimento institucional e a "
-            "participacao ativa dos trabalhadores ao longo de todo o processo, uma vez que sao os proprios "
-            "colaboradores que vivenciam as rotinas laborais e detem a experiencia pratica necessaria para fornecer "
-            "informacoes fidedignas e relevantes acerca dos fatores que impactam sua saude, bem-estar e produtividade.",
+            "A eficácia da metodologia adotada está diretamente vinculada ao comprometimento institucional e à "
+            "participação ativa dos trabalhadores ao longo de todo o processo, considerando que são os próprios "
+            "colaboradores que vivenciam as rotinas laborais e detêm a experiência prática necessária para fornecer "
+            "informações confiáveis e relevantes sobre os fatores que influenciam sua saúde, bem-estar e desempenho.",
             body_style,
         )
     )
     story.append(
         Paragraph(
-            "Adicionalmente, a metodologia adotada contribui para a promoção de ambientes de trabalho mais saudáveis "
-            "e produtivos, possibilitando que a organização atue de maneira preventiva, estruturada e sistemática no "
-            "gerenciamento dos fatores psicossociais relacionados ao trabalho, em conformidade com a legislação "
-            "brasileira vigente e com os princípios internacionais de gestão em saúde e segurança ocupacional.",
+            "Adicionalmente, a metodologia empregada favorece a promoção de ambientes laborais mais seguros, "
+            "equilibrados e produtivos, permitindo que a organização atue de forma preventiva, estruturada e "
+            "sistematizada na gestão dos fatores psicossociais relacionados ao trabalho, em conformidade com a "
+            "legislação brasileira vigente e com os referenciais internacionais de gestão em saúde e segurança ocupacional.",
             body_style,
         )
     )
@@ -432,19 +456,20 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
             body_style,
         )
     )
-    story.append(Paragraph("- Quais listas de trabalhadores podem ser usadas;", body_style))
-    story.append(Paragraph("- Quantos trabalhadores você precisa amostrar; e", body_style))
-    story.append(Paragraph("- Como selecionar uma amostra de trabalhadores.", body_style))
+
+    story.append(Paragraph("• Quais listas de trabalhadores podem ser utilizadas;", body_style))
+    story.append(Paragraph("• Quantos trabalhadores devem compor a amostra; e", body_style))
+    story.append(Paragraph("• Como selecionar a amostra de trabalhadores.", body_style))
 
     story.append(Paragraph("Lista de trabalhadores", sub_section_style))
     story.append(
         Paragraph(
-            "Se você estiver selecionando uma amostra de trabalhadores ou todos os trabalhadores da sua organização, "
-            "precisará garantir que tenha uma lista atualizada dos trabalhadores selecionados para a pesquisa. A lista "
-            "pode ser a folha de pagamento, registros de funcionários, registros de segurança do local ou fonte "
-            "similar. É importante que a lista de trabalhadores utilizada esteja atualizada e precisa para garantir "
-            "que todos os participantes da sua amostra recebam seus questionários. Isso ajudará a maximizar sua taxa "
-            "de resposta, tornando a pesquisa o mais confiável possível.",
+            "Ao selecionar uma amostra de trabalhadores — ou mesmo a totalidade dos colaboradores da organização — "
+            "é fundamental assegurar a disponibilidade de uma lista atualizada dos participantes incluídos na pesquisa. "
+            "Essa relação pode ser obtida por meio da folha de pagamento, cadastros de empregados, registros de segurança "
+            "ou outras fontes equivalentes. É imprescindível que a lista utilizada esteja correta e atualizada, a fim de "
+            "garantir que todos os integrantes da amostra recebam o questionário. Tal cuidado contribui para o aumento da "
+            "taxa de resposta e para a confiabilidade dos resultados obtidos.",
             body_style,
         )
     )
@@ -452,19 +477,20 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
     story.append(Paragraph("Tamanho mínimo de amostra recomendado", sub_section_style))
     story.append(
         Paragraph(
-            "Uma pesquisa com todos os seus funcionários sempre fornecerá uma imagem mais precisa do que uma amostra. "
-            "As vantagens de realizar uma pesquisa com o menor tamanho de amostra recomendado são que ela mantém os "
-            "custos no mínimo e também limita o tempo necessário para a equipe. Os tamanhos mínimos de amostra foram "
-            "calculados para garantir que os resultados da pesquisa forneçam uma imagem estatisticamente "
-            "representativa das opiniões de todos os funcionários da sua organização.",
+            "A realização de uma pesquisa envolvendo todos os colaboradores tende a proporcionar um retrato mais fiel "
+            "da realidade organizacional do que a utilização de uma amostra. Por outro lado, optar pelo tamanho mínimo "
+            "de amostra recomendado apresenta como benefícios a redução de custos e a diminuição do tempo demandado "
+            "pela equipe. Os quantitativos mínimos foram definidos de modo a assegurar que os resultados obtidos sejam "
+            "estatisticamente representativos das percepções do conjunto de trabalhadores da organização.",
             body_style,
         )
     )
     story.append(
         Paragraph(
-            "As vantagens de utilizar uma amostra maior incluem a possibilidade de uma análise mais detalhada de "
-            "subgrupos (por exemplo, por grupo ocupacional) e a oportunidade de mais funcionários expressarem suas "
-            "opiniões. As desvantagens são os custos mais elevados em termos de recursos e tempo.",
+            "A adoção de uma amostra ampliada possibilita análises mais aprofundadas de subgrupos "
+            "(como por categoria profissional) e amplia a oportunidade para que um número maior de "
+            "colaboradores manifeste suas percepções. Em contrapartida, essa escolha pode implicar "
+            "maior investimento de tempo e recursos para sua execução.",
             body_style,
         )
     )
@@ -511,58 +537,61 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
     add_section_header(4, "IMPORTÂNCIA DA PARTICIPAÇÃO DOS TRABALHADORES")
     story.append(
         Paragraph(
-            "A participação ativa, genuína e informada dos trabalhadores é um pilar essencial para a efetividade desta "
-            "Avaliação Ergonômica Preliminar (AEP), estando em conformidade com os princípios de participação "
-            "previstos na NR-1 (item 1.5.3.1) e NR-17, que destacam a importância do envolvimento dos trabalhadores na "
-            "identificação e gestão dos riscos ocupacionais, incluindo fatores psicossociais relacionados ao trabalho.",
+            "A participação ativa, consciente e transparente dos trabalhadores constitui elemento fundamental "
+            "para a efetividade desta Avaliação Ergonômica Preliminar (AEP), em consonância com os princípios "
+            "de participação estabelecidos na NR-1 (item 1.5.3.1) e na NR-17, que ressaltam a relevância do "
+            "envolvimento dos colaboradores na identificação e no gerenciamento dos riscos ocupacionais, "
+            "inclusive daqueles relacionados aos fatores psicossociais do trabalho.",
             body_style,
         )
     )
     story.append(
         Paragraph(
-            "Os trabalhadores são os que vivenciam diariamente os processos, as demandas e os desafios do ambiente "
-            "laboral, possuindo conhecimento prático e percepções realistas sobre os fatores que impactam sua saúde, "
-            "bem-estar, segurança e desempenho. Este conhecimento prático e insubstituível e complementa as "
-            "observações técnicas realizadas durante a avaliação.",
+            "Os trabalhadores são aqueles que vivenciam cotidianamente os processos, as exigências e os desafios do "
+            "ambiente de trabalho, detendo conhecimento prático e percepções concretas acerca dos fatores que influenciam "
+            "sua saúde, bem-estar, segurança e desempenho. Esse saber experiencial, de caráter insubstituível, "
+            "complementa as análises e observações técnicas realizadas no decorrer da avaliação.",
             body_style,
         )
     )
     story.append(
         Paragraph(
-            "A coleta de percepções diretamente com os trabalhadores, de forma anônima e confidencial, reduz vieses "
-            "de avaliação e possibilita a identificação de fatores subjetivos que não seriam captados apenas por "
-            "métodos observacionais ou de análise documental. Além disso, a participação efetiva dos colaboradores "
-            "reforça o compromisso coletivo com a saúde e segurança, incentivando o engajamento nas ações de melhoria "
-            "que venham a ser implementadas posteriormente.",
+            "A obtenção das percepções diretamente junto aos trabalhadores, de maneira anônima e confidencial, "
+            "minimiza vieses de avaliação e permite a identificação de aspectos subjetivos que não seriam "
+            "evidenciados apenas por meio de observações técnicas ou análise documental. Ademais, a participação "
+            "efetiva dos colaboradores fortalece o compromisso coletivo com a saúde e a segurança, estimulando "
+            "o engajamento nas ações de melhoria que venham a ser implementadas posteriormente.",
             body_style,
         )
     )
     story.append(
         Paragraph(
-            "Sem o engajamento dos trabalhadores, os dados coletados podem apresentar lacunas significativas, "
-            "tornando o diagnóstico impreciso ou incompleto e comprometendo a eficácia das medidas corretivas e "
-            "preventivas propostas. Por este motivo, destaca-se que a qualidade das informações obtidas depende "
-            "diretamente de um ambiente de confiança, onde os trabalhadores sintam-se seguros para expressar suas "
-            "percepcoes de forma honesta, sem receio de represalias ou julgamentos.",
+            "A ausência de engajamento dos trabalhadores pode resultar em lacunas relevantes nas informações "
+            "coletadas, tornando o diagnóstico impreciso ou parcial e comprometendo a efetividade das medidas "
+            "preventivas e corretivas propostas. Por essa razão, ressalta-se que a qualidade dos dados obtidos "
+            "está diretamente vinculada à existência de um ambiente de confiança, no qual os colaboradores se "
+            "sintam seguros para manifestar suas percepções de forma transparente, sem receio de retaliações "
+            "ou julgamentos.",
             body_style,
         )
     )
     story.append(
         Paragraph(
-            "A promoção de transparência, escuta ativa e diálogo constante são estratégias fundamentais para "
-            "garantir esta participação, alinhadas ao ciclo de melhoria contínua do Gerenciamento de Riscos "
-            "Ocupacionais (GRO) e ao Programa de Gerenciamento de Riscos (PGR). Esta abordagem participativa "
-            "fortalece a cultura de segurança e saúde dentro da organização, contribuindo para um ambiente de "
-            "trabalho mais seguro, saudável, equilibrado e produtivo.",
+            "A promoção da transparência, da escuta ativa e do diálogo permanente constitui estratégia essencial "
+            "para assegurar essa participação, em consonância com o ciclo de melhoria contínua do Gerenciamento "
+            "de Riscos Ocupacionais (GRO) e do Programa de Gerenciamento de Riscos (PGR). Essa abordagem participativa "
+            "fortalece a cultura de saúde e segurança na organização, contribuindo para a construção de um ambiente "
+            "de trabalho mais seguro, saudável, equilibrado e produtivo.",
             body_style,
         )
     )
     story.append(
         Paragraph(
-            "Por fim, reforça-se que a inclusão do trabalhador no processo de identificação e análise de riscos "
-            "psicossociais está alinhada às melhores práticas internacionais recomendadas pela HSE-UK, sendo um "
-            "diferencial para empresas que buscam excelência em seus sistemas de gestão de saúde e segurança do "
-            "trabalho, promovendo resultados sustentáveis e respeitando o bem-estar de seus colaboradores.",
+            "Por fim, destaca-se que a participação do trabalhador no processo de identificação e avaliação dos "
+            "riscos psicossociais está em consonância com as melhores práticas internacionais recomendadas pela "
+            "HSE-UK, configurando-se como um diferencial para organizações que buscam excelência em seus sistemas "
+            "de gestão de saúde e segurança do trabalho, promovendo resultados sustentáveis e valorizando o "
+            "bem-estar de seus colaboradores.",
             body_style,
         )
     )

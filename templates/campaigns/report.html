@@ -202,7 +202,7 @@
       </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 16px; margin-top: 10px; align-items: stretch;">
         <div class="card" style="text-align: center; grid-column: 1; grid-row: 1; height: 100%; display: flex; flex-direction: column; justify-content: center;">
-          <p class="card__label">Media geral da empresa</p>
+          <p class="card__label">Média geral da empresa</p>
           <p style="margin: 8px 0 0; font-size: 2rem; font-weight: 800; color: #22c55e;">
             {{ results.overall_percent }}%
           </p>
@@ -266,7 +266,7 @@
         </span>
       </div>
       <div style="margin: 18px auto 0; max-width: 860px;">
-        <p style="margin: 0 0 8px; font-weight: 800;">Grafico dos resultados</p>
+        <p style="margin: 0 0 8px; font-weight: 800;">Gráfico dos resultados</p>
         {% for domain in results.domain_details %}
           <div class="card report-graphics-card" style="margin-bottom: 16px; border: 1px solid #dbeafe;">
             <div style="font-weight: 800; margin-bottom: 6px;">{{ domain.label|upper }}</div>
@@ -284,24 +284,24 @@
                 SEMPRE - NEGATIVO | RUIM
               </span>
             </div>
-            {% if domain.ghes %}
-              <div style="margin-top: 10px; font-size: 0.82rem; font-weight: 700; color: #334155;">Analise por Setor</div>
+            {% if domain.group_items %}
+              <div style="margin-top: 10px; font-size: 0.82rem; font-weight: 700; color: #334155;">Analise por {{ group_label_singular }}</div>
               <div style="display: grid; gap: 8px; margin-top: 6px;">
-                {% for ghe in domain.ghes %}
+                {% for group in domain.group_items %}
                   <div>
                     <div style="display: flex; justify-content: space-between; font-size: 0.8rem; font-weight: 700;">
-                      <span>{{ ghe.name }}</span>
-                      <span>{{ ghe.percent }}% | {{ ghe.avg }}</span>
+                      <span>{{ group.name }}</span>
+                      <span>{{ group.percent }}% | {{ group.avg }}</span>
                     </div>
                     <div style="height: 16px; border-radius: 999px; background: #e2e8f0; border: 1px solid #cbd5e1; overflow: hidden;">
-                      <span style="display: block; height: 100%; width: {{ ghe.percent_css }}%; background: {% if ghe.percent >= 75 %}#22c55e{% elif ghe.percent >= 40 %}#f59e0b{% else %}#ef4444{% endif %};"></span>
+                      <span style="display: block; height: 100%; width: {{ group.percent_css }}%; background: {% if group.percent >= 75 %}#22c55e{% elif group.percent >= 40 %}#f59e0b{% else %}#ef4444{% endif %};"></span>
                     </div>
                   </div>
                 {% endfor %}
               </div>
             {% endif %}
 
-            <div style="margin-top: 12px; font-size: 0.82rem; font-weight: 700; margin-bottom: 6px; color: #334155;">Media Geral</div>
+            <div style="margin-top: 12px; font-size: 0.82rem; font-weight: 700; margin-bottom: 6px; color: #334155;">Média Geral</div>
             <div style="display: flex; justify-content: space-between; font-size: 0.82rem; font-weight: 700; color: #0f172a;">
               <span>{{ domain.percent }}%</span>
               <span>{{ domain.avg }}</span>
@@ -333,14 +333,14 @@
               </div>
             {% endif %}
 
-            {% if domain.ghe_questions %}
-              <div style="margin-top: 14px; font-size: 0.82rem; font-weight: 800;">{{ domain.label|upper }} (Analise por Setor)</div>
-              {% for ghe in domain.ghe_questions %}
+            {% if domain.group_questions %}
+              <div style="margin-top: 14px; font-size: 0.82rem; font-weight: 800;">{{ domain.label|upper }} (Analise por {{ group_label_singular }})</div>
+              {% for group in domain.group_questions %}
                 <div style="margin-top: 10px; font-size: 0.8rem; font-weight: 700; color: #0f172a;">
-                  SETOR: {{ ghe.name|upper }}
+                  {{ group_label_singular|upper }}: {{ group.name|upper }}
                 </div>
                 <div style="display: grid; gap: 10px; margin-top: 6px;">
-                  {% for question in ghe.questions %}
+                  {% for question in group.questions %}
                     <div style="display: grid; grid-template-columns: 1fr 120px; gap: 10px; align-items: center;">
                       <div>
                         <div style="font-size: 0.82rem; color: #334155;">{{ question.text }}</div>

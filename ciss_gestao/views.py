@@ -2277,14 +2277,26 @@ class CampaignReportView(MasterRequiredMixin, View):
             messages.error(request, 'Relatório disponível apenas para campanhas encerradas.')
             return redirect('campaigns-list')
         responses_qs = CampaignResponse.all_objects.filter(campaign=campaign)
-        ghe_ids = list(
-            responses_qs.exclude(ghe_id__isnull=True).values_list('ghe_id', flat=True).distinct()
-        )
-        ghes = list(GHE.all_objects.filter(id__in=ghe_ids).order_by('name'))
+        assessment_type = (campaign.company.assessment_type or '').strip().lower()
+        use_departments = assessment_type == 'setor'
+        group_label_singular = 'Setor' if use_departments else 'GHE'
+        group_label_plural = 'Setores' if use_departments else 'GHEs'
+
+        if use_departments:
+            group_ids = list(
+                responses_qs.exclude(department_id__isnull=True).values_list('department_id', flat=True).distinct()
+            )
+            groups = list(Department.all_objects.filter(id__in=group_ids).order_by('name'))
+        else:
+            group_ids = list(
+                responses_qs.exclude(ghe_id__isnull=True).values_list('ghe_id', flat=True).distinct()
+            )
+            groups = list(GHE.all_objects.filter(id__in=group_ids).order_by('name'))
+
         total_workers = campaign.company.employee_count or 0
         response_rate = (responses_qs.count() / total_workers * 100) if total_workers else 0
         response_label = self._response_rate_label(response_rate, total_workers)
-        ghe_map = {ghe.id: ghe.name for ghe in ghes}
+        group_map = {group.id: group.name for group in groups}
         standard_actions = {
             item['question_number']: item['actions']
             for item in StandardActionPlan.all_objects.filter(
@@ -2292,7 +2304,13 @@ class CampaignReportView(MasterRequiredMixin, View):
                 is_active=True,
             ).values('question_number', 'actions')
         }
-        results = self._build_results(responses_qs, ghe_map, standard_actions)
+        results = self._build_results(
+            responses_qs,
+            group_map,
+            standard_actions,
+            group_id_field='department_id' if use_departments else 'ghe_id',
+            group_label_singular=group_label_singular,
+        )
         saved_actions = CampaignReportAction.all_objects.filter(campaign=campaign).values(
             'question_text',
             'measures',
@@ -2310,7 +2328,9 @@ class CampaignReportView(MasterRequiredMixin, View):
             'total_workers': total_workers,
             'response_rate': round(response_rate, 1) if total_workers else 0,
             'response_label': response_label,
-            'report_ghes': ghes,
+            'report_ghes': groups,
+            'group_label_singular': group_label_singular,
+            'group_label_plural': group_label_plural,
             'results': results,
             'report_actions_json': json.dumps(list(saved_actions), ensure_ascii=False),
             'report_settings': report_settings,
@@ -2322,14 +2342,21 @@ class CampaignReportView(MasterRequiredMixin, View):
         return render(request, self.template_name, context)
 
 
-    def _build_results(self, responses_qs, ghe_map, standard_actions):
+    def _build_results(
+        self,
+        responses_qs,
+        group_map,
+        standard_actions,
+        group_id_field='ghe_id',
+        group_label_singular='GHE',
+    ):
         domain_totals = {key: {'sum': 0, 'count': 0} for key in self.DOMAIN_BY_STEP.keys()}
         question_totals = {
             key: [{'sum': 0, 'count': 0} for _ in self.STEP_QUESTIONS.get(key, [])]
             for key in self.DOMAIN_BY_STEP.keys()
         }
-        ghe_totals = {key: {} for key in self.DOMAIN_BY_STEP.keys()}
-        ghe_question_totals = {
+        group_totals = {key: {} for key in self.DOMAIN_BY_STEP.keys()}
+        group_question_totals = {
             key: {} for key in self.DOMAIN_BY_STEP.keys()
         }
         overall_sum = 0
@@ -2337,7 +2364,7 @@ class CampaignReportView(MasterRequiredMixin, View):
 
         for response in responses_qs:
             answers_by_step = response.responses or {}
-            ghe_id = response.ghe_id
+            group_id = getattr(response, group_id_field, None)
             for step_key, answers in answers_by_step.items():
                 if step_key not in self.DOMAIN_BY_STEP or not answers:
                     continue
@@ -2352,17 +2379,17 @@ class CampaignReportView(MasterRequiredMixin, View):
                     if idx < len(question_totals[step_key]):
                         question_totals[step_key][idx]['sum'] += score
                         question_totals[step_key][idx]['count'] += 1
-                    if ghe_id:
-                        ghe_totals[step_key].setdefault(ghe_id, {'sum': 0, 'count': 0})
-                        ghe_totals[step_key][ghe_id]['sum'] += score
-                        ghe_totals[step_key][ghe_id]['count'] += 1
-                        ghe_question_totals[step_key].setdefault(
-                            ghe_id,
+                    if group_id:
+                        group_totals[step_key].setdefault(group_id, {'sum': 0, 'count': 0})
+                        group_totals[step_key][group_id]['sum'] += score
+                        group_totals[step_key][group_id]['count'] += 1
+                        group_question_totals[step_key].setdefault(
+                            group_id,
                             [{'sum': 0, 'count': 0} for _ in self.STEP_QUESTIONS.get(step_key, [])],
                         )
-                        if idx < len(ghe_question_totals[step_key][ghe_id]):
-                            ghe_question_totals[step_key][ghe_id][idx]['sum'] += score
-                            ghe_question_totals[step_key][ghe_id][idx]['count'] += 1
+                        if idx < len(group_question_totals[step_key][group_id]):
+                            group_question_totals[step_key][group_id][idx]['sum'] += score
+                            group_question_totals[step_key][group_id][idx]['count'] += 1
 
         domains = []
         domain_details = []
@@ -2378,30 +2405,30 @@ class CampaignReportView(MasterRequiredMixin, View):
                     'percent_css': f'{percent:.1f}',
                 }
             )
-            ghe_items = []
-            ghe_question_items = []
-            for ghe_id, totals in ghe_totals[step_key].items():
-                ghe_avg = (totals['sum'] / totals['count']) if totals['count'] else 0
-                ghe_percent = (ghe_avg / 5) * 100 if totals['count'] else 0
-                ghe_items.append(
+            group_items = []
+            group_question_items = []
+            for group_id, totals in group_totals[step_key].items():
+                group_avg = (totals['sum'] / totals['count']) if totals['count'] else 0
+                group_percent = (group_avg / 5) * 100 if totals['count'] else 0
+                group_items.append(
                     {
-                        'name': ghe_map.get(ghe_id, f'GHE {ghe_id}'),
-                        'avg': round(ghe_avg, 1) if totals['count'] else 0,
-                        'percent': round(ghe_percent, 1) if totals['count'] else 0,
-                        'percent_css': f'{ghe_percent:.1f}',
+                        'name': group_map.get(group_id, f'{group_label_singular} {group_id}'),
+                        'avg': round(group_avg, 1) if totals['count'] else 0,
+                        'percent': round(group_percent, 1) if totals['count'] else 0,
+                        'percent_css': f'{group_percent:.1f}',
                     }
                 )
-                ghe_questions = []
+                group_questions = []
                 for idx, question in enumerate(self.STEP_QUESTIONS.get(step_key, [])):
                     question_number = self.STEP_OFFSETS.get(step_key, 0) + idx + 1
-                    q_count = ghe_question_totals[step_key][ghe_id][idx]['count']
+                    q_count = group_question_totals[step_key][group_id][idx]['count']
                     q_avg = (
-                        ghe_question_totals[step_key][ghe_id][idx]['sum'] / q_count
+                        group_question_totals[step_key][group_id][idx]['sum'] / q_count
                         if q_count
                         else 0
                     )
                     q_percent = (q_avg / 5) * 100 if q_count else 0
-                    ghe_questions.append(
+                    group_questions.append(
                         {
                             'text': question,
                             'question_number': question_number,
@@ -2413,10 +2440,10 @@ class CampaignReportView(MasterRequiredMixin, View):
                             'actions': standard_actions.get(question_number, []),
                         }
                     )
-                ghe_question_items.append(
+                group_question_items.append(
                     {
-                        'name': ghe_map.get(ghe_id, f'GHE {ghe_id}'),
-                        'questions': ghe_questions,
+                        'name': group_map.get(group_id, f'{group_label_singular} {group_id}'),
+                        'questions': group_questions,
                     }
                 )
             questions = []
@@ -2447,9 +2474,9 @@ class CampaignReportView(MasterRequiredMixin, View):
                     'avg': round(avg, 1) if count else 0,
                     'percent': round(percent, 1) if count else 0,
                     'percent_css': f'{percent:.1f}',
-                    'ghes': sorted(ghe_items, key=lambda item: item['name']),
+                    'group_items': sorted(group_items, key=lambda item: item['name']),
                     'questions': questions,
-                    'ghe_questions': sorted(ghe_question_items, key=lambda item: item['name']),
+                    'group_questions': sorted(group_question_items, key=lambda item: item['name']),
                 }
             )
 
@@ -2709,6 +2736,7 @@ class CampaignReportPdfView(MasterRequiredMixin, View):
         report_context = {
             'campaign_uuid': str(campaign.uuid),
             'company_name': company.name or '-',
+            'company_logo': company.logo.name if getattr(company, 'logo', None) else '',
             'company_cnpj': company.cnpj or '-',
             'company_address': company_address,
             'company_cnae': company.cnae or '-',
@@ -4403,6 +4431,9 @@ class ReportCompareView(CompanyAdminRequiredMixin, View):
     allow_superuser_without_company = True
 
     def get(self, request):
+        if (request.GET.get('load_campaigns') or '').strip() == '1':
+            return self._campaigns_json(request)
+
         is_master = request.user.is_superuser
         companies = []
         selected_company_id = request.current_company_id
@@ -4491,13 +4522,44 @@ class ReportCompareView(CompanyAdminRequiredMixin, View):
             return None
         return campaigns_qs.filter(pk=int(campaign_id)).first()
 
+    def _campaigns_json(self, request):
+        raw_company_id = (request.GET.get('company_id') or '').strip()
+        if not raw_company_id.isdigit():
+            return JsonResponse({'campaigns': []})
+
+        company_id = int(raw_company_id)
+        if not user_has_company_access(request.user, company_id):
+            return JsonResponse({'campaigns': []}, status=403)
+
+        campaigns_qs = (
+            Campaign.all_objects.filter(
+                company_id=company_id,
+                status=Campaign.Status.FINISHED,
+            )
+            .only('id', 'title', 'start_date', 'end_date')
+            .order_by('-end_date', '-created_at')
+        )
+
+        campaigns = [
+            {
+                'id': campaign.id,
+                'label': (
+                    f'{campaign.title} '
+                    f'({campaign.start_date.strftime("%d/%m/%Y")} - '
+                    f'{campaign.end_date.strftime("%d/%m/%Y")})'
+                ),
+            }
+            for campaign in campaigns_qs
+        ]
+        return JsonResponse({'campaigns': campaigns})
+
     def _generate_content_with_gemini(self, report, metrics):
         mood_distribution = metrics.get('mood_distribution') or []
         complaint_distribution = metrics.get('complaint_distribution') or []
         prompt = (
             'Voce e especialista em analise psicossocial ocupacional, com foco na NR-1, GRO e PGR. '
             'Seu objetivo neste relatorio e levantar riscos psicossociais com base nos indicadores apresentados. '
-            'Analise SOMENTE os dados numericos enviados nas distribuicoes dos graficos. '
+            'Analise SOMENTE os dados numericos enviados nas distribuições dos gráficos. '
             'Nao invente contexto, nao cite causas sem evidencias e nao use informacoes externas. '
             'Se os dados forem insuficientes, diga isso de forma objetiva. '
             'Retorne APENAS JSON valido, sem markdown, com as chaves: '
@@ -4691,10 +4753,10 @@ class ReportCompareView(CompanyAdminRequiredMixin, View):
         top_mood_label = mood_top[0]['label'] if mood_top else 'humor'
         top_complaint_label = complaint_top[0]['label'] if complaint_top else 'denuncias'
         return [
-            f'Monitorar variacao semanal do indicador predominante de {top_mood_label.lower()}.',
-            f'Priorizar plano preventivo para ocorrencias de {top_complaint_label.lower()}.',
-            'Definir meta mensal de reducao para os maiores percentuais observados.',
-            'Reavaliar indicadores em 30 dias para validar tendencia dos graficos.',
+            f'Monitorar variação semanal do indicador predominante de {top_mood_label.lower()}.',
+            f'Priorizar plano preventivo para ocorrências de {top_complaint_label.lower()}.',
+            'Definir meta mensal de redução para os maiores percentuais observados.',
+            'Reavaliar indicadores em 30 dias para validar tendência dos gráficos.',
         ]
 
     def _parse_recommendations(self, recommendations_text):

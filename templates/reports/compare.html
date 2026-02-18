@@ -26,7 +26,7 @@
         {% if is_master %}
           <div class="form-field">
             <label for="company_id">Empresa</label>
-          <select id="company_id" name="company_id" required onchange="this.form.submit()" data-company-select>
+          <select id="company_id" name="company_id" required data-company-select>
               <option value="">Selecione</option>
               {% for company in companies %}
                 <option value="{{ company.id }}" {% if selected_company_id and company.id == selected_company_id %}selected{% endif %}>
@@ -38,7 +38,7 @@
         {% endif %}
         <div class="form-field">
           <label for="report_a">Campanha A</label>
-          <select id="report_a" name="report_a" required data-report-select>
+          <select id="report_a" name="report_a" required data-report-select {% if is_master and not selected_company_id %}disabled{% endif %}>
             <option value="">Selecione</option>
             {% for campaign in campaigns %}
               <option value="{{ campaign.id }}" {% if campaign_a and campaign.id == campaign_a.id %}selected{% endif %}>
@@ -49,7 +49,7 @@
         </div>
         <div class="form-field">
           <label for="report_b">Campanha B</label>
-          <select id="report_b" name="report_b" required data-report-select>
+          <select id="report_b" name="report_b" required data-report-select {% if is_master and not selected_company_id %}disabled{% endif %}>
             <option value="">Selecione</option>
             {% for campaign in campaigns %}
               <option value="{{ campaign.id }}" {% if campaign_b and campaign.id == campaign_b.id %}selected{% endif %}>
@@ -416,12 +416,56 @@
     (function () {
       var companySelect = document.querySelector('[data-company-select]');
       if (!companySelect) return;
+
+      var reportSelects = document.querySelectorAll('[data-report-select]');
+      var hasSelectedCompany = Boolean(companySelect.value);
+      reportSelects.forEach(function (select) {
+        select.disabled = !hasSelectedCompany;
+      });
+
       companySelect.addEventListener('change', function () {
-        var reportSelects = document.querySelectorAll('[data-report-select]');
+        var companyId = companySelect.value;
+        if (!companyId) {
+          reportSelects.forEach(function (select) {
+            select.innerHTML = '<option value="">Selecione</option>';
+            select.disabled = true;
+          });
+          return;
+        }
+
         reportSelects.forEach(function (select) {
           select.innerHTML = '<option value="">Carregando...</option>';
           select.disabled = true;
         });
+
+        fetch(window.location.pathname + '?load_campaigns=1&company_id=' + encodeURIComponent(companyId), {
+          headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        })
+          .then(function (response) {
+            if (!response.ok) {
+              throw new Error('Falha ao carregar campanhas');
+            }
+            return response.json();
+          })
+          .then(function (data) {
+            var campaigns = Array.isArray(data.campaigns) ? data.campaigns : [];
+            reportSelects.forEach(function (select) {
+              select.innerHTML = '<option value="">Selecione</option>';
+              campaigns.forEach(function (campaign) {
+                var option = document.createElement('option');
+                option.value = String(campaign.id);
+                option.textContent = campaign.label;
+                select.appendChild(option);
+              });
+              select.disabled = false;
+            });
+          })
+          .catch(function () {
+            reportSelects.forEach(function (select) {
+              select.innerHTML = '<option value="">Erro ao carregar</option>';
+              select.disabled = true;
+            });
+          });
       });
 
       var form = companySelect.closest('form');

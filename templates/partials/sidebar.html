@@ -34,7 +34,7 @@
       <div class="menu__section-label">Menu Master</div>
       <a class="menu__item{% if active_menu == 'master-dashboard' %} is-active{% endif %}" href="{% url 'master-dashboard' %}">
         <svg class="menu__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 13h8V3H3v10Zm10 8h8V11h-8v10ZM3 21h8v-6H3v6Zm10-10h8V3h-8v8Z" fill="currentColor"/></svg>
-        <span class="menu__text">Master</span>
+        <span class="menu__text">Início</span>
       </a>
       <a class="menu__item{% if active_menu == 'companies' %} is-active{% endif %}" href="{% url 'companies-list' %}" data-match-path="/master/companies/">
         <svg class="menu__icon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 21h16V9L12 3 4 9v12Zm4-8h8v2H8v-2Zm0 4h8v2H8v-2Z" fill="currentColor"/></svg>
@@ -136,6 +136,24 @@
       <form method="post" action="{% url 'logout' %}" class="user-chip__logout">
         {% csrf_token %}
         <button type="submit" class="user-chip__logout-btn" title="Sair" data-loading-text="Saindo...">Sair</button>
+      </form>
+    </div>
+    <div class="sidebar__mini-footer" aria-label="Rodape compacto">
+      <div class="sidebar__mini-avatar" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M12 12c2.76 0 5-2.3 5-5.1C17 4.1 14.76 2 12 2S7 4.1 7 6.9C7 9.7 9.24 12 12 12Z" stroke="currentColor" stroke-width="1.6" />
+          <path d="M4 21c0-4.2 3.6-7.6 8-7.6s8 3.4 8 7.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+        </svg>
+      </div>
+      <form method="post" action="{% url 'logout' %}" class="sidebar__mini-logout">
+        {% csrf_token %}
+        <button type="submit" class="sidebar__mini-logout-btn" title="Sair" aria-label="Sair" data-loading-text="Saindo...">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M10 16l4-4-4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M14 12H4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+          </svg>
+        </button>
       </form>
     </div>
   </div>
