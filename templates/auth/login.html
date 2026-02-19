@@ -41,7 +41,7 @@
           <input type="checkbox" name="remember_me" />
           <span>Lembrar-me</span>
         </label>
-        <a class="auth-link" href="#" aria-disabled="true">Esqueci minha senha</a>
+        <a class="auth-link" href="{% url 'password_reset' %}">Esqueci minha senha</a>
       </div>
       <button type="submit" class="auth-submit" data-loading-text="Acessando...">Entrar</button>
       {% if next %}
