@@ -43,6 +43,7 @@ Principais variaveis:
 - `DJANGO_ALLOWED_HOSTS`
 - `DJANGO_TIME_ZONE`
 - `TENANCY_COMPANY_HEADER`
+- `TENANCY_BASE_DOMAIN`
 - `DB_ENGINE`
 - `DB_NAME`
 - `DB_USER`
@@ -172,3 +173,4 @@ Regras aplicadas:
 - Dashboard mostra contagem separada por totem no periodo selecionado.
 "# cissconsult" 
 "# cissconsult" 
+"# nr01facil" 
