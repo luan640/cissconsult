@@ -40,16 +40,46 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
         "ReportTitle",
         parent=styles["Title"],
         alignment=1,
-        fontSize=14,
-        spaceAfter=10,
+        fontSize=16,
+        leading=20,
+        textColor=colors.HexColor("#0f172a"),
+        spaceAfter=6,
     )
     subtitle_style = ParagraphStyle(
         "ReportSubtitle",
         parent=styles["Normal"],
         alignment=1,
         fontSize=10,
+        leading=14,
+        textColor=colors.HexColor("#475569"),
+        spaceAfter=4,
+    )
+    cover_title_style = ParagraphStyle(
+        "ReportCoverTitle",
+        parent=styles["Title"],
+        alignment=1,
+        fontSize=17,
+        leading=22,
+        textColor=colors.HexColor("#0f172a"),
+        spaceAfter=8,
+    )
+    cover_subtitle_style = ParagraphStyle(
+        "ReportCoverSubtitle",
+        parent=styles["Normal"],
+        alignment=1,
+        fontSize=10.5,
+        leading=14,
         textColor=colors.HexColor("#475569"),
         spaceAfter=6,
+    )
+    cover_caps_style = ParagraphStyle(
+        "ReportCoverCaps",
+        parent=styles["Normal"],
+        alignment=1,
+        fontSize=10,
+        leading=13,
+        textColor=colors.HexColor("#1e293b"),
+        spaceAfter=4,
     )
     section_style = ParagraphStyle(
         "ReportSection",
@@ -94,7 +124,7 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
 
     def add_section_header(number, title):
         badge = Drawing(18, 18)
-        badge.add(Circle(9, 9, 9, fillColor=colors.HexColor("#1d4ed8"), strokeColor=None))
+        badge.add(Circle(9, 9, 9, fillColor=colors.HexColor("#16a34a"), strokeColor=None))
         badge.add(String(9, 5.5, str(number), fontName="Helvetica-Bold", fontSize=9, fillColor=colors.white, textAnchor="middle"))
         header = Table(
             [[
@@ -115,7 +145,7 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
         )
         story.append(header)
         story.append(Spacer(1, 4))
-        story.append(Table([[""]], colWidths=[doc.width], rowHeights=[2], style=TableStyle([("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#1d4ed8"))])))
+        story.append(Table([[""]], colWidths=[doc.width], rowHeights=[2], style=TableStyle([("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#16a34a"))])))
         story.append(Spacer(1, 6))
 
     def zone_color(percent):
@@ -243,15 +273,21 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
         except Exception:
             pass
 
-    story.append(Paragraph("RELATÓRIO DE SAÚDE ORGANIZACIONAL", title_style))
+    story.append(Paragraph("RELATÓRIO DE SAÚDE ORGANIZACIONAL", cover_title_style))
     story.append(
         Paragraph(
             "Avaliação ergonômica preliminar dos fatores riscos psicossociais relacionados ao ambiente de trabalho",
-            subtitle_style,
+            cover_subtitle_style,
         )
     )
-    story.append(Paragraph("AEP-FRPRT NR01/HSE-SIT-UK", subtitle_style))
+    story.append(Paragraph("AEP-FRPRT NR01/HSE-SIT-UK", cover_caps_style))
+    story.append(Spacer(1, 8))
+    story.append(Paragraph("RELATÓRIO DE FATORES RISCOS PSICOSSOCIAIS RELACIONADOS AO TRABALHO", cover_caps_style))
+    story.append(Paragraph("(FRPRT)", cover_caps_style))
     story.append(Spacer(1, 6))
+    story.append(Paragraph("AVALIAÇÃO ERGONÔMICA PRELIMINAR (AEP)", cover_caps_style))
+    story.append(Paragraph("NR-1. NR-17, GUIA DE FATORES PSICOSSOCIAIS HSE-SIT-UK", cover_caps_style))
+    story.append(Spacer(1, 8))
 
     company_name = report_context.get("company_name", "-")
     company_cnpj = report_context.get("company_cnpj", "-")
@@ -264,9 +300,6 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
     responses_count = report_context.get("responses_count", "-")
     evaluation_date = report_context.get("evaluation_date", "-")
 
-    story.append(Paragraph("RELATÓRIO DE FATORES RISCOS PSICOSSOCIAIS RELACIONADOS AO TRABALHO (FRPRT)", section_style))
-    story.append(Paragraph("AVALIAÇÃO ERGONÔMICA PRELIMINAR (AEP)", section_style))
-    story.append(Paragraph("NR-1. NR-17, GUIA DE FATORES PSICOSSOCIAIS HSE-SIT-UK", body_style))
     story.append(Spacer(1, 6))
 
     story.append(PageBreak())
@@ -284,7 +317,7 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
     ]
     for number, title in summary_items:
         badge = Drawing(14, 14)
-        badge.add(Circle(7, 7, 7, fillColor=colors.HexColor("#1d4ed8"), strokeColor=None))
+        badge.add(Circle(7, 7, 7, fillColor=colors.HexColor("#16a34a"), strokeColor=None))
         badge.add(String(7, 4.5, str(number), fontName="Helvetica-Bold", fontSize=7, fillColor=colors.white, textAnchor="middle"))
         row = Table(
             [[badge, Paragraph(title, body_style)]],
@@ -324,7 +357,7 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
             ParagraphStyle(
                 "SectionSubBlue",
                 parent=section_style,
-                textColor=colors.HexColor("#1e3a8a"),
+                textColor=colors.HexColor("#16a34a"),
             ),
         )
     )
@@ -923,17 +956,18 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
         right_block.append(graph_separator())
         right_block.append(Spacer(1, 6))
 
-        ghes = domain.get("ghes") or []
-        if ghes:
-            right_block.extend([Paragraph("Análise por Setor", chart_text_center), Spacer(1, 2)])
-            for ghe in ghes:
-                percent = ghe.get("percent", 0)
-                avg = ghe.get("avg", 0)
+        group_items = domain.get("group_items") or []
+        group_label = report_context.get("group_label_plural", "GHEs")
+        if group_items:
+            right_block.extend([Paragraph(f"Análise por {group_label}", chart_text_center), Spacer(1, 2)])
+            for group in group_items:
+                percent = group.get("percent", 0)
+                avg = group.get("avg", 0)
                 color = zone_color(percent)
                 row = Table(
                     [
                         [
-                            Paragraph(ghe.get("name", "-"), chart_text_center),
+                            Paragraph(group.get("name", "-"), chart_text_center),
                             make_bar(percent, bar_width, 12, color, show_container=True),
                             Paragraph(f"<b>{percent}%</b> | {avg}", chart_text_center),
                         ]
@@ -1041,15 +1075,16 @@ def build_campaign_report_pdf(report_context: dict) -> bytes:
                 story.append(Spacer(1, 6))
                 story.append(Spacer(1, 6))
 
-        ghe_questions = domain.get("ghe_questions") or []
-        if ghe_questions:
-            for ghe in ghe_questions:
-                qs = ghe.get("questions", [])
+        group_questions = domain.get("group_questions") or []
+        group_label_singular = report_context.get("group_label_singular", "GHE")
+        if group_questions:
+            for group in group_questions:
+                qs = group.get("questions", [])
                 if not qs:
                     continue
                 block = [
-                    Paragraph(f"{domain.get('label', '').upper()} (Análise por Setor)", chart_title_big),
-                    Paragraph(f"SETOR: {ghe.get('name', '-')}", chart_subtitle_big),
+                    Paragraph(f"{domain.get('label', '').upper()} (Análise por {group_label_singular})", chart_title_big),
+                    Paragraph(f"{group_label_singular.upper()}: {group.get('name', '-')}", chart_subtitle_big),
                     Spacer(1, 2),
                 ]
                 for q in qs:

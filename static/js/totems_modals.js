@@ -130,6 +130,7 @@
       editForm.action = editButton.dataset.updateUrl || '';
       editForm.querySelector('#edit_totem_name').value = editButton.dataset.name || '';
       editForm.querySelector('#edit_totem_location').value = editButton.dataset.location || '';
+      editForm.querySelector('#edit_totem_assessment_type').value = editButton.dataset.assessmentType || 'setor';
       restoreSubmitButton(editForm);
       openModal('edit-totem-modal');
       return;

@@ -1059,7 +1059,7 @@ class MasterDashboardView(MasterRequiredMixin, View):
     @staticmethod
     def _build_context():
         today = timezone.localdate()
-        companies_qs = Company.objects.order_by('name')
+        companies_qs = Company.objects.order_by('-created_at')
         active_companies_qs = companies_qs.filter(is_active=True)
         total_companies = companies_qs.count()
         active_companies = companies_qs.filter(is_active=True).count()
@@ -1220,7 +1220,7 @@ class CompanyListView(MasterRequiredMixin, View):
     @method_decorator(vary_on_headers('Cookie'))
     @method_decorator(cache_page(30))
     def get(self, request):
-        companies_qs = Company.objects.order_by('name')
+        companies_qs = Company.objects.order_by('-created_at')
         search_name = (request.GET.get('name') or '').strip()
         selected_status = (request.GET.get('status') or '').strip().lower()
         if search_name:
@@ -1229,7 +1229,7 @@ class CompanyListView(MasterRequiredMixin, View):
             companies_qs = companies_qs.filter(is_active=True)
         elif selected_status == 'inactive':
             companies_qs = companies_qs.filter(is_active=False)
-        page_obj = paginate_queryset(request, companies_qs)
+        page_obj = paginate_queryset(request, companies_qs, per_page=9)
         companies_filter_options = list(Company.objects.order_by('name').only('id', 'name'))
         context = {
             'companies': page_obj.object_list,
@@ -1244,6 +1244,12 @@ class CompanyListView(MasterRequiredMixin, View):
         if is_ajax_request(request) or request.GET.get('partial') == '1':
             return render(request, 'companies/_table_container.html', context)
         return render(request, self.template_name, context)
+
+
+class CompanyOptionsView(MasterRequiredMixin, View):
+    def get(self, request):
+        companies = list(Company.objects.order_by('name').values('id', 'name'))
+        return JsonResponse({'companies': companies})
 
 
 class CompanyCreateView(MasterRequiredMixin, View):
@@ -1390,7 +1396,7 @@ class CampaignListView(MasterRequiredMixin, View):
         filters = get_campaigns_filters(request)
         campaigns_qs = get_campaigns_queryset(filters)
         page_obj = paginate_queryset(request, campaigns_qs, per_page=15)
-        companies = list(Company.objects.order_by('name').only('id', 'name'))
+        companies = list(Company.objects.order_by('name').values('id', 'name'))
         context = {
             'campaigns': page_obj.object_list,
             'page_obj': page_obj,
@@ -1455,7 +1461,7 @@ class CampaignUpdateView(MasterRequiredMixin, View):
             messages.error(
                 request,
                 (
-                    'Ainda faltam funcionarios responder o questionario '
+                    'Ainda faltam funcionários responder o questionário '
                     f'({responses_count}/{total_workers}, faltam {missing}). '
                     'Confirme o encerramento para salvar mesmo assim.'
                 ),
@@ -2713,14 +2719,19 @@ class CampaignReportPdfView(MasterRequiredMixin, View):
             departments = list(Department.all_objects.filter(id__in=department_ids).order_by('name'))
             company_group_list_label = 'Setores'
             company_group_list = ', '.join([department.name for department in departments]) if departments else '-'
+            group_map = {department.id: department.name for department in departments}
+            group_id_field = 'department_id'
+            group_label_singular = 'Setor'
         else:
             company_group_list_label = 'GHEs'
             company_group_list = ghes_label
+            group_map = {ghe.id: ghe.name for ghe in ghes}
+            group_id_field = 'ghe_id'
+            group_label_singular = 'GHE'
         evaluation_date = campaign.end_date.strftime('%d/%m/%Y') if campaign.end_date else '-'
         total_workers = company.employee_count or 0
         response_rate = (responses_qs.count() / total_workers * 100) if total_workers else 0
         response_label = CampaignReportView._response_rate_label(response_rate, total_workers)
-        ghe_map = {ghe.id: ghe.name for ghe in ghes}
         standard_actions = {
             item['question_number']: item['actions']
             for item in StandardActionPlan.all_objects.filter(
@@ -2728,7 +2739,13 @@ class CampaignReportPdfView(MasterRequiredMixin, View):
                 is_active=True,
             ).values('question_number', 'actions')
         }
-        results = CampaignReportView()._build_results(responses_qs, ghe_map, standard_actions)
+        results = CampaignReportView()._build_results(
+            responses_qs,
+            group_map,
+            standard_actions,
+            group_id_field=group_id_field,
+            group_label_singular=group_label_singular,
+        )
         technical_responsibles_qs = TechnicalResponsible.objects.filter(
             is_active=True,
         ).order_by('sort_order', 'name')
@@ -2744,6 +2761,8 @@ class CampaignReportPdfView(MasterRequiredMixin, View):
             'company_ghes': ghes_label,
             'company_group_list_label': company_group_list_label,
             'company_group_list': company_group_list,
+            'group_label_singular': group_label_singular,
+            'group_label_plural': company_group_list_label,
             'responses_count': responses_qs.count(),
             'evaluation_date': evaluation_date,
             'total_workers': total_workers,
@@ -3014,12 +3033,16 @@ class TotemView(View):
             slug=totem_slug,
             is_active=True,
         )
+        group_label = 'GHE' if (totem.assessment_type or '').strip().lower() == 'ghe' else 'Setor'
+        ghes = GHE.all_objects.filter(company=company, is_active=True).order_by('name')
         return render(
             request,
             self.template_name,
             {
                 'company': company,
                 'totem': totem,
+                'totem_group_label': group_label,
+                'ghes': ghes,
                 'departments': Department.all_objects.filter(
                     company=company,
                     is_active=True,
@@ -3034,6 +3057,33 @@ class TotemView(View):
                 ).order_by('label'),
             },
         )
+
+
+class TotemDepartmentsView(View):
+    def get(self, request, company_slug, totem_slug):
+        company = get_object_or_404(Company, slug=company_slug, is_active=True)
+        totem = get_object_or_404(
+            Totem.all_objects,
+            company=company,
+            slug=totem_slug,
+            is_active=True,
+        )
+        ghe_id_raw = (request.GET.get('ghe_id') or '').strip()
+        try:
+            ghe_id = int(ghe_id_raw)
+        except (TypeError, ValueError):
+            return JsonResponse({'departments': []})
+
+        departments = list(
+            Department.all_objects.filter(
+                company=company,
+                is_active=True,
+                ghe_id=ghe_id,
+            )
+            .order_by('name')
+            .values('id', 'name')
+        )
+        return JsonResponse({'departments': departments})
 
 
 class TotemMoodSubmitView(View):
@@ -3234,6 +3284,11 @@ class CompanyAdminRequiredMixin(LoginRequiredMixin):
 class TotemForm(forms.Form):
     name = forms.CharField(max_length=150)
     location = forms.CharField(max_length=180, required=False)
+    assessment_type = forms.ChoiceField(
+        choices=(('setor', 'Setor'), ('ghe', 'GHE')),
+        required=True,
+        label='Tipo de avaliacao',
+    )
 
 
 MAX_COMPANY_LOGO_SIZE = 2 * 1024 * 1024
@@ -3257,7 +3312,7 @@ class CompanyForm(forms.Form):
     assessment_type = forms.ChoiceField(choices=(('setor', 'Setor'), ('ghe', 'GHE')), required=False)
     cnae = forms.CharField(max_length=20, required=False)
     risk_level = forms.IntegerField(min_value=1, max_value=4, required=False)
-    employee_count = forms.IntegerField(min_value=0, required=False)
+    employee_count = forms.IntegerField(min_value=0, required=True, label='Número de funcionários')
     max_users = forms.IntegerField(min_value=0, required=False)
     max_totems = forms.IntegerField(min_value=0, required=False)
     address_street = forms.CharField(max_length=255, required=False)
@@ -3285,7 +3340,7 @@ class CompanyForm(forms.Form):
     def clean_employee_count(self):
         value = self.cleaned_data.get('employee_count')
         if value is None:
-            return 0
+            raise forms.ValidationError('Informe o número de funcionários.')
         return value
 
     def clean_max_users(self):
@@ -3529,6 +3584,7 @@ class TotemCreateView(CompanyAdminRequiredMixin, View):
             name=form.cleaned_data['name'],
             slug=final_slug,
             location=form.cleaned_data['location'],
+            assessment_type=form.cleaned_data['assessment_type'],
         )
         cache.clear()
         messages.success(request, 'Totem criado com sucesso.')
@@ -3551,6 +3607,7 @@ class TotemUpdateView(CompanyAdminRequiredMixin, View):
 
         totem.name = form.cleaned_data['name']
         totem.location = form.cleaned_data['location']
+        totem.assessment_type = form.cleaned_data['assessment_type']
         totem.save()
         cache.clear()
         messages.success(request, 'Totem atualizado com sucesso.')
@@ -3900,7 +3957,7 @@ def render_job_functions_table(request, company_id):
 
 
 def render_companies_table(request):
-    companies_qs = Company.objects.order_by('name')
+    companies_qs = Company.objects.order_by('-created_at')
     search_name = (request.GET.get('name') or '').strip()
     selected_status = (request.GET.get('status') or '').strip().lower()
     if search_name:
@@ -3909,7 +3966,7 @@ def render_companies_table(request):
         companies_qs = companies_qs.filter(is_active=True)
     elif selected_status == 'inactive':
         companies_qs = companies_qs.filter(is_active=False)
-    page_obj = paginate_queryset(request, companies_qs)
+    page_obj = paginate_queryset(request, companies_qs, per_page=9)
     return render(
         request,
         'companies/_table_container.html',
@@ -4327,10 +4384,10 @@ class ReportDetailView(CompanyAdminRequiredMixin, View):
         if report.report_template != 'technical':
             if is_ajax:
                 return JsonResponse(
-                    {'ok': False, 'message': 'Edicao de analise IA disponivel apenas para o relatorio tecnico.'},
+                    {'ok': False, 'message': 'Edicao de análise IA disponivel apenas para o relatorio tecnico.'},
                     status=400,
                 )
-            messages.error(request, 'Edicao de analise IA disponivel apenas para o relatorio tecnico.')
+            messages.error(request, 'Edicao de análise IA disponivel apenas para o relatorio tecnico.')
             return redirect('reports-detail', report_id=report.id)
 
         action = (request.POST.get('action') or 'save').strip().lower()
@@ -4557,7 +4614,7 @@ class ReportCompareView(CompanyAdminRequiredMixin, View):
         mood_distribution = metrics.get('mood_distribution') or []
         complaint_distribution = metrics.get('complaint_distribution') or []
         prompt = (
-            'Voce e especialista em analise psicossocial ocupacional, com foco na NR-1, GRO e PGR. '
+            'Voce e especialista em análise psicossocial ocupacional, com foco na NR-1, GRO e PGR. '
             'Seu objetivo neste relatorio e levantar riscos psicossociais com base nos indicadores apresentados. '
             'Analise SOMENTE os dados numericos enviados nas distribuições dos gráficos. '
             'Nao invente contexto, nao cite causas sem evidencias e nao use informacoes externas. '

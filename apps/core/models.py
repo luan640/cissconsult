@@ -329,6 +329,7 @@ class Totem(TenantModel):
     name = models.CharField(max_length=150)
     slug = models.SlugField(max_length=80)
     location = models.CharField(max_length=180, blank=True)
+    assessment_type = models.CharField(max_length=20, blank=True, default='setor')
     is_active = models.BooleanField(default=True)
 
     class Meta:

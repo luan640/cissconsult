@@ -1,0 +1,2 @@
+dentro de "/master/companies/" tem alguma limitação de quantidade por carregamento? Ex.: 10 cards por página. Caso não, adicione. Reutilize a paginação da plataforma.
+ 

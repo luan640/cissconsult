@@ -32,6 +32,10 @@
   const confirmMoodSubmitButton = document.querySelector('[data-confirm-mood-submit]');
   const inlineMessagesContainer = document.querySelector('.totem-messages');
   const toastStackId = 'totem-toast-stack';
+  const helpGheSelect = document.querySelector('[data-help-ghe-select]');
+  const helpDepartmentSelect = document.querySelector('[data-help-department-select]');
+  const helpRequesterInput = document.querySelector('#requester_name');
+  const helpSubmitButton = document.querySelector('form[action*="/help/"] button[type="submit"]');
 
   const setButtonLoading = (button, isLoading, loadingText) => {
     if (!button) return;
@@ -97,6 +101,52 @@
     }
   };
 
+  const setHelpDepartmentState = (state) => {
+    if (!helpDepartmentSelect) return;
+    helpDepartmentSelect.disabled = Boolean(state.disabled);
+    helpDepartmentSelect.innerHTML = `<option value="">${state.label}</option>`;
+  };
+
+  const loadHelpDepartments = async (gheId) => {
+    if (!helpDepartmentSelect || !helpGheSelect) return;
+    const url = helpGheSelect.getAttribute('data-departments-url') || '';
+    if (!gheId || !url) {
+      setHelpDepartmentState({ disabled: true, label: 'Selecione o GHE primeiro' });
+      return;
+    }
+    setHelpDepartmentState({ disabled: true, label: 'Carregando...' });
+    try {
+      const response = await fetch(`${url}?ghe_id=${encodeURIComponent(gheId)}`, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      });
+      if (!response.ok) {
+        throw new Error('Falha ao carregar setores.');
+      }
+      const payload = await response.json();
+      const departments = Array.isArray(payload.departments) ? payload.departments : [];
+      if (!departments.length) {
+        setHelpDepartmentState({ disabled: true, label: 'Nenhum setor disponível' });
+        return;
+      }
+      helpDepartmentSelect.disabled = false;
+      helpDepartmentSelect.innerHTML = [
+        '<option value="">Selecione</option>',
+        ...departments.map((dept) => `<option value="${dept.name}">${dept.name}</option>`),
+      ].join('');
+    } catch (error) {
+      setHelpDepartmentState({ disabled: true, label: 'Nao foi possivel carregar' });
+    }
+  };
+
+  const updateHelpSubmitState = () => {
+    if (!helpSubmitButton) return;
+    const nameOk = Boolean((helpRequesterInput?.value || '').trim());
+    const gheOk = helpGheSelect ? Boolean((helpGheSelect.value || '').trim()) : true;
+    const deptOk = helpDepartmentSelect ? Boolean((helpDepartmentSelect.value || '').trim()) : Boolean((document.querySelector('#department_name')?.value || '').trim());
+    const canSubmit = nameOk && gheOk && deptOk;
+    helpSubmitButton.disabled = !canSubmit;
+  };
+
   const openComplaintModal = () => {
     if (!complaintModal) {
       return;
@@ -117,6 +167,17 @@
     button.addEventListener('click', () => {
       const step = button.getAttribute('data-open-step');
       showStep(step);
+      if (step === 'help' && helpGheSelect && helpDepartmentSelect) {
+        const gheValue = (helpGheSelect.value || '').trim();
+        if (gheValue) {
+          loadHelpDepartments(gheValue);
+        } else {
+          setHelpDepartmentState({ disabled: true, label: 'Selecione o GHE primeiro' });
+        }
+      }
+      if (step === 'help') {
+        updateHelpSubmitState();
+      }
     });
   });
 
@@ -152,6 +213,16 @@
       }
       if (complaintExtraInput) {
         complaintExtraInput.value = '';
+      }
+      if (helpGheSelect) {
+        helpGheSelect.value = '';
+      }
+      if (helpDepartmentSelect) {
+        if (helpGheSelect) {
+          setHelpDepartmentState({ disabled: true, label: 'Selecione o GHE primeiro' });
+        } else {
+          helpDepartmentSelect.value = '';
+        }
       }
       showStep('home');
     });
@@ -321,4 +392,24 @@
   }
 
   consumeInlineMessages();
+
+  if (helpGheSelect && helpDepartmentSelect) {
+    helpGheSelect.addEventListener('change', (event) => {
+      loadHelpDepartments(event.target.value);
+      updateHelpSubmitState();
+    });
+    const initialGhe = (helpGheSelect.value || '').trim();
+    if (initialGhe) {
+      loadHelpDepartments(initialGhe);
+    }
+  }
+
+  if (helpDepartmentSelect) {
+    helpDepartmentSelect.addEventListener('change', updateHelpSubmitState);
+  }
+  if (helpRequesterInput) {
+    helpRequesterInput.addEventListener('input', updateHelpSubmitState);
+  }
+
+  updateHelpSubmitState();
 })();

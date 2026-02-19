@@ -305,6 +305,15 @@
     overlay.classList.toggle('is-active', Boolean(isLoading));
   };
 
+  const ensureWizardLastStep = (form) => {
+    const modal = form ? form.closest('.modal-backdrop') : null;
+    if (!modal) return;
+    const wizard = getCompanyWizard(modal);
+    if (wizard) {
+      setWizardStep(wizard, 3);
+    }
+  };
+
   document.addEventListener('submit', async (event) => {
     const form = event.target;
     const isToggleForm = form.matches('[action*="/master/companies/"][action$="/delete/"]');
@@ -333,12 +342,17 @@
       if (!isToggleForm) {
         const responseDoc = new DOMParser().parseFromString(html, 'text/html');
         consumeInlineNoticesFromDoc(responseDoc);
+        const hasError = Boolean(responseDoc.querySelector('.notice--error'));
         const nextContainer = responseDoc.querySelector(`#${containerId}`);
         if (nextContainer) {
           nextContainer.querySelectorAll('.notice, .stack-gap').forEach((node) => node.remove());
         }
         if (container) {
           container.outerHTML = nextContainer ? nextContainer.outerHTML : html;
+        }
+        if (hasError) {
+          ensureWizardLastStep(form);
+          return;
         }
       } else {
         const responseDoc = new DOMParser().parseFromString(html, 'text/html');

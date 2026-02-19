@@ -116,10 +116,84 @@
     };
   };
 
+  const companyOptionsUrl =
+    document.querySelector('[data-company-options-url]')?.getAttribute('data-company-options-url') || '';
+  let companyOptionsCache = null;
+  let companyOptionsPromise = null;
+
+  const getCompanySelects = () => Array.from(document.querySelectorAll('[data-company-select]'));
+
+  const populateCompanySelects = (companies) => {
+    const selects = getCompanySelects();
+    if (!selects.length) return;
+    selects.forEach((select) => {
+      if (select.dataset.optionsLoaded === '1') return;
+      const previous = select.value;
+      select.innerHTML = '';
+      const placeholder = document.createElement('option');
+      placeholder.value = '';
+      placeholder.textContent = 'Selecione';
+      select.appendChild(placeholder);
+      companies.forEach((company) => {
+        const option = document.createElement('option');
+        option.value = String(company.id);
+        option.textContent = company.name;
+        select.appendChild(option);
+      });
+      select.dataset.optionsLoaded = '1';
+      if (previous) {
+        select.value = previous;
+      }
+    });
+  };
+
+  const ensureCompanyOptions = async (desiredValue) => {
+    if (!companyOptionsUrl) return;
+    if (!companyOptionsPromise) {
+      companyOptionsPromise = fetch(companyOptionsUrl, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      })
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error('Falha ao carregar empresas.');
+          }
+          return response.json();
+        })
+        .then((data) => {
+          companyOptionsCache = Array.isArray(data?.companies) ? data.companies : [];
+          populateCompanySelects(companyOptionsCache);
+          return companyOptionsCache;
+        })
+        .catch(() => {
+          const selects = getCompanySelects();
+          selects.forEach((select) => {
+            select.innerHTML = '';
+            const option = document.createElement('option');
+            option.value = '';
+            option.textContent = 'Nao foi possivel carregar empresas';
+            select.appendChild(option);
+          });
+          companyOptionsCache = [];
+          return companyOptionsCache;
+        });
+    } else if (companyOptionsCache) {
+      populateCompanySelects(companyOptionsCache);
+    }
+    await companyOptionsPromise;
+    if (desiredValue) {
+      getCompanySelects().forEach((select) => {
+        select.value = String(desiredValue);
+      });
+    }
+  };
+
   document.addEventListener('click', (event) => {
     const openButton = event.target.closest('[data-open-modal]');
     if (openButton) {
       openModal(openButton.getAttribute('data-open-modal'));
+      if (openButton.getAttribute('data-open-modal') === 'create-campaign-modal') {
+        ensureCompanyOptions();
+      }
       return;
     }
 
@@ -161,7 +235,8 @@
       if (!editForm) return;
       editForm.action = editButton.dataset.updateUrl || '';
       editForm.querySelector('#edit_campaign_title').value = editButton.dataset.title || '';
-      editForm.querySelector('#edit_campaign_company').value = editButton.dataset.companyId || '';
+      const companyId = editButton.dataset.companyId || '';
+      editForm.querySelector('#edit_campaign_company').value = companyId;
       editForm.querySelector('#edit_campaign_start').value = editButton.dataset.startDate || '';
       editForm.querySelector('#edit_campaign_end').value = editButton.dataset.endDate || '';
       editForm.querySelector('#edit_campaign_status').value = editButton.dataset.status || '';
@@ -172,6 +247,7 @@
         forceField.value = '';
       }
       openModal('edit-campaign-modal');
+      ensureCompanyOptions(companyId);
       return;
     }
 

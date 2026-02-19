@@ -114,13 +114,34 @@
         <input id="requester_name" name="requester_name" maxlength="150" required />
       </div>
       <div class="field">
+        {% if totem.assessment_type == 'ghe' %}
+          <label for="help_ghe_id">GHE</label>
+          <select id="help_ghe_id" name="help_ghe_id" required data-help-ghe-select data-departments-url="{% url 'totem-departments' company.slug totem.slug %}">
+            <option value="">Selecione</option>
+            {% for ghe in ghes %}
+              <option value="{{ ghe.id }}">{{ ghe.name }}</option>
+            {% endfor %}
+          </select>
+        {% endif %}
+      </div>
+      <div class="field">
         <label for="department_name">Setor</label>
         {% if departments %}
-          <select id="department_name" name="department_name" required>
-            <option value="">Selecione</option>
-            {% for department in departments %}
-              <option value="{{ department.name }}">{{ department.name }}</option>
-            {% endfor %}
+          <select
+            id="department_name"
+            name="department_name"
+            required
+            data-help-department-select
+            {% if totem.assessment_type == 'ghe' %}disabled{% endif %}
+          >
+            <option value="">
+              {% if totem.assessment_type == 'ghe' %}Selecione o GHE primeiro{% else %}Selecione{% endif %}
+            </option>
+            {% if totem.assessment_type != 'ghe' %}
+              {% for department in departments %}
+                <option value="{{ department.name }}">{{ department.name }}</option>
+              {% endfor %}
+            {% endif %}
           </select>
         {% else %}
           <input id="department_name" name="department_name" maxlength="150" required />
@@ -136,10 +157,10 @@
 
 <div class="totem-modal-backdrop" data-mood-department-modal aria-hidden="true">
   <div class="totem-modal-card">
-    <h3>Escolha seu setor</h3>
+    <h3>Escolha seu {{ totem_group_label|lower }}</h3>
     <p>Essas informações são sigilosas.</p>
     <div class="field">
-      <label for="modal_mood_department_id">Setor</label>
+      <label for="modal_mood_department_id">{{ totem_group_label }}</label>
       <select id="modal_mood_department_id" data-mood-department-select>
         <option value="">Selecione</option>
         {% for department in departments %}
@@ -157,9 +178,9 @@
 <div class="totem-modal-backdrop" data-complaint-modal aria-hidden="true">
   <div class="totem-modal-card">
     <h3>Informações adicionais</h3>
-    <p>Informe setor e um breve relato para concluir o registro.</p>
+    <p>Informe {{ totem_group_label|lower }} e um breve relato para concluir o registro.</p>
     <div class="field">
-      <label for="complaint_department_modal">Setor</label>
+      <label for="complaint_department_modal">{{ totem_group_label }}</label>
       {% if departments %}
         <select id="complaint_department_modal" data-complaint-department-select>
           <option value="">Selecione</option>

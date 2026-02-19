@@ -13,7 +13,7 @@
 {% block content %}
 <div class="app-layout">
   {% include "partials/sidebar.html" with active_menu="campaigns" is_master=True %}
-  <main class="content" data-page="campaigns">
+  <main class="content" data-page="campaigns" data-company-options-url="{% url 'companies-options' %}">
     <header class="content__header">
       <div>
         <h1 class="content__title">Campanhas</h1>
@@ -63,10 +63,8 @@
           <div class="form-field"><label for="create_campaign_title">Titulo</label><input id="create_campaign_title" name="title" required maxlength="255" /></div>
           <div class="form-field">
             <label for="create_campaign_company">Empresa</label>
-            <select id="create_campaign_company" name="company_id" required>
-              {% for company in companies %}
-                <option value="{{ company.id }}">{{ company.name }}</option>
-              {% endfor %}
+            <select id="create_campaign_company" name="company_id" required data-company-select>
+              <option value="">Carregando empresas...</option>
             </select>
           </div>
           <div class="form-field"><label for="create_campaign_start">Data inicial</label><input id="create_campaign_start" type="date" name="start_date" required /></div>
@@ -93,10 +91,8 @@
           <div class="form-field"><label for="edit_campaign_title">Titulo</label><input id="edit_campaign_title" name="title" required maxlength="255" /></div>
           <div class="form-field">
             <label for="edit_campaign_company">Empresa</label>
-            <select id="edit_campaign_company" name="company_id" required>
-              {% for company in companies %}
-                <option value="{{ company.id }}">{{ company.name }}</option>
-              {% endfor %}
+            <select id="edit_campaign_company" name="company_id" required data-company-select>
+              <option value="">Carregando empresas...</option>
             </select>
           </div>
           <div class="form-field"><label for="edit_campaign_start">Data inicial</label><input id="edit_campaign_start" type="date" name="start_date" required /></div>
