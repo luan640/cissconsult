@@ -14,7 +14,7 @@
 <div class="app-layout">
   {% include "partials/sidebar.html" with active_menu="companies" is_master=True %}
 
-  <main class="content" data-page="companies">
+  <main class="content" data-page="companies" data-company-options-url="{% url 'companies-options' %}">
     <header class="content__header">
       <div>
         <h1 class="content__title">Empresas</h1>
@@ -28,12 +28,21 @@
       <form method="get" action="{% url 'companies-list' %}" class="period-filter table-filters-form" data-ajax-table-form data-table-container-id="companies-table-container">
         <div class="filter-field">
           <label for="companies_name">Nome</label>
-          <select id="companies_name" name="name">
-            <option value="">Todas</option>
-            {% for company in companies_filter_options %}
-              <option value="{{ company.name }}"{% if search_name == company.name %} selected{% endif %}>{{ company.name }}</option>
-            {% endfor %}
-          </select>
+          <div class="master-company-picker" data-companies-name-picker>
+            <input type="hidden" id="companies_name" name="name" value="{{ search_name|default:'' }}" data-companies-name-hidden />
+            <input
+              id="companies_name_search"
+              type="text"
+              autocomplete="off"
+              value="{{ search_name|default:'' }}"
+              placeholder="Digite para pesquisar empresa"
+              data-companies-name-search
+            />
+            <div class="master-company-picker__menu" data-companies-name-menu hidden>
+              <div class="master-company-picker__options" data-companies-name-options></div>
+              <div class="master-company-picker__status" data-companies-name-status></div>
+            </div>
+          </div>
         </div>
         <div class="filter-field">
           <label for="companies_status">Status</label>

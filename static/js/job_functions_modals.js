@@ -98,11 +98,12 @@
     return await response.text();
   };
 
-  const setMultiSelectValues = (select, values) => {
-    if (!select) return;
+  const setCheckboxGroupValues = (container, values) => {
+    if (!container) return;
     const valueSet = new Set(values);
-    Array.from(select.options).forEach((option) => {
-      option.selected = valueSet.has(option.value);
+    const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+    checkboxes.forEach((checkbox) => {
+      checkbox.checked = valueSet.has(checkbox.value);
     });
   };
 
@@ -166,12 +167,8 @@
         .split(',')
         .map((value) => value.trim())
         .filter(Boolean);
-      setMultiSelectValues(editForm.querySelector('#edit_job_function_ghes'), gheValues);
-      setMultiSelectValues(editForm.querySelector('#edit_job_function_departments'), departmentValues);
-      const activeField = editForm.querySelector('[data-edit-job-function-active]');
-      if (activeField) {
-        activeField.checked = editButton.dataset.isActive === '1';
-      }
+      setCheckboxGroupValues(editForm.querySelector('#edit_job_function_ghes'), gheValues);
+      setCheckboxGroupValues(editForm.querySelector('#edit_job_function_departments'), departmentValues);
       openModal('edit-job-function-modal');
       return;
     }

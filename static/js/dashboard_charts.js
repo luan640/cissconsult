@@ -1,4 +1,5 @@
 (function () {
+  let chartReadyAttempts = 0;
   const chartInstances = [];
   const destroyCharts = () => {
     while (chartInstances.length) {
@@ -21,9 +22,17 @@
 
   const initDashboardCharts = () => {
     const dataNode = document.getElementById('dashboard-chart-data');
-    if (!dataNode || typeof Chart === 'undefined') {
+    if (!dataNode) {
       return;
     }
+    if (typeof Chart === 'undefined') {
+      chartReadyAttempts += 1;
+      if (chartReadyAttempts < 25) {
+        window.setTimeout(initDashboardCharts, 200);
+      }
+      return;
+    }
+    chartReadyAttempts = 0;
 
     destroyCharts();
 

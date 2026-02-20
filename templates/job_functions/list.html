@@ -59,19 +59,25 @@
           </div>
           <div class="form-field">
             <label for="create_job_function_ghes">GHE(s)</label>
-            <select id="create_job_function_ghes" name="ghes" multiple>
+            <div id="create_job_function_ghes" class="checkbox-group-list" data-job-function-checkbox-group="ghes">
               {% for ghe in ghes %}
-                <option value="{{ ghe.id }}">{{ ghe.name }}</option>
+                <label class="checkbox-group-list__item" for="create_job_function_ghe_{{ ghe.id }}">
+                  <input id="create_job_function_ghe_{{ ghe.id }}" type="checkbox" name="ghes" value="{{ ghe.id }}" />
+                  <span>{{ ghe.name }}</span>
+                </label>
               {% endfor %}
-            </select>
+            </div>
           </div>
           <div class="form-field">
             <label for="create_job_function_departments">Setor(es)</label>
-            <select id="create_job_function_departments" name="departments" multiple>
+            <div id="create_job_function_departments" class="checkbox-group-list" data-job-function-checkbox-group="departments">
               {% for department in departments %}
-                <option value="{{ department.id }}">{{ department.name }}</option>
+                <label class="checkbox-group-list__item" for="create_job_function_department_{{ department.id }}">
+                  <input id="create_job_function_department_{{ department.id }}" type="checkbox" name="departments" value="{{ department.id }}" />
+                  <span>{{ department.name }}</span>
+                </label>
               {% endfor %}
-            </select>
+            </div>
           </div>
           <div class="form-actions">
             <button class="btn btn--primary" type="submit">Salvar</button>
@@ -95,25 +101,25 @@
           </div>
           <div class="form-field">
             <label for="edit_job_function_ghes">GHE(s)</label>
-            <select id="edit_job_function_ghes" name="ghes" multiple>
+            <div id="edit_job_function_ghes" class="checkbox-group-list" data-job-function-checkbox-group="ghes">
               {% for ghe in ghes %}
-                <option value="{{ ghe.id }}">{{ ghe.name }}</option>
+                <label class="checkbox-group-list__item" for="edit_job_function_ghe_{{ ghe.id }}">
+                  <input id="edit_job_function_ghe_{{ ghe.id }}" type="checkbox" name="ghes" value="{{ ghe.id }}" />
+                  <span>{{ ghe.name }}</span>
+                </label>
               {% endfor %}
-            </select>
+            </div>
           </div>
           <div class="form-field">
             <label for="edit_job_function_departments">Setor(es)</label>
-            <select id="edit_job_function_departments" name="departments" multiple>
+            <div id="edit_job_function_departments" class="checkbox-group-list" data-job-function-checkbox-group="departments">
               {% for department in departments %}
-                <option value="{{ department.id }}">{{ department.name }}</option>
+                <label class="checkbox-group-list__item" for="edit_job_function_department_{{ department.id }}">
+                  <input id="edit_job_function_department_{{ department.id }}" type="checkbox" name="departments" value="{{ department.id }}" />
+                  <span>{{ department.name }}</span>
+                </label>
               {% endfor %}
-            </select>
-          </div>
-          <div class="form-field form-field--check">
-            <label for="edit_job_function_active">
-              <input id="edit_job_function_active" type="checkbox" name="is_active" value="1" data-edit-job-function-active />
-              Ativo
-            </label>
+            </div>
           </div>
           <div class="form-actions">
             <button class="btn btn--primary" type="submit">Salvar</button>

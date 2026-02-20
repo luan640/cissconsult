@@ -16,7 +16,7 @@ from django.core.exceptions import PermissionDenied
 from django.core.mail import send_mail
 from django.core.paginator import Paginator
 from django.db import transaction
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.db.models.functions import TruncMonth
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -1058,9 +1058,9 @@ class MasterDashboardView(MasterRequiredMixin, View):
 
     @staticmethod
     def _build_context():
-        today = timezone.localdate()
         companies_qs = Company.objects.order_by('-created_at')
-        active_companies_qs = companies_qs.filter(is_active=True)
+        active_companies_qs = Company.objects.filter(is_active=True).order_by('name')
+        initial_company = active_companies_qs.only('id', 'name').first()
         total_companies = companies_qs.count()
         active_companies = companies_qs.filter(is_active=True).count()
         campaigns_qs = Campaign.all_objects.all()
@@ -1072,7 +1072,8 @@ class MasterDashboardView(MasterRequiredMixin, View):
         return {
             'active_menu': 'master-dashboard',
             'is_master': True,
-            'companies': list(active_companies_qs.only('id', 'name')),
+            'initial_company_id': initial_company.id if initial_company else '',
+            'initial_company_name': initial_company.name if initial_company else '',
             'total_companies': total_companies,
             'active_companies': active_companies,
             'total_campaigns': total_campaigns,
@@ -1230,14 +1231,12 @@ class CompanyListView(MasterRequiredMixin, View):
         elif selected_status == 'inactive':
             companies_qs = companies_qs.filter(is_active=False)
         page_obj = paginate_queryset(request, companies_qs, per_page=9)
-        companies_filter_options = list(Company.objects.order_by('name').only('id', 'name'))
         context = {
             'companies': page_obj.object_list,
             'page_obj': page_obj,
             'pagination_query': build_pagination_query(request),
             'search_name': search_name,
             'selected_status': selected_status,
-            'companies_filter_options': companies_filter_options,
             'active_menu': 'companies',
             'is_master': True,
         }
@@ -1248,7 +1247,45 @@ class CompanyListView(MasterRequiredMixin, View):
 
 class CompanyOptionsView(MasterRequiredMixin, View):
     def get(self, request):
-        companies = list(Company.objects.order_by('name').values('id', 'name'))
+        query = (request.GET.get('q') or '').strip()
+        raw_offset = (request.GET.get('offset') or '0').strip()
+        raw_limit = (request.GET.get('limit') or '').strip()
+        active_only = (request.GET.get('active_only') or '').strip() == '1'
+        has_pagination = any(param in request.GET for param in ('q', 'offset', 'limit'))
+
+        try:
+            offset = max(0, int(raw_offset))
+        except (TypeError, ValueError):
+            offset = 0
+        try:
+            limit = int(raw_limit) if raw_limit else 10
+        except (TypeError, ValueError):
+            limit = 10
+        limit = max(1, min(limit, 50))
+
+        companies_qs = Company.objects.order_by('name')
+        if active_only:
+            companies_qs = companies_qs.filter(is_active=True)
+        if query:
+            companies_qs = companies_qs.filter(
+                Q(name__icontains=query)
+                | Q(legal_name__icontains=query)
+                | Q(cnpj__icontains=query)
+            )
+
+        if has_pagination:
+            companies = list(companies_qs.values('id', 'name')[offset:offset + limit])
+            has_more = companies_qs.values('id')[offset + limit:offset + limit + 1].exists()
+            return JsonResponse(
+                {
+                    'companies': companies,
+                    'offset': offset,
+                    'limit': limit,
+                    'has_more': has_more,
+                }
+            )
+
+        companies = list(companies_qs.values('id', 'name'))
         return JsonResponse({'companies': companies})
 
 
@@ -5301,7 +5338,6 @@ class JobFunctionUpdateView(CompanyAdminRequiredMixin, View):
             return redirect('job-functions-list')
 
         job_function.name = name
-        job_function.is_active = form.cleaned_data['is_active']
         job_function.save()
         job_function.ghes.set(ghes_ids)
         job_function.departments.set(departments_ids)

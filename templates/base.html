@@ -77,6 +77,7 @@
           const page = content.getAttribute('data-page') || '';
           if (page.includes('companies')) {
             loadScriptOnce("{% static 'js/companies_modals.js' %}");
+            loadScriptOnce("{% static 'js/companies_filters.js' %}");
           }
           if (page.includes('campaigns')) {
             loadScriptOnce("{% static 'js/campaigns_modals.js' %}");
@@ -133,8 +134,12 @@
             loadScriptOnce("{% static 'js/master_dashboard_charts.js' %}");
           }
           if (page.includes('dashboard')) {
+            loadScriptOnce("https://cdn.jsdelivr.net/npm/chart.js");
             loadScriptOnce("{% static 'js/dashboard_charts.js' %}");
             loadScriptOnce("{% static 'js/dashboard_filters.js' %}");
+          }
+          if (page.includes('reports-compare')) {
+            loadScriptOnce("{% static 'js/reports_compare.js' %}");
           }
         };
         const firePageLoad = () => {

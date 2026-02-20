@@ -13,7 +13,7 @@
 {% block content %}
 <div class="app-layout">
   {% include "partials/sidebar.html" with active_menu="reports" can_manage_access=True %}
-  <main class="content">
+  <main class="content" data-page="reports-compare" data-company-options-url="{% url 'companies-options' %}">
     <header class="content__header">
       <div>
         <h1 class="content__title">Comparar campanhas</h1>
@@ -24,16 +24,22 @@
     <section class="card card--form compare-form">
       <form method="get" class="form-grid compare-form__grid">
         {% if is_master %}
-          <div class="form-field">
-            <label for="company_id">Empresa</label>
-          <select id="company_id" name="company_id" required data-company-select>
-              <option value="">Selecione</option>
-              {% for company in companies %}
-                <option value="{{ company.id }}" {% if selected_company_id and company.id == selected_company_id %}selected{% endif %}>
-                  {{ company.name }}
-                </option>
-              {% endfor %}
-            </select>
+          <div class="form-field master-company-picker" data-master-company-picker>
+            <label for="company_search">Empresa</label>
+            <input type="hidden" id="company_id" name="company_id" value="{{ selected_company_id|default:'' }}" data-company-select />
+            <input
+              id="company_search"
+              type="text"
+              autocomplete="off"
+              value="{% if selected_company %}{{ selected_company.name }}{% endif %}"
+              placeholder="Digite para pesquisar empresa"
+              data-master-company-search
+              required
+            />
+            <div class="master-company-picker__menu" data-master-company-menu hidden>
+              <div class="master-company-picker__options" data-master-company-options></div>
+              <div class="master-company-picker__status" data-master-company-status></div>
+            </div>
           </div>
         {% endif %}
         <div class="form-field">
@@ -412,72 +418,5 @@
 
 {% block extra_scripts %}
   <script src="{% static 'js/dashboard_sidebar.js' %}"></script>
-  <script>
-    (function () {
-      var companySelect = document.querySelector('[data-company-select]');
-      if (!companySelect) return;
-
-      var reportSelects = document.querySelectorAll('[data-report-select]');
-      var hasSelectedCompany = Boolean(companySelect.value);
-      reportSelects.forEach(function (select) {
-        select.disabled = !hasSelectedCompany;
-      });
-
-      companySelect.addEventListener('change', function () {
-        var companyId = companySelect.value;
-        if (!companyId) {
-          reportSelects.forEach(function (select) {
-            select.innerHTML = '<option value="">Selecione</option>';
-            select.disabled = true;
-          });
-          return;
-        }
-
-        reportSelects.forEach(function (select) {
-          select.innerHTML = '<option value="">Carregando...</option>';
-          select.disabled = true;
-        });
-
-        fetch(window.location.pathname + '?load_campaigns=1&company_id=' + encodeURIComponent(companyId), {
-          headers: { 'X-Requested-With': 'XMLHttpRequest' },
-        })
-          .then(function (response) {
-            if (!response.ok) {
-              throw new Error('Falha ao carregar campanhas');
-            }
-            return response.json();
-          })
-          .then(function (data) {
-            var campaigns = Array.isArray(data.campaigns) ? data.campaigns : [];
-            reportSelects.forEach(function (select) {
-              select.innerHTML = '<option value="">Selecione</option>';
-              campaigns.forEach(function (campaign) {
-                var option = document.createElement('option');
-                option.value = String(campaign.id);
-                option.textContent = campaign.label;
-                select.appendChild(option);
-              });
-              select.disabled = false;
-            });
-          })
-          .catch(function () {
-            reportSelects.forEach(function (select) {
-              select.innerHTML = '<option value="">Erro ao carregar</option>';
-              select.disabled = true;
-            });
-          });
-      });
-
-      var form = companySelect.closest('form');
-      if (form) {
-        form.addEventListener('submit', function () {
-          var submitBtn = form.querySelector('[data-compare-submit]');
-          if (submitBtn) {
-            submitBtn.disabled = true;
-            submitBtn.textContent = 'Carregando...';
-          }
-        });
-      }
-    })();
-  </script>
+  <script src="{% static 'js/reports_compare.js' %}"></script>
 {% endblock %}

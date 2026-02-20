@@ -14,25 +14,12 @@
 <div class="app-layout">
   {% include "partials/sidebar.html" with active_menu="master-dashboard" is_master=True %}
 
-  <main class="content" data-page="master-dashboard" data-master-metrics-url="{% url 'master-metrics' %}">
+  <main class="content" data-page="master-dashboard" data-master-metrics-url="{% url 'master-metrics' %}" data-company-options-url="{% url 'companies-options' %}">
     <header class="content__header">
       <div>
         <h1 class="content__title">Painel master</h1>
-        <p class="content__subtitle">Visão geral das empresas cadastradas.</p>
+        <p class="content__subtitle">Visao geral das empresas cadastradas.</p>
       </div>
-      <form method="post" action="{% url 'master-dashboard' %}" class="master-company-form">
-        {% csrf_token %}
-        <input type="hidden" name="next_url" value="{% url 'dashboard' %}" />
-        <div class="form-field">
-          <label for="master_company_id">Empresa</label>
-          <select id="master_company_id" name="company_id" required>
-            {% for company in companies %}
-              <option value="{{ company.id }}">{{ company.name }}</option>
-            {% endfor %}
-          </select>
-        </div>
-          <button class="btn btn--primary" type="submit" data-loading-text="Acessando...">Acessar</button>
-      </form>
     </header>
 
     {% if messages %}
@@ -74,13 +61,35 @@
       </article>
     </section>
 
+    <section class="master-charts-toolbar">
+      <div class="master-company-form">
+        <div class="form-field master-company-picker" data-master-company-picker>
+          <label for="master_company_search">Empresa (graficos)</label>
+          <input type="hidden" id="master_company_id" name="company_id" value="{{ initial_company_id }}" />
+          <input
+            id="master_company_search"
+            type="text"
+            autocomplete="off"
+            value="{{ initial_company_name }}"
+            placeholder="Digite para pesquisar empresa"
+            data-master-company-search
+            required
+          />
+          <div class="master-company-picker__menu" data-master-company-menu hidden>
+            <div class="master-company-picker__options" data-master-company-options></div>
+            <div class="master-company-picker__status" data-master-company-status></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section class="master-charts">
       <article class="master-chart-card">
         <div class="master-chart-loading" data-master-loading="history">
           <span class="master-spinner" aria-hidden="true"></span>
           Carregando...
         </div>
-        <h2 class="master-chart-title">Histórico de avaliações</h2>
+        <h2 class="master-chart-title">Historico de avaliacoes</h2>
         <canvas id="master-eval-history" height="120"></canvas>
       </article>
       <article class="master-chart-card">
@@ -88,7 +97,7 @@
           <span class="master-spinner" aria-hidden="true"></span>
           Carregando...
         </div>
-        <h2 class="master-chart-title">Distribuição por segmento</h2>
+        <h2 class="master-chart-title">Distribuicao por segmento</h2>
         <div class="master-segment-grid">
           <div>
             <canvas id="master-segment-pie" width="280" height="280"></canvas>

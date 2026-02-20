@@ -576,6 +576,10 @@ body {
   margin-top: 18px;
 }
 
+.master-charts-toolbar {
+  margin-top: 18px;
+}
+
 @media (max-width: 960px) {
   .master-charts {
     grid-template-columns: 1fr;
@@ -670,6 +674,7 @@ body {
 .master-company-form {
   display: flex;
   align-items: flex-end;
+  justify-content: flex-end;
   gap: 10px;
   margin: 0;
 }
@@ -677,10 +682,56 @@ body {
 .master-company-form .form-field {
   margin: 0;
   min-width: 260px;
+  position: relative;
 }
 
-.master-company-form select {
+.master-company-form input[type="text"] {
   min-width: 260px;
+}
+
+.master-company-picker__menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 120;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.16);
+}
+
+.master-company-picker__options {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.master-company-picker__option {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  padding: 10px 12px;
+  color: #0f172a;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.master-company-picker__option:hover,
+.master-company-picker__option.is-active {
+  background: #eff6ff;
+}
+
+.master-company-picker__status {
+  padding: 8px 12px 10px;
+  border-top: 1px solid #e2e8f0;
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.master-company-picker {
+  position: relative;
 }
 
 .card {
@@ -1175,6 +1226,8 @@ body {
 
 .table-filters-card {
   margin-bottom: 14px;
+  overflow: visible;
+  z-index: 30;
 }
 
 .table-filters-form .btn {
@@ -1338,6 +1391,37 @@ body {
   padding: 7px 10px;
   font: inherit;
   background: #fff;
+}
+
+.checkbox-group-list {
+  border: 1px solid var(--slate-200);
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 10px;
+  max-height: 170px;
+  overflow-y: auto;
+  display: grid;
+  gap: 6px;
+}
+
+.checkbox-group-list__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.84rem;
+  color: #0f172a;
+  line-height: 1.25;
+}
+
+.checkbox-group-list__item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  flex: 0 0 16px;
+}
+
+.checkbox-group-list__item span {
+  display: inline-block;
 }
 
 .emoji-field {
@@ -2150,7 +2234,7 @@ body {
     align-items: stretch;
   }
   .master-company-form .form-field,
-  .master-company-form select {
+  .master-company-form input[type="text"] {
     min-width: 0;
     width: 100%;
   }
